@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FocusFlow · Phase 0</title><link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <header><span class="logo">F</span><strong>FocusFlow</strong><span class="phase">Phase 0 · 技术验证</span></header>
+    <section class="intro"><p class="eyebrow">PERSONAL & PROJECTS TRACKER</p><h1>先把基础验证清楚。</h1><p>这是本地运行与数据保全实验。正式任务功能将在技术方案确认后开发。</p></section>
+    <div class="grid">
+      <section class="card"><span class="tag">可操作实验</span><h2>重启后，文字还在。</h2><p>输入一段测试文字并保存，关闭程序后重新打开，检查内容是否保留。</p>
+        <form id="note-form"><label for="note">验证文字</label><textarea id="note" maxlength="500" rows="4" placeholder="例如：今天先完成本地持久化验证。"></textarea><div class="actions"><button id="save" type="submit">保存到本地</button><button id="backup" type="button" class="secondary">创建验证备份</button></div></form><p id="status" role="status" aria-live="polite">正在读取本地数据…</p>
+      </section>
+      <section class="card"><span class="tag neutral">验证边界</span><h2>哪些还没接通？</h2><dl><dt>Codex 执行</dt><dd>独立程序握手实验另行运行；没有启动编程任务。</dd><dt>GitHub</dt><dd>尚未连接账户、创建仓库、Issue 或 PR。</dd><dt>正式版本更新</dt><dd>尚无安装包和真实升级测试；此处仅验证数据库备份。</dd></dl><p class="footnote">请使用测试文字。此实验的数据目录与正式版分开，不会自动导入正式版。</p></section>
+    </div>
+    <footer>本地单用户 · 无注册 · 当前页面不会调用 AI 或向 GitHub 写入数据</footer>
+  </main><script type="module" src="/app.js"></script>
+</body></html>

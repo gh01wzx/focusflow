@@ -1,0 +1,14 @@
+{
+  "name": "focusflow-phase0",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Local, dependency-free feasibility spike. Not the Tracker MVP.",
+  "engines": { "node": ">=24.12.0 <25" },
+  "scripts": {
+    "start": "node src/main.mjs --open",
+    "test": "node --test",
+    "probe:codex": "node scripts/probe-codex.mjs",
+    "probe:github": "node scripts/probe-github.mjs"
+  }
+}

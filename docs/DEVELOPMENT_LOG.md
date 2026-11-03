@@ -1,0 +1,22 @@
+# Development log
+
+## 2026-11-03 — initial feasibility spike
+
+- Established the user-supplied product brief as the baseline.
+- Built a zero-dependency Windows local HTTP/SQLite experiment, not the product UI.
+- Verified persistence across server restart, consistent backup and independent restoration, newer-schema refusal, and local HTTP boundaries with six tests.
+- Verified an isolated Codex stdio initialization without a model turn, account access or attachment to an existing session.
+- Unauthenticated public GitHub API requests were blocked by the execution environment's network restriction. No remote mutation occurred.
+- Proposed a desktop application using Electron, TypeScript/React, SQLite and a separate Codex app-server integration. Concrete runtime/driver/packaging choices still need experiments.
+- Owner explicitly approved the desktop direction and public repository destination `gh01wzx/focusflow`.
+- Initialized local Git and prepared this honest import of the Phase 0 spike. GitHub account connection and public repository creation are pending. No historic Issues or PRs are invented.
+- Re-ran all six tests successfully. The first staging attempt was blocked by filesystem permissions on `.git/index.lock`; no commit was created. No elevation or permission workaround was attempted.
+
+## 2026-11-03 — public repository bootstrap
+
+- The owner created the public repository with an initial README commit.
+- The connected GitHub app confirms the expected account and repository access. The future Tracker app still needs its own integration and authorization.
+- Bootstrap work is tracked in a real Issue and reviewed in a branch/PR. Local Git index writes remain restricted; the connected GitHub Git-data API publishes the reviewed source snapshot without changing local Git permissions.
+- Private databases, helper scripts, logs and archives are excluded from the source snapshot. A hosted CI run is distinct from the six passing local tests.
+
+Next gate: review/merge of the bootstrap PR, followed by supported Codex/runtime and Windows packaging feasibility checks. Product features are still unimplemented.

@@ -18,12 +18,21 @@ const post = (origin: string, path: string, value: unknown, extraHeaders: Record
   method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', ...extraHeaders }, body: JSON.stringify(value),
 });
 
+async function readNote(origin: string): Promise<string> {
+  const response = await fetch(origin + '/api/probe');
+  assert.equal(response.status, 200);
+  const payload: unknown = await response.json();
+  assert.ok(typeof payload === 'object' && payload !== null && 'note' in payload);
+  assert.ok(typeof payload.note === 'string');
+  return payload.note;
+}
+
 test('HTTP save, server restart, read and backup use the real SQLite store', async t => {
   const f = await fixture(t);
   assert.equal((await fetch(f.app.origin)).status, 200);
   assert.equal((await post(f.app.origin, '/api/probe', { note: '服务器重启验证' })).status, 200);
   await f.restart();
-  assert.equal((await (await fetch(f.app.origin + '/api/probe')).json()).note, '服务器重启验证');
+  assert.equal(await readNote(f.app.origin), '服务器重启验证');
   assert.equal((await post(f.app.origin, '/api/backup', {})).status, 201);
 });
 
@@ -40,5 +49,5 @@ test('cross-origin writes, DNS rebinding hosts and oversized payloads are refuse
   });
   assert.equal(reboundStatus, 403);
   assert.equal((await post(app.origin, '/api/probe', { note: 'x'.repeat(5000) })).status, 413);
-  assert.equal((await (await fetch(app.origin + '/api/probe')).json()).note, '');
+  assert.equal(await readNote(app.origin), '');
 });

@@ -1,19 +1,20 @@
 import test from 'node:test';
+import type { TestContext } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { startServer } from '../src/server.mjs';
+import { startServer } from '../src/server.ts';
 import { request as httpRequest } from 'node:http';
 
-async function fixture(t) {
+async function fixture(t: TestContext) {
   const dataDirectory = await mkdtemp(join(tmpdir(), 'focusflow-http-test-'));
   let app = await startServer({ dataDirectory });
   t.after(async () => { await app.close(); await rm(dataDirectory, { recursive: true, force: true }); });
   return { get app() { return app; }, async restart() { await app.close(); app = await startServer({ dataDirectory }); } };
 }
 
-const post = (origin, path, value, extraHeaders = {}) => fetch(origin + path, {
+const post = (origin: string, path: string, value: unknown, extraHeaders: Record<string, string> = {}) => fetch(origin + path, {
   method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', ...extraHeaders }, body: JSON.stringify(value),
 });
 
@@ -29,7 +30,7 @@ test('HTTP save, server restart, read and backup use the real SQLite store', asy
 test('cross-origin writes, DNS rebinding hosts and oversized payloads are refused', async t => {
   const { app } = await fixture(t);
   assert.equal((await post(app.origin, '/api/probe', { note: 'x' }, { Origin: 'https://other.example' })).status, 403);
-  const reboundStatus = await new Promise((resolve, reject) => {
+  const reboundStatus = await new Promise<number | undefined>((resolve, reject) => {
     const request = httpRequest(app.origin, { headers: { Host: 'other.example' } }, response => {
       response.resume();
       resolve(response.statusCode);

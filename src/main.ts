@@ -1,6 +1,6 @@
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
-import { startServer } from './server.mjs';
+import { startServer } from './server.ts';
 
 const dataDirectory = process.env.FOCUSFLOW_DATA_DIR
   ? resolve(process.env.FOCUSFLOW_DATA_DIR)

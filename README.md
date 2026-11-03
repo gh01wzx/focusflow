@@ -6,7 +6,7 @@ Windows-first, local-first personal tasks and project delivery, with a planned C
 
 ## Run on Windows
 
-Prerequisite for this spike: Node.js **24.12.x or a later 24.x release**. No npm installation or API key is required.
+Prerequisite for this spike: Node.js **24.12.x or a later 24.x release**. Run `npm ci` once to install the pinned development compiler and Node type definitions. No API key is required. The installed desktop product will have a separate end-user setup flow.
 
 1. Double-click `Start-FocusFlow.cmd`.
 2. A browser page opens. Keep the console window open while using it.
@@ -16,9 +16,12 @@ Prerequisite for this spike: Node.js **24.12.x or a later 24.x release**. No npm
 If automatic browser opening fails, open the `http://127.0.0.1:...` URL printed in the console. The server uses an OS-assigned port and listens only on IPv4 loopback. This is a development launcher, not the proposed installed desktop experience. Multiple launches are not yet deduplicated.
 
 ```powershell
+npm ci
+npm run typecheck
+npm run build
 npm test
-node src/main.mjs
-node scripts/probe-codex.mjs 'ABSOLUTE_PATH_TO_CODEX_EXE'
+npm start
+node scripts/probe-codex.ts 'ABSOLUTE_PATH_TO_CODEX_EXE'
 npm run probe:github
 ```
 
@@ -36,7 +39,9 @@ Current Windows test results and limitations: [Phase 0 report](docs/PHASE0_REPOR
 
 ## Architecture
 
-The spike uses Node's built-in HTTP server, `node:sqlite`, vanilla JavaScript, and Node's test runner, with **zero third-party packages**. `node:sqlite` is experimental in the tested Node 24.12.0 runtime; this is not a final database-driver commitment. The approved desktop direction is Electron + TypeScript/React + SQLite + a Codex app-server adapter; see [architecture decisions](docs/ADR-001.md) for the version, driver and packaging checks still needed.
+The spike uses **TypeScript throughout application, browser, probes and tests**, with strict checks and separate Node/browser compiler configurations. TypeScript emits JavaScript into ignored `dist/`; browser HTML/CSS assets are copied alongside it. `npm start` builds before launching. `npm test` runs the built tests; `npm run test:source` additionally exercises erasable TypeScript directly on Node 24 and does not perform type checking.
+
+Runtime code uses Node's built-in HTTP server, `node:sqlite` and test runner, with no third-party runtime packages. TypeScript and Node type definitions are development dependencies. `node:sqlite` is experimental in the tested Node 24.12.0 runtime; this is not a final database-driver commitment. The approved desktop direction is Electron + TypeScript/React + SQLite + a Codex app-server adapter; see [architecture decisions](docs/ADR-001.md) for the version, driver and packaging checks still needed.
 
 ```text
 public/   Browser UI for the persistence experiment

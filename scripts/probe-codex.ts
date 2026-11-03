@@ -7,13 +7,14 @@ import { createInterface } from 'node:readline';
 
 const executable = process.argv[2];
 if (!executable || !isAbsolute(executable)) {
-  console.error('Usage: node scripts/probe-codex.mjs <absolute-path-to-codex.exe>');
+  console.error('Usage: node scripts/probe-codex.ts <absolute-path-to-codex.exe>');
   process.exit(2);
 }
 const isolatedHome = await mkdtemp(join(tmpdir(), 'focusflow-codex-probe-'));
-const childEnv = {};
+const childEnv: NodeJS.ProcessEnv = {};
 for (const key of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH', 'LOCALAPPDATA', 'APPDATA']) {
-  if (process.env[key]) childEnv[key] = process.env[key];
+  const value = process.env[key];
+  if (value) childEnv[key] = value;
 }
 childEnv.CODEX_HOME = isolatedHome;
 const child = spawn(executable, ['app-server', '--listen', 'stdio://'], {
@@ -24,16 +25,24 @@ child.stderr.resume();
 const lines = createInterface({ input: child.stdout });
 let handshake = false;
 let failure = false;
-const result = await new Promise(resolve => {
+interface ProbeResult {
+  status: 'verified' | 'blocked';
+  reason?: string;
+  check?: string;
+  modelTurnStarted?: false;
+  accountAccessed?: false;
+}
+
+const result = await new Promise<ProbeResult>(resolve => {
   const timeout = setTimeout(() => { failure = true; child.kill(); }, 15000);
-  child.once('error', error => { clearTimeout(timeout); failure = true; resolve({ status: 'blocked', reason: error.code || 'SPAWN_FAILED' }); });
+  child.once('error', (error: NodeJS.ErrnoException) => { clearTimeout(timeout); failure = true; resolve({ status: 'blocked', reason: error.code || 'SPAWN_FAILED' }); });
   child.stdin.on('error', () => { failure = true; child.kill(); });
   lines.on('line', line => {
-    let message;
+    let message: unknown;
     try { message = JSON.parse(line); } catch { return; }
-    if (message.id !== 1) return;
-    if (message.error) { failure = true; child.kill(); return; }
-    if (message.result) {
+    if (typeof message !== 'object' || message === null || !('id' in message) || message.id !== 1) return;
+    if ('error' in message && message.error) { failure = true; child.kill(); return; }
+    if ('result' in message && message.result) {
       handshake = true;
       child.stdin.end(JSON.stringify({ method: 'initialized', params: {} }) + '\n');
       // We only need the transport handshake, not a persistent service.

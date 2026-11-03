@@ -3,12 +3,20 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "description": "Local, dependency-free feasibility spike. Not the Tracker MVP.",
+  "description": "TypeScript local feasibility spike. Not the Tracker MVP.",
   "engines": { "node": ">=24.12.0 <25" },
   "scripts": {
-    "start": "node src/main.mjs --open",
-    "test": "node --test",
-    "probe:codex": "node scripts/probe-codex.mjs",
-    "probe:github": "node scripts/probe-github.mjs"
+    "start": "node dist/src/main.js --open",
+    "prestart": "npm run build",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.browser.json && node scripts/copy-assets.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.browser.json --noEmit",
+    "test": "node --test dist/test/*.test.js",
+    "test:source": "node --test test/*.test.ts",
+    "probe:codex": "node scripts/probe-codex.ts",
+    "probe:github": "node scripts/probe-github.ts"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.0",
+    "typescript": "5.9.3"
   }
 }

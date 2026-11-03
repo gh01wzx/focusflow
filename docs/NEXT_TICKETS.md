@@ -1,6 +1,6 @@
 # Proposed next Tickets — not approved, started or published
 
-The desktop direction and repository bootstrap are authorized. P0-01 is now in progress through a real GitHub Issue/PR; the remaining rows are a working breakdown and are not automatically started or batch-published. Existing feasibility work is recorded honestly as a spike, not fabricated historic Issues/PRs.
+P0-01 is complete through merged PR #2. TypeScript and English-text follow-ups were merged as PRs #4 and #6. After the owner asked to continue, Issue #7 starts P0-03a: the shell/installer slice of P0-03. The later two-version update/recovery slice and all other rows remain a working breakdown; they are not automatically started or batch-published. Existing feasibility work is recorded honestly as a spike, not fabricated historic Issues/PRs.
 
 | ID | Phase | Small outcome / acceptance | Depends on |
 | --- | --- | --- | --- |

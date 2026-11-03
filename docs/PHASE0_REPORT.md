@@ -36,7 +36,7 @@ The execution environment still restricts direct network access: unauthenticated
 
 Codex is not on PATH. The discovered internal executable is an alpha build and is not a production dependency commitment. Authenticated model calls, generated changes, tests/PR creation by the future Tracker runner and quota handling remain unverified.
 
-Electron is not installed in the tested environment. No installer, signing certificate or real update test exists. A dotnet host was found, but `dotnet --list-sdks` produced no SDKs; Rust/cargo were not found on PATH.
+Electron is not installed in the owner's tested local environment. The subsequent [desktop experiment](DESKTOP_EXPERIMENT.md) adds separate Windows CI packaging and installed-app checks; its exact run result establishes what passed. Signing and real updates remain unverified. A dotnet host was found, but `dotnet --list-sdks` produced no SDKs; Rust/cargo were not found on PATH.
 
 ## Approved direction and next gates
 

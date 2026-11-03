@@ -33,3 +33,10 @@ Next gate: review/merge of the bootstrap PR, followed by supported Codex/runtime
 - The owner approved PR #4, which merged as `ae1bc83d29bc926c20e3da2297d81fdc2bb51243`. TypeScript is now the application source language.
 - The owner requested English for all software and repository material; only the conversation remains Chinese.
 - Issue #5 tracks translation of UI/messages/documentation and a focused language check. Unicode persistence fixtures use escapes while retaining their runtime values. Existing user data is not translated or rewritten.
+
+## 2026-11-03 — Windows shell and installer feasibility
+
+- The owner manually merged PR #6 as `dc15beada26162e160c47d8ea9d2746afb32d902`, then explicitly asked to continue.
+- Issue #7 starts the bounded P0-03a shell/installer slice. Codex authentication, two-version updates and failure recovery remain separate gates; no Phase 1 feature was started.
+- The first Windows compatibility job verified Electron 45.2.1 with bundled Node 24.22.1 and SQLite 3.53.4. No extra native database driver is required for this pinned experiment.
+- The desktop workflow builds an unsigned NSIS installer with publication disabled and checks the installed app in a disposable profile. The exact workflow result, smoke report and PR head determine what is verified; artifact existence is not proof of success.

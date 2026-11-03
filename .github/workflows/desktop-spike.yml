@@ -1,0 +1,44 @@
+name: Windows desktop feasibility
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  desktop:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.12.0'
+      - name: Install pinned desktop development dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Download the pinned official Electron binary
+        run: node node_modules/electron/install.js
+      - name: Verify bundled Node and SQLite compatibility
+        env:
+          ELECTRON_RUN_AS_NODE: '1'
+        run: .\node_modules\electron\dist\electron.exe -e "const {DatabaseSync}=require('node:sqlite'); const db=new DatabaseSync(':memory:'); console.log(JSON.stringify({versions:process.versions,sqlite:db.prepare('select sqlite_version() version').get()})); db.close();"
+      - run: npm run check:language
+      - run: npm run typecheck
+      - run: npm run package:windows
+      - run: npm test
+      - name: Install the unsigned experiment in a disposable directory
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -LiteralPath release -Filter 'FocusFlow-Phase0-*-x64.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'Installer not found' }
+          $installationDirectory = Join-Path $env:RUNNER_TEMP 'focusflow-phase0-installed'
+          $result = Start-Process -FilePath $installer.FullName -ArgumentList @('/S', "/D=$installationDirectory") -WindowStyle Hidden -Wait -PassThru
+          if ($result.ExitCode -ne 0) { throw "Installer exited with code $($result.ExitCode)" }
+          node dist/scripts/smoke-desktop.js (Join-Path $installationDirectory 'FocusFlow-Phase0.exe')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-desktop-experiment
+          path: |
+            release/FocusFlow-Phase0-*-x64.exe
+            artifacts/desktop/
+          if-no-files-found: ignore
+          retention-days: 14

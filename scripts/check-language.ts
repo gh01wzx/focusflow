@@ -2,7 +2,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 
 const sourceRoots = ['src', 'public', 'scripts', 'test', 'docs', '.github'];
-const rootFiles = ['AGENTS.md', 'README.md', '.gitignore', 'package.json', 'package-lock.json', 'electron-builder.json', 'Start-FocusFlow.cmd', 'tsconfig.base.json', 'tsconfig.json', 'tsconfig.browser.json'];
+const rootFiles = ['AGENTS.md', 'README.md', '.gitignore', 'package.json', 'package-lock.json', 'electron-builder.json', 'Start-FocusFlow.cmd', 'tsconfig.base.json', 'tsconfig.json', 'tsconfig.browser.json', 'tsconfig.desktop.json'];
 const textExtensions = new Set(['.ts', '.md', '.html', '.css', '.json', '.yml', '.yaml', '.cmd', '.sql']);
 
 async function sourceFiles(directory: string): Promise<string[]> {

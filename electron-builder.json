@@ -14,6 +14,7 @@
     "allowElevation": false,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
+    "runAfterFinish": false,
     "deleteAppDataOnUninstall": false
   },
   "publish": null

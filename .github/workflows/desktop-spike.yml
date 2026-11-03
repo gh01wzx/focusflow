@@ -5,15 +5,14 @@ permissions:
 jobs:
   desktop:
     runs-on: windows-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24.12.0'
-      - name: Resolve pinned desktop development dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
-      - name: Export dependency lockfile for bootstrap
-        run: node -e "console.log('LOCKFILE_START'); console.log(require('node:fs').readFileSync('package-lock.json', 'utf8')); console.log('LOCKFILE_END')"
+      - name: Install pinned desktop development dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Download the pinned official Electron binary
         run: node node_modules/electron/install.js
       - name: Verify bundled Node and SQLite compatibility

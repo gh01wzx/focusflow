@@ -9,13 +9,15 @@ Status: Phase 0 feasibility work, not a formal release. The workflow result for 
 - playwright-core 1.64.1: development-only automation for the installed app in a disposable Windows CI profile. It does not install a separate browser.
 - All first-party source stays TypeScript. Runtime code has no third-party database driver or production npm dependency.
 
+Node-only source keeps its own compiler configuration. Desktop/Electron and automation definitions also reference DOM types, so `tsconfig.desktop.json` checks that boundary with both Node and DOM libraries; strict checking stays enabled without skipping dependency declaration checks.
+
 References checked on 2026-11-03: [Electron release](https://github.com/electron/electron/releases/tag/v45.2.1), [Electron security](https://www.electronjs.org/docs/latest/tutorial/security), [app lifecycle and paths](https://www.electronjs.org/docs/latest/api/app), [NSIS packaging](https://www.electron.build/nsis/), [Playwright release](https://github.com/microsoft/playwright/releases/tag/v1.64.1).
 
 ## Run and package
 
 For development, run `npm ci` once, then double-click `Start-FocusFlow.cmd` or run `npm start`. The default opens an Electron window. `npm run start:web` preserves the browser-based spike. `npm run package:windows` builds the TypeScript source and an x64 NSIS installer in `release/`, with publication explicitly disabled.
 
-For the packaged experiment, open the passing **Windows desktop feasibility** workflow run and download its `windows-desktop-experiment` artifact. Extract it and run `FocusFlow-Phase0-0.0.1-x64.exe`. This is an unsigned test installer. Windows reputation/security prompts may appear; do not disable system protections to run it. It is not offered as a signed production release.
+For the packaged experiment, open the passing **Windows desktop feasibility** workflow run and download its `windows-desktop-experiment` artifact. Extract it, run `FocusFlow-Phase0-0.0.1-x64.exe`, then open the installed desktop/Start menu shortcut. This is an unsigned test installer. Windows reputation/security prompts may appear; do not disable system protections to run it. It is not offered as a signed production release.
 
 The artifact also contains a screenshot and JSON evidence from an automated disposable profile when the smoke check succeeds. Failure artifacts may be uploaded too: artifact existence alone is not a passing test. Read the run conclusion and smoke report.
 

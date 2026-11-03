@@ -1,8 +1,10 @@
 # Product baseline — 2026-11-03
 
-Source: Jack's “Personal & Projects Tracker — MVP 产品需求与 Codex 开发交接”, version 0.1, supplied in this conversation. This is an implementation reference summarizing that brief, not a replacement approval or an amendment to it. The full supplied brief remains the requirement authority.
+Source: the owner's “Personal & Projects Tracker — MVP Product Requirements and Codex Development Handoff”, version 0.1, supplied in the conversation. This is an implementation reference summarizing that brief, not a replacement approval or an amendment to it. The full supplied brief remains the requirement authority.
 
 ## Confirmed constraints
+
+- Follow-up decisions: application, browser, probes and tests use TypeScript; source comments, software text and repository material use English. The owner conversation remains Chinese, and user-entered data retains its original language.
 
 - Windows single-user, local-first; no Tracker account, mobile app or cross-device sync in MVP. Necessary Codex/GitHub authorization remains separate.
 - Low interaction cost, easy daily launch, progressive detail. Desktop or local web selected through Phase 0.

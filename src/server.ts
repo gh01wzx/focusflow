@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { openStore } from './store.ts';
+import { openStore, SCHEMA_VERSION } from './store.ts';
 
 const publicFiles = new Map<string, readonly [string, string]>([
   ['/', ['index.html', 'text/html; charset=utf-8']],
@@ -20,7 +20,7 @@ export interface LocalServer {
 }
 
 export async function startServer({ dataDirectory, port = 0 }: ServerOptions): Promise<LocalServer> {
-  const store = openStore(join(dataDirectory, 'phase0.db'));
+  const store = await openStore(join(dataDirectory, 'phase0.db'));
   let origin = '';
   const server = createServer(async (request, response) => {
     const send = (status: number, body: unknown): void => {
@@ -41,7 +41,7 @@ export async function startServer({ dataDirectory, port = 0 }: ServerOptions): P
         response.writeHead(200, { 'Content-Type': contentType });
         return response.end(content);
       }
-      if (request.method === 'GET' && request.url === '/api/probe') return send(200, { note: store.read(), schemaVersion: 1 });
+      if (request.method === 'GET' && request.url === '/api/probe') return send(200, { note: store.read(), schemaVersion: SCHEMA_VERSION });
       if (request.method === 'POST' && ['/api/probe', '/api/backup'].includes(resource)) {
         if (request.headers.origin !== origin) return send(403, { error: 'Origin required' });
         if (request.headers['content-type'] !== 'application/json') return send(415, { error: 'JSON required' });

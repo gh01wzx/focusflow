@@ -3,6 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { startServer } from '../server.ts';
 import type { LocalServer } from '../server.ts';
+import { MigrationError, NewerDatabaseError } from '../database/migrate.ts';
 
 app.setName('FocusFlow Phase 0');
 const profileDirectory = process.env.FOCUSFLOW_DESKTOP_TEST_DATA_DIR
@@ -61,8 +62,13 @@ if (!app.requestSingleInstanceLock()) {
     window.once('ready-to-show', () => window?.show());
     window.on('closed', () => { window = null; });
     await window.loadURL(origin);
-  }).catch(() => {
-    dialog.showErrorBox('FocusFlow could not start', 'The local desktop experiment could not start. Check available disk space and try again.');
+  }).catch((error: unknown) => {
+    const message = error instanceof NewerDatabaseError
+      ? 'This data belongs to a newer app version. Reinstall that version, or restore a verified backup to a separate location before using an older version.'
+      : error instanceof MigrationError
+      ? 'The database upgrade failed and was rolled back. Keep the data directory and its backups. Use a compatible previous version or follow the recovery guide.'
+      : 'The local desktop experiment could not start. Check available disk space and try again.';
+    dialog.showErrorBox('FocusFlow could not start', message);
     app.exit(1);
   });
 }

@@ -1,14 +1,18 @@
-import { DatabaseSync, backup } from 'node:sqlite';
+import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { dirname } from 'node:path';
+import { createSnapshot, schemaVersion } from './database/backup.ts';
+import type { Snapshot } from './database/backup.ts';
+import { migrateDatabase, NewerDatabaseError } from './database/migrate.ts';
+import type { Migration } from './database/migrate.ts';
 
-export const SCHEMA_VERSION = 1;
-
-export interface Snapshot {
-  name: string;
-  path: string;
-}
+export const SCHEMA_VERSION = 2;
+const migrations: readonly Migration[] = [
+  { version: 1, sql: `CREATE TABLE probe_note (id INTEGER PRIMARY KEY CHECK(id=1), body TEXT NOT NULL);
+    INSERT INTO probe_note VALUES(1, '');` },
+  { version: 2, sql: `CREATE TABLE store_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    INSERT INTO store_metadata VALUES('format', 'focusflow-phase0');` },
+];
 
 export interface Store {
   read(): string;
@@ -17,22 +21,16 @@ export interface Store {
   close(): void;
 }
 
-export function openStore(path: string): Store {
+export async function openStore(path: string): Promise<Store> {
   mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
   try {
-    const version = db.prepare('PRAGMA user_version').get()?.user_version;
-    if (typeof version !== 'number') throw new Error('INVALID_SCHEMA_VERSION');
+    const version = schemaVersion(db);
     // An older binary must never modify a newer schema, even its journal mode.
-    if (version > SCHEMA_VERSION) throw new Error('NEWER_DATABASE: use the newer application; no downgrade migration is available.');
+    if (version > SCHEMA_VERSION) throw new NewerDatabaseError();
     db.exec('PRAGMA busy_timeout=3000; PRAGMA foreign_keys=ON;');
-    if (version === 0) {
-      db.exec(`BEGIN IMMEDIATE;
-        CREATE TABLE probe_note (id INTEGER PRIMARY KEY CHECK(id=1), body TEXT NOT NULL);
-        INSERT INTO probe_note VALUES(1, '');
-        PRAGMA user_version=1;
-        COMMIT;`);
-    }
+    if (version === 0 && db.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%'").all().length) throw new Error('UNRECOGNIZED_DATABASE');
+    await migrateDatabase(db, path, migrations);
     db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;');
   } catch (error) {
     db.close();
@@ -48,18 +46,7 @@ export function openStore(path: string): Store {
       if (typeof body !== 'string' || body.length > 500) throw new TypeError('Enter test text with no more than 500 characters.');
       db.prepare('UPDATE probe_note SET body=? WHERE id=1').run(body);
     },
-    async snapshot(directory: string) {
-      mkdirSync(directory, { recursive: true });
-      const name = `probe-${Date.now()}-${randomUUID()}.db`;
-      const destination = join(directory, name);
-      // SQLite backup includes committed WAL data; never copy only the live .db.
-      await backup(db, destination);
-      const check = new DatabaseSync(destination, { readOnly: true });
-      try {
-        if (check.prepare('PRAGMA integrity_check').get()?.integrity_check !== 'ok') throw new Error('BACKUP_INTEGRITY_FAILED');
-      } finally { check.close(); }
-      return { name, path: destination };
-    },
+    snapshot: (directory: string) => createSnapshot(db, directory),
     close: () => db.close(),
   };
 }

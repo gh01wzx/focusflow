@@ -46,3 +46,9 @@ Next gate: review/merge of the bootstrap PR, followed by supported Codex/runtime
 - The owner merged PR #8 as `5e92f0af3db98fa64560b077cd77e10b98737c86` and reproduced a source-launch failure after a successful `npm ci`.
 - Electron 45.2.1's installed package has no binary-download postinstall script. Its official loader initializes the binary on first use; the Windows launcher's executable precheck prevented that normal path.
 - The launcher now checks the installed CLI package and allows first-run initialization. Windows CI exercises a clean npm install followed by the official loader, and records dependency audit diagnostics without changing or force-upgrading the dependency tree.
+
+## 2026-11-03 — manual installer upgrade and data recovery
+
+- The owner approved PR #10, merged as `14a30b166ef350961518cff586fb2ffa5c22db50`, and asked to continue.
+- Issue #11 tracks P0-03b: candidate version 0.0.2 adds schema 2 format metadata, transactional migration, a verified pre-upgrade snapshot and non-overwriting recovery. No automatic updater or Phase 1 task feature is added.
+- Disposable database tests inject migration and backup failures. A separate Windows job compares installed versions A/B and recovers the pre-upgrade snapshot with the packaged baseline binary. Exact-head CI results determine the observed outcome.

@@ -1,6 +1,6 @@
 # Proposed next Tickets — not approved, started or published
 
-P0-01 is complete through merged PR #2. TypeScript and English-text follow-ups were merged as PRs #4 and #6. After the owner asked to continue, Issue #7 starts P0-03a: the shell/installer slice of P0-03. The later two-version update/recovery slice and all other rows remain a working breakdown; they are not automatically started or batch-published. Existing feasibility work is recorded honestly as a spike, not fabricated historic Issues/PRs.
+P0-01 is complete through merged PR #2. TypeScript/English follow-ups were merged as PRs #4/#6; the desktop shell and first-launch fix followed as PRs #8/#10. The owner then authorized continued work, starting Issue #11 for P0-03b: manual two-version installer and database recovery validation. Signing, automatic updates and the other rows remain a working breakdown, not automatically started or batch-published. Existing feasibility work is recorded honestly, not fabricated historic Issues/PRs.
 
 | ID | Phase | Small outcome / acceptance | Depends on |
 | --- | --- | --- | --- |

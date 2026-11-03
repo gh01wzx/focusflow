@@ -56,3 +56,51 @@ jobs:
             artifacts/dependency-audit.json
           if-no-files-found: ignore
           retention-days: 14
+  upgrade:
+    needs: desktop
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.12.0'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-desktop-experiment
+          path: .phase0/candidate-artifact
+      - name: Check out immutable schema-1 baseline
+        uses: actions/checkout@v4
+        with:
+          ref: 14a30b166ef350961518cff586fb2ffa5c22db50
+          path: .phase0/upgrade-baseline
+      - name: Build baseline installer A
+        working-directory: .phase0/upgrade-baseline
+        shell: pwsh
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run package:windows
+          exit $LASTEXITCODE
+      - name: Verify manual installer upgrade and baseline recovery
+        shell: pwsh
+        run: |
+          $baseline = Get-ChildItem -LiteralPath .phase0/upgrade-baseline/release -Filter 'FocusFlow-Phase0-*-x64.exe' | Select-Object -First 1
+          $candidate = Get-ChildItem -LiteralPath .phase0/candidate-artifact/release -Filter 'FocusFlow-Phase0-*-x64.exe' | Select-Object -First 1
+          if (-not $baseline -or -not $candidate) { throw 'Both installers are required' }
+          $baselineExecutable = Join-Path (Get-Location).Path '.phase0/upgrade-baseline/release/win-unpacked/FocusFlow-Phase0.exe'
+          node dist/scripts/smoke-upgrade.js $baseline.FullName $candidate.FullName $baselineExecutable
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-upgrade-experiment
+          include-hidden-files: true
+          path: |
+            artifacts/upgrade/
+            .phase0/upgrade-baseline/release/FocusFlow-Phase0-*-x64.exe
+          if-no-files-found: ignore
+          retention-days: 14

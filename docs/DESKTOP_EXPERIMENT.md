@@ -17,7 +17,7 @@ References checked on 2026-11-03: [Electron release](https://github.com/electron
 
 For development, run `npm ci` once, then double-click `Start-FocusFlow.cmd` or run `npm start`. Electron 45 installs its binary on demand through its official loader: the npm package has no binary-download postinstall script. First launch needs access to its official download service; later launches reuse the cached runtime. The launcher checks for the installed CLI package and lets that loader initialize a missing binary. The default opens an Electron window. `npm run start:web` preserves the browser-based spike. `npm run package:windows` builds the TypeScript source and an x64 NSIS installer in `release/`, with publication explicitly disabled.
 
-For the packaged experiment, open the passing **Windows desktop feasibility** workflow run and download its `windows-desktop-experiment` artifact. Extract it, run `FocusFlow-Phase0-0.0.1-x64.exe`, then open the installed desktop/Start menu shortcut. This is an unsigned test installer. Windows reputation/security prompts may appear; do not disable system protections to run it. It is not offered as a signed production release.
+For the packaged experiment, open the passing **Windows desktop feasibility** workflow run and download its `windows-desktop-experiment` artifact. Extract it, run the versioned `FocusFlow-Phase0-...-x64.exe` installer, then open the installed desktop/Start menu shortcut. This is an unsigned test installer. Windows reputation/security prompts may appear; do not disable system protections to run it. It is not offered as a signed production release.
 
 The artifact also contains a screenshot and JSON evidence from an automated disposable profile when the smoke check succeeds. Failure artifacts may be uploaded too: artifact existence alone is not a passing test. Read the run conclusion and smoke report.
 
@@ -34,6 +34,8 @@ The app uses a single-instance lock after selecting its profile. A second launch
 The existing local HTTP experiment runs in the main process on IPv4 loopback with an OS-assigned port. The renderer has Node integration disabled, context isolation and sandboxing enabled, and no preload/IPC bridge. Existing Host/Origin/body-size checks and Content Security Policy remain. Navigation to other locations, new windows, permission requests and downloads are denied. This validates a small local shell, not future Codex/credential integration security.
 
 ## Evidence and remaining gates
+
+The subsequent [upgrade/recovery experiment](UPGRADE_RECOVERY_EXPERIMENT.md) covers installer versions 0.0.1 to 0.0.2 and schema 1 to 2. It adds a separate job and report; it does not add an updater.
 
 The Windows job builds the installer, silently installs it in an isolated runner directory, and launches the installed executable. The smoke check loads the real renderer, verifies that Node globals are unavailable there, saves text, creates a verified database backup, checks that a second instance exits, closes the app and verifies the saved text after relaunch. It also checks that data lives outside installation output. The JSON report records the observed Electron/Node/SQLite versions.
 

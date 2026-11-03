@@ -40,3 +40,9 @@ Next gate: review/merge of the bootstrap PR, followed by supported Codex/runtime
 - Issue #7 starts the bounded P0-03a shell/installer slice. Codex authentication, two-version updates and failure recovery remain separate gates; no Phase 1 feature was started.
 - The first Windows compatibility job verified Electron 45.2.1 with bundled Node 24.22.1 and SQLite 3.53.4. No extra native database driver is required for this pinned experiment.
 - The desktop workflow builds an unsigned NSIS installer with publication disabled and checks the installed app in a disposable profile. The exact workflow result, smoke report and PR head determine what is verified; artifact existence is not proof of success.
+
+## 2026-11-03 — first-launch regression
+
+- The owner merged PR #8 as `5e92f0af3db98fa64560b077cd77e10b98737c86` and reproduced a source-launch failure after a successful `npm ci`.
+- Electron 45.2.1's installed package has no binary-download postinstall script. Its official loader initializes the binary on first use; the Windows launcher's executable precheck prevented that normal path.
+- The launcher now checks the installed CLI package and allows first-run initialization. Windows CI exercises a clean npm install followed by the official loader, and records dependency audit diagnostics without changing or force-upgrading the dependency tree.

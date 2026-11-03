@@ -15,7 +15,7 @@ References checked on 2026-11-03: [Electron release](https://github.com/electron
 
 ## Run and package
 
-For development, run `npm ci` once, then double-click `Start-FocusFlow.cmd` or run `npm start`. The default opens an Electron window. `npm run start:web` preserves the browser-based spike. `npm run package:windows` builds the TypeScript source and an x64 NSIS installer in `release/`, with publication explicitly disabled.
+For development, run `npm ci` once, then double-click `Start-FocusFlow.cmd` or run `npm start`. Electron 45 installs its binary on demand through its official loader: the npm package has no binary-download postinstall script. First launch needs access to its official download service; later launches reuse the cached runtime. The launcher checks for the installed CLI package and lets that loader initialize a missing binary. The default opens an Electron window. `npm run start:web` preserves the browser-based spike. `npm run package:windows` builds the TypeScript source and an x64 NSIS installer in `release/`, with publication explicitly disabled.
 
 For the packaged experiment, open the passing **Windows desktop feasibility** workflow run and download its `windows-desktop-experiment` artifact. Extract it, run `FocusFlow-Phase0-0.0.1-x64.exe`, then open the installed desktop/Start menu shortcut. This is an unsigned test installer. Windows reputation/security prompts may appear; do not disable system protections to run it. It is not offered as a signed production release.
 

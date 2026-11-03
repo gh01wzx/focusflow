@@ -6,7 +6,7 @@ Windows-first, local-first personal tasks and project delivery, with a planned C
 
 ## Run on Windows
 
-Prerequisite for source development: Node.js **24.12.x or a later 24.x release**. Run `npm ci` once to install the pinned compiler, Electron runtime and development tools. No API key is required. The experimental installer bundles its runtime; it has a separate setup flow.
+Prerequisite for source development: Node.js **24.12.x or a later 24.x release**. Run `npm ci` once to install the pinned compiler, Electron launcher package and development tools. Electron 45 downloads its binary on first use, so a successful `npm ci` does not need to create `node_modules/electron/dist/electron.exe`. The first `npm start` can take longer while the official loader downloads and verifies the runtime; subsequent starts reuse it. No API key is required. The experimental installer already bundles its runtime and has a separate setup flow.
 
 1. Double-click `Start-FocusFlow.cmd`.
 2. The experiment opens in a desktop window. Keep the development console open while using it.

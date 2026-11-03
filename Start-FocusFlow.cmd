@@ -12,8 +12,8 @@ if not exist node_modules\typescript\bin\tsc (
   pause
   exit /b 1
 )
-if not exist node_modules\electron\dist\electron.exe (
-  echo Run npm ci once in this folder to install the pinned Electron runtime.
+if not exist node_modules\electron\cli.js (
+  echo Run npm ci once in this folder to install the Electron launcher package.
   pause
   exit /b 1
 )

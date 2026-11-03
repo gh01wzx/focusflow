@@ -20,3 +20,10 @@
 - Private databases, helper scripts, logs and archives are excluded from the source snapshot. A hosted CI run is distinct from the six passing local tests.
 
 Next gate: review/merge of the bootstrap PR, followed by supported Codex/runtime and Windows packaging feasibility checks. Product features are still unimplemented.
+
+## 2026-11-03 — approved merge and TypeScript migration
+
+- The owner approved PR #2, which merged as `3b62585449857675b2628e0bb5be66d2023a9828`. The linked bootstrap Issue #1 is complete.
+- The owner requested TypeScript rather than JavaScript, and English-only PR descriptions. Both preferences are now recorded in the development rules.
+- Issue #3 tracks migration of the application, browser, probes and tests, with strict checks and compiler output isolated in ignored `dist/`. The data location and schema remain version 1.
+- Local npm registry access is blocked by the execution environment. Source-runtime tests can be run locally with Node 24; dependency installation, strict compilation and built tests are verified separately through GitHub CI. Runtime type stripping alone is not a compiler check.

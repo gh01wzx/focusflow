@@ -1,12 +1,13 @@
 import test from 'node:test';
+import type { TestContext } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, copyFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { openStore } from '../src/store.mjs';
+import { openStore } from '../src/store.ts';
 
-async function fixture(t) {
+async function fixture(t: TestContext) {
   const directory = await mkdtemp(join(tmpdir(), 'focusflow-store-test-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   return { directory, path: join(directory, 'test.db') };

@@ -1,5 +1,9 @@
 # Development log
 
+## P0-02 protocol boundary (Issue #13)
+
+Added a strict TypeScript JSONL app-server client, deterministic in-memory transport tests and explicit standalone CLI install/login/status/live-probe commands. The CLI compatibility target is `@openai/codex@0.166.0`, installed separately from the desktop application. Local language, compiler, build and 24 tests passed before publication; the PR's exact head and hosted checks are the review evidence boundary. No real authenticated model turn was performed. The development host cannot download the standalone CLI from npm (`EACCES`); the App's internal alpha CLI is not treated as a supported runtime. Remaining live gates and short user commands are in `CODEX_VERIFICATION.md`.
+
 ## 2026-11-03 — initial feasibility spike
 
 - Established the user-supplied product brief as the baseline.

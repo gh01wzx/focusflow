@@ -21,7 +21,11 @@
     "test": "node --test dist/test/*.test.js",
     "test:source": "node --test test/*.test.ts",
     "probe:codex": "node scripts/probe-codex.ts",
-    "probe:github": "node scripts/probe-github.ts"
+    "probe:github": "node scripts/probe-github.ts",
+    "codex:install": "node scripts/codex-verify.ts install",
+    "codex:login": "node scripts/codex-verify.ts login",
+    "codex:status": "node scripts/codex-verify.ts status",
+    "codex:probe": "node scripts/codex-verify.ts live"
   },
   "devDependencies": {
     "@types/node": "24.10.0",

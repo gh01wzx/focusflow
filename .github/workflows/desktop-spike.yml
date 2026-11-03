@@ -1,0 +1,22 @@
+name: Windows desktop feasibility
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.12.0'
+      - name: Inspect maintained packager version
+        run: npm view electron-builder version
+      - name: Install the pinned Electron runtime for compatibility testing
+        run: npm install --no-save --ignore-scripts --package-lock=false --no-audit --no-fund electron@45.2.1
+      - name: Download the pinned official Electron binary
+        run: node node_modules/electron/install.js
+      - name: Verify bundled Node and SQLite compatibility
+        env:
+          ELECTRON_RUN_AS_NODE: '1'
+        run: .\node_modules\electron\dist\electron.exe -e "const {DatabaseSync}=require('node:sqlite'); const db=new DatabaseSync(':memory:'); console.log(JSON.stringify({versions:process.versions,sqlite:db.prepare('select sqlite_version() version').get()})); db.close();"

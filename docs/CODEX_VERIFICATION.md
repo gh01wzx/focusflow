@@ -1,10 +1,10 @@
 # Codex integration verification (P0-02)
 
-Status: protocol client and deterministic tests implemented. Authenticated CLI/model execution, Windows sandbox behavior, real cancellation and actual quota failures are **unverified**. This does not pass the entire P0-02 gate or provide the product execution UI.
+Status: protocol client and deterministic tests implemented. A credential-free Windows CI job installs the pinned CLI and runs the unauthenticated status/handshake command; check its result on the exact PR head. Authenticated CLI/model execution, Windows sandbox behavior, real cancellation and actual quota failures are **unverified**. This does not pass the entire P0-02 gate or provide the product execution UI.
 
 ## Explicit developer verification
 
-Use Node 24.12.x and a normal terminal in the repository. The commands are opt-in; neither desktop launch nor CI runs them.
+Use Node 24.12.x and a normal terminal in the repository. These are explicit developer commands. Desktop launch never runs them. CI runs installation and unauthenticated status only in its fresh runner profile; it never logs in or starts a model turn.
 
 ```powershell
 npm run codex:install

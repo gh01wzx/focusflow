@@ -29,7 +29,7 @@ npm run probe:github
 
 Codex discovery is intentionally explicit. The transport probe launches a separate process in a temporary isolated Codex home, sends only `initialize`/`initialized`, then stops it. It does not log in, invoke a model, inspect tokens, or attach to a running Codex conversation. Public GitHub probes send only unauthenticated GET requests; failure is reported honestly.
 
-The opt-in [Codex verification commands](docs/CODEX_VERIFICATION.md) add a pinned standalone CLI, separate developer login profile and one disposable read-only model probe. The JSONL client is tested with fake streams only; authenticated model execution remains unverified. These commands are never run by desktop launch or ordinary CI.
+The opt-in [Codex verification commands](docs/CODEX_VERIFICATION.md) add a pinned standalone CLI, separate developer login profile and one disposable read-only model probe. The JSONL client is tested with fake streams; a separate Windows CI job checks standalone installation and unauthenticated status. Authenticated model execution remains unverified. Desktop launch never runs these commands; CI never logs in or invokes a model.
 
 ## What this spike proves
 

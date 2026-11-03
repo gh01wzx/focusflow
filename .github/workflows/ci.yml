@@ -18,3 +18,14 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm test
+  codex-transport:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.12.0'
+      # Fresh runner profile: no login, tokens, existing App sessions or model call.
+      - run: npm run codex:install
+      - run: npm run codex:status

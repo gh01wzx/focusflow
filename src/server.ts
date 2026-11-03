@@ -69,7 +69,7 @@ export async function startServer({ dataDirectory, port = 0 }: ServerOptions): P
       return send(404, { error: 'Not found' });
     } catch {
       // Do not expose local paths or credentials in HTTP errors.
-      if (!response.headersSent) send(500, { error: '本地操作失败，请检查可用磁盘空间或重新启动。' });
+      if (!response.headersSent) send(500, { error: 'Local operation failed. Check available disk space or restart the app.' });
       else response.end();
     }
   });

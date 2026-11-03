@@ -45,7 +45,7 @@ export function openStore(path: string): Store {
       return body;
     },
     save(body: unknown) {
-      if (typeof body !== 'string' || body.length > 500) throw new TypeError('请输入不超过 500 字的验证文字。');
+      if (typeof body !== 'string' || body.length > 500) throw new TypeError('Enter test text with no more than 500 characters.');
       db.prepare('UPDATE probe_note SET body=? WHERE id=1').run(body);
     },
     async snapshot(directory: string) {

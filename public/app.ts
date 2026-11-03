@@ -22,7 +22,7 @@ async function request(path: string, value?: unknown): Promise<Record<string, un
   const payload: unknown = await response.json();
   if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) throw new Error('Invalid server response');
   const data = payload as Record<string, unknown>;
-  if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : '操作失败，请重新启动程序。');
+  if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : 'Operation failed. Restart the app and try again.');
   return data;
 }
 
@@ -37,18 +37,18 @@ form.addEventListener('submit', event => {
   event.preventDefault();
   void perform(async () => {
     await request('/api/probe', { note: note.value });
-    status.textContent = '已保存。现在可以关闭程序，再次打开检查文字是否保留。';
+    status.textContent = 'Saved locally. Close and reopen the app to check that your text is still here.';
   });
 });
 requireElement<HTMLButtonElement>('#backup').addEventListener('click', () => void perform(async () => {
   const result = await request('/api/backup', {});
   const name = readString(result, 'name');
-  status.textContent = `已备份最后一次保存的内容，并通过完整性检查：${name}`;
+  status.textContent = `Backup created from your last save and verified: ${name}`;
 }));
 void perform(async () => {
   const data = await request('/api/probe');
   note.value = readString(data, 'note');
-  status.textContent = '本地数据已读取。';
+  status.textContent = 'Local data loaded.';
 });
 
 export {};

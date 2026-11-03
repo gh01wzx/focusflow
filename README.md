@@ -61,6 +61,8 @@ Personal data, credentials, local configuration, logs and release output are ign
 
 ## Product direction
 
+The application, source comments, project documentation and GitHub development records use English. User-entered data keeps its original language. `npm run check:language` checks maintained source and documentation for accidental Han-script text; it does not inspect databases, credentials, dependencies or build output. Unicode persistence coverage uses escaped test fixtures.
+
 Personal: Today, recurring tasks, dated temporary tasks and history. Projects: Project → Milestone → Ticket, action center, manual workflows, reviewed AI planning, individually started Codex runs, evidence-based AI review, and completion only after confirmed merge. Formal releases will be separately built and updated while preserving data.
 
 See [requirements baseline](docs/PRODUCT_BASELINE.md) and [proposed Tickets](docs/NEXT_TICKETS.md). Product screenshots and the full installation/update guide will accompany the first functional release; the current test page is not the product UI.

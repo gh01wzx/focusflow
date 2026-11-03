@@ -30,9 +30,9 @@ async function readNote(origin: string): Promise<string> {
 test('HTTP save, server restart, read and backup use the real SQLite store', async t => {
   const f = await fixture(t);
   assert.equal((await fetch(f.app.origin)).status, 200);
-  assert.equal((await post(f.app.origin, '/api/probe', { note: '服务器重启验证' })).status, 200);
+  assert.equal((await post(f.app.origin, '/api/probe', { note: '\u670d\u52a1\u5668\u91cd\u542f\u9a8c\u8bc1' })).status, 200);
   await f.restart();
-  assert.equal(await readNote(f.app.origin), '服务器重启验证');
+  assert.equal(await readNote(f.app.origin), '\u670d\u52a1\u5668\u91cd\u542f\u9a8c\u8bc1');
   assert.equal((await post(f.app.origin, '/api/backup', {})).status, 201);
 });
 

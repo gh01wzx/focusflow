@@ -16,7 +16,7 @@ async function fixture(t: TestContext) {
 test('saved Unicode and SQL-like text survives database close and reopen', async t => {
   const { path } = await fixture(t);
   let store = openStore(path);
-  const value = "重启后仍在 😊 '); DROP TABLE probe_note; --";
+  const value = "\u91cd\u542f\u540e\u4ecd\u5728 \u{1f60a} '); DROP TABLE probe_note; --";
   store.save(value);
   store.close();
   store = openStore(path);

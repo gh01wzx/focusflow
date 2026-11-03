@@ -1,48 +1,47 @@
-# Phase 0 技术验证报告
+# Phase 0 technical validation report
 
-日期：2026-11-03（奥克兰）。状态：**本地验证骨架完成；Phase 0 仍有集成阻断项，未进入 Phase 1。**
+Date: 2026-11-03 (Pacific/Auckland). Status: **The local feasibility skeleton is complete. Integration and packaging checks remain; Phase 1 product features have not started.**
 
-## 已实测
+## Verified observations
 
-| 项目 | 证据 | 能说明什么 / 不能说明什么 |
+| Area | Evidence | Scope of the result |
 | --- | --- | --- |
-| Windows 工具环境 | Node 24.12.0、npm 11.6.2、Git 2.53.0.windows.2；SQLite 3.50.4 内存查询成功 | 能运行当前零依赖实验；不证明 Electron 打包可用 |
-| SQLite 持久化 | `npm test`：关闭/重新打开后中文、emoji、SQL 样式文字仍准确保留 | 证明实验数据持久化；不证明任务业务已实现 |
-| 本地 HTTP 骨架 | 实际随机端口启动→保存→停止服务器→重启→读回→备份的集成测试通过 | 证明最小启动与存储链路；不是完整桌面 App |
-| 备份与恢复 | 运行中的 SQLite backup→完整性检查→独立数据库恢复；备份后的修改不改变快照 | 证明包含已提交 WAL 内容的恢复实验；不代表正式软件更新/自动回滚已实现 |
-| 旧版本保护 | schema 999 的测试数据库被 schema 1 程序拒绝，前后文件字节相同 | 证明拒绝不兼容数据库；并未实测未来真实业务迁移 |
-| 本地 HTTP 边界 | 跨源写入、错误 Host、超大请求被拒绝 | 仅限此小型实验；正式 Codex/凭据接口需独立验证 |
-| Codex 独立进程握手 | 本机发现的 `codex-cli 0.166.0-alpha.5.1`；临时隔离目录 stdio `initialize`/`initialized` 验证成功 | 证明可单独启动协议进程；没有读取账户、调用模型、控制现有会话或跑开发任务 |
+| Windows environment | Node 24.12.0, npm 11.6.2, Git 2.53.0.windows.2; SQLite 3.50.4 in-memory query succeeded | Supports the experiment; does not establish Electron packaging compatibility |
+| SQLite persistence | Database close/reopen preserves Unicode, emoji and SQL-like input | Demonstrates storage behavior, not task-management features |
+| Local HTTP service | Real random-port startup, save, server restart, read and backup integration test | Demonstrates the minimal local execution/storage path |
+| Backup and recovery | Online SQLite backup, integrity check and restoration into an independent database; later writes do not change the snapshot | Includes committed WAL data; not a software updater or automatic binary rollback |
+| Older-version protection | A schema-1 binary refuses a schema-999 test database; file bytes stay identical | Refuses an incompatible database; future business migrations remain untested |
+| Local HTTP boundaries | Cross-origin writes, incorrect Host and oversized requests are rejected | Limited to the spike; future execution/credential interfaces need separate validation |
+| Independent Codex process | A discovered `codex-cli 0.166.0-alpha.5.1` completes stdio `initialize`/`initialized` in an isolated temporary home | No account access, model turn, existing-session control or coding task was performed |
+| Public repository bootstrap | The owner created `gh01wzx/focusflow`; the connected development GitHub app wrote Issue/branch/commit/PR records | Demonstrates the assistant's integration, not the future Tracker app's authorization |
+| TypeScript migration | All six local source-runtime tests pass; PR #4 CI passed strict type checking, Node/browser builds and compiled tests on Windows and Ubuntu | Runtime type stripping alone is not type checking; hosted compiler evidence is recorded separately |
 
-自动化结果：**6 项通过，0 项失败**，含真实数据库和本地 HTTP 集成检查。CI 文件已写好，尚未在 GitHub 上执行。首次测试发现 Node fetch 不保留自定义 Host 的测试写法问题，已改为真实 `http.request`，之后全部通过；没有把原失败隐藏为成功。
+The six storage/HTTP tests passed locally. The initial Host-header test used Node fetch, which did not preserve the custom test header; switching the test transport to `http.request` produced the intended boundary check. This original failure was corrected before reporting a passing result.
 
-页面已在浏览器中实际加载，确认中文内容、输入框、保存/备份按钮和验证边界正常显示，初始状态为“本地数据已读取”。保存/重启/备份行为的证据来自自动化 HTTP/SQLite 检查，未把页面显示当成业务验证。
+The original test page was loaded in a browser and its initial data-loaded state inspected. Behavioral evidence comes from HTTP/SQLite tests, not from the screenshot alone. English interface copy is a subsequent change; a new visual browser check has not been claimed.
 
-`Start-FocusFlow.cmd` 是双击启动入口，脚本配置为打开浏览器并保留控制台；这次实测通过 Node 直接启动服务器，未声称已通过资源管理器双击验收。此实验依赖现有 Node；正式版计划随桌面安装包分发运行时。实验数据在项目下 `.phase0/data/`，不用于真实个人任务。
+`Start-FocusFlow.cmd` opens the experiment through `npm start`, which builds the TypeScript source first. It requires Node and a one-time `npm ci` developer setup. Initial runtime testing started Node directly; Explorer double-click acceptance has not been claimed. The proposed installed desktop product will bundle its runtime. Spike-only data remains in `.phase0/data/`.
 
-## 官方文档支持，但尚未端到端实测
+## Documented capabilities that still need integration tests
 
-- Codex app-server 提供任务对话、进度、审批和认证接口；本机只验证无模型握手。正式版本固定、账户登录、权限限制、真实模型额度/费用与失败恢复需要授权后验证。不能从桌面 App 已登录推断自建客户端必然可用。
-- GitHub REST 提供 Issue、分支和 PR 接口；主数据、冲突、幂等写入与合并事实规则已在 ADR 提议。
-- Electron/NSIS/electron-updater 有正式更新工具链；签名、安装/更新、数据库迁移与失败回退尚未验证。不能把“有成熟库”写成“一键更新已完成”。
+- Official Codex app-server documentation describes thread/turn lifecycle, streamed progress, approvals and authentication. Only an isolated handshake was verified locally. A supported CLI version, login, sandbox/approval behavior, model quota/cost and interrupted-run recovery remain unverified. Desktop-app login does not establish that a custom client can execute tasks.
+- GitHub REST supports Issues, branches and PRs. The assistant exercised this through its connected development app. Tracker's own authentication, durable publication outbox, conflict handling, retry reconciliation and merge synchronization are still product work.
+- Electron, NSIS and electron-updater provide candidate release tooling. Package signing, installation, version A-to-B updating, database migrations and failure recovery have not been tested. Availability of a library is not evidence that updating works.
 
-## 当前进度补充
+## Resolved initial blockers and continuing limitations
 
-用户已认可桌面应用方向并建立公开仓库 `gh01wzx/focusflow`。开发助手的 GitHub 连接已验证为对应账号，仓库可读并报告写入权限；本次导入通过真实 Issue/PR 审核。此连接不等于未来 Tracker 程序已接通 GitHub。此前公共 API 的本机网络限制依然存在；本地 Git 索引写入也受当前执行环境权限限制，未修改这些权限。
+The repository destination and public authorization were initially missing. The owner later approved the desktop direction, created the repository, connected GitHub, and approved merges of PR #2 (bootstrap) and PR #4 (TypeScript). Those initial setup blockers are resolved.
 
-以下保留首次验证的限制记录；仓库未建立、开发助手未连接的状态已由上述后续操作解决。CI 的实际结果以 PR Checks 为准。
+The execution environment still restricts direct network access: unauthenticated public GitHub GET probes and npm registry access returned `EACCES`. This does not diagnose the user's account, the remote service or their ordinary terminal. Local Git staging was also denied at `.git/index.lock`. No permissions were changed; the connected GitHub API publishes audited source snapshots. CI installs the committed lockfile and performs compiler/build checks in its own normal build environment.
 
-## 首次验证的阻断项与仍待验证的集成
+Codex is not on PATH. The discovered internal executable is an alpha build and is not a production dependency commitment. Authenticated model calls, generated changes, tests/PR creation by the future Tracker runner and quota handling remain unverified.
 
-1. **GitHub：** 尚无仓库 owner/name 和公开创建授权；`gh` 不在 PATH。只读公共 API 探针访问 `octocat/Hello-World` 的 repository/issues/pulls 三个 GET 均返回网络 `EACCES`。这是当前执行环境网络访问限制，不足以判断账户、GitHub 服务或用户普通终端能否访问。未尝试绕过限制，未写入任何远端内容。
-2. **Codex：** 找到桌面 App 内部程序且握手成功，但它是 alpha 版本，不作为正式发布依赖承诺；`codex` 不在 PATH。账户连接、真实模型调用、测试执行/PR 和额度尚未验证。
-3. **Windows 发布：** Electron 未安装；没有安装包、代码签名或真实 A→B 更新实验。dotnet 主机存在但 `dotnet --list-sdks` 无输出；Rust/cargo 未在 PATH 找到。
-4. **产品开发门槛：** 架构、默认业务细节和后续 Ticket 仅为提案，尚待用户认可；没有创建仓库、Issues、分支或 PR。
+Electron is not installed in the tested environment. No installer, signing certificate or real update test exists. A dotnet host was found, but `dotnet --list-sdks` produced no SDKs; Rust/cargo were not found on PATH.
 
-## 建议与待决定
+## Approved direction and next gates
 
-建议正式版采用 Electron + TypeScript/React + SQLite，通过独立 Codex app-server 连接任务；更新采用维护中的 NSIS 工具链，并先做打包验证。此建议根据日常启动、已有 Windows 工具链和长期集成成本作出，尚非经过实测的最佳方案。比较与限制见 [ADR-001](ADR-001.md)。
+The approved desktop direction is Electron + TypeScript/React + SQLite with a separate Codex app-server adapter. NSIS-based release tooling is a candidate pending its feasibility experiment. This is an engineering recommendation based on daily launch and integration costs, not a measured claim of optimal performance. See [ADR-001](ADR-001.md).
 
-建议保留临时任务原计划日期并允许查看历史；采用本地时区日历周期，跨日/DST/离线补记规则写入测试。未单独确认的默认项见 [产品基线](PRODUCT_BASELINE.md)。
+Proposed task defaults retain original dates for pending temporary tasks and use local-calendar recurrence. Day boundaries, offline periods, timezone changes and DST require explicit behavior and tests. Unconfirmed defaults are listed in the [product baseline](PRODUCT_BASELINE.md).
 
-下一步需要：确认 GitHub 账号/组织、仓库名及公开创建授权；认可或调整 ADR 与 [后续 Ticket 草案](NEXT_TICKETS.md)；随后在明确授权的环境验证登录、真实 Codex 调用、GitHub 写入和打包更新。**尚未满足完整 MVP 或完整 Phase 0 验收。**
+Next gates are supported Codex/runtime authentication and execution checks, Windows packaging/update feasibility, and individually reviewed Tickets from the [working roadmap](NEXT_TICKETS.md). **Neither the full MVP nor all Phase 0 acceptance criteria are complete.**

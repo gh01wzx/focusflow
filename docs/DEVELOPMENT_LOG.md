@@ -27,3 +27,9 @@ Next gate: review/merge of the bootstrap PR, followed by supported Codex/runtime
 - The owner requested TypeScript rather than JavaScript, and English-only PR descriptions. Both preferences are now recorded in the development rules.
 - Issue #3 tracks migration of the application, browser, probes and tests, with strict checks and compiler output isolated in ignored `dist/`. The data location and schema remain version 1.
 - Local npm registry access is blocked by the execution environment. Source-runtime tests can be run locally with Node 24; dependency installation, strict compilation and built tests are verified separately through GitHub CI. Runtime type stripping alone is not a compiler check.
+
+## 2026-11-03 — TypeScript merge and English application text
+
+- The owner approved PR #4, which merged as `ae1bc83d29bc926c20e3da2297d81fdc2bb51243`. TypeScript is now the application source language.
+- The owner requested English for all software and repository material; only the conversation remains Chinese.
+- Issue #5 tracks translation of UI/messages/documentation and a focused language check. Unicode persistence fixtures use escapes while retaining their runtime values. Existing user data is not translated or rewritten.

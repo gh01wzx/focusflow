@@ -59,6 +59,8 @@ Browser-spike data is stored in `.phase0/data/` relative to the project director
 
 SQLite snapshots use its backup API, including committed WAL data. They are not a complete update rollback mechanism. Stop all app instances before manual recovery; preserve the original database and its WAL/SHM files together, then restore a verified snapshot into a separate empty directory and launch with that directory. Do not overwrite a live database. The automated recovery experiment uses disposable databases only.
 
+Version 0.0.2 introduces schema 2 format metadata and transactional migrations. Existing data is snapshotted and verified before migration; failure rolls back the transaction. Recovery verifies the matching manifest and creates a new database without overwriting the original. The [manual upgrade/recovery guide](docs/UPGRADE_RECOVERY_EXPERIMENT.md) separates the two-installer test from automatic updates and production recovery, which remain unimplemented.
+
 Personal data, credentials, local configuration, logs and release output are ignored by default. No token belongs in a Ticket, commit, screenshot or archive. The repository is public; the user's data remains local. The included CI workflow runs tests on Windows and Linux; the PR's Checks panel reports hosted results separately from the local results in the Phase 0 report.
 
 ## Product direction

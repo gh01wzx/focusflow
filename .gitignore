@@ -6,6 +6,7 @@ dist/
 release/
 *.db
 *.db-*
+*.db.json
 *.sqlite
 *.sqlite-*
 .env

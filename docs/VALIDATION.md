@@ -1,6 +1,6 @@
 # Validation and limits
 
-Review evidence belongs to a commit, not a branch name. Check PR #20's current head and Checks tab; a new commit invalidates earlier approval.
+Review evidence belongs to a commit, not a branch name. Check the current PR head and Checks tab; a new commit invalidates earlier approval.
 
 ## Current verification
 
@@ -9,10 +9,12 @@ Review evidence belongs to a commit, not a branch name. Check PR #20's current h
 - Migration rollback, backup failure, WAL snapshot consistency, checksum/target protection and product identity/newer-schema refusal.
 - Windows installed UI: add/complete/cancel, overdue/future/history, text escaping, second instance, graceful exit and restart.
 - Synthetic prior product schema migration and separate snapshot recovery.
+- Daily/weekly rollover, closed-app catch-up, completion/cancellation, stop, restart, clock rollback, Auckland DST and failed reconciliation rollback.
+- Schema 2 migration retains task identities/states; its backup can be restored separately.
 
 The retired note-app tests were removed or transferred to product fixtures. A smaller test count does not imply the removed note UI is still maintained. Exact current results/counts are recorded in the PR.
 
-Cleanup checks passed local language/type checks and 38 compiled tests. Renderer bundling in this restricted host is blocked by an ancestor-directory read denial; use exact-head hosted checks for full build evidence. This does not diagnose an ordinary Windows launch. CI screenshots are in windows-today; artifact presence alone is not a pass.
+The merged cleanup passed 38 compiled tests. Current recurrence results belong to Issue #21's PR. Renderer bundling in this restricted host is blocked by an ancestor-directory read denial; use exact-head hosted checks for full build evidence. This does not diagnose an ordinary Windows launch. CI screenshots are in windows-today; artifact presence alone is not a pass. Installed recurrence rollover uses prior-period fixtures and the real app clock; disposable store tests separately advance injected clocks across midnight/DST.
 
 ## Retained evidence
 

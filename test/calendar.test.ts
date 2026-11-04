@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { localDay, validDate } from '../src/tasks/model.ts';
+import { localDay, nextOccurrence, validDate } from '../src/tasks/model.ts';
 
 test('local calendar day follows Auckland midnight and DST rather than UTC date slicing', () => {
   const previous = process.env.TZ;
@@ -14,4 +14,13 @@ test('local calendar day follows Auckland midnight and DST rather than UTC date 
   } finally {
     if (previous === undefined) delete process.env.TZ; else process.env.TZ = previous;
   }
+});
+
+test('calendar recurrence handles leap days, year boundaries and the final supported date', () => {
+  assert.equal(nextOccurrence('2028-02-28', 'daily'), '2028-02-29');
+  assert.equal(nextOccurrence('2028-02-29', 'daily'), '2028-03-01');
+  assert.equal(nextOccurrence('2026-12-28', 'weekly'), '2027-01-04');
+  assert.equal(nextOccurrence('0099-12-31', 'daily'), '0100-01-01');
+  assert.equal(nextOccurrence('9999-12-31', 'daily'), null);
+  assert.equal(nextOccurrence('9999-12-28', 'weekly'), null);
 });

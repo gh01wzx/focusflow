@@ -76,7 +76,8 @@ try {
   if (recovery) {
     await mkdir(data, { recursive: true });
     const db = new DatabaseSync(join(data, 'tracker.db'));
-    db.exec(TASK_MIGRATIONS[0].sql); db.exec('PRAGMA user_version=1');
+    for (const migration of TASK_MIGRATIONS.slice(0, 2)) db.exec(migration.sql);
+    db.exec('PRAGMA user_version=2');
     db.prepare("INSERT INTO tasks VALUES('prior-product-task','Retained through product migration',?,'pending',?,NULL)")
       .run(localDay(new Date()), new Date().toISOString());
     db.close();
@@ -98,7 +99,7 @@ try {
     await restoreSnapshot(join(data, 'backups', snapshots[0]!), restored);
     const reader = new DatabaseSync(restored, { readOnly: true });
     try {
-      assert.equal(reader.prepare('PRAGMA user_version').get()?.user_version, 1);
+      assert.equal(reader.prepare('PRAGMA user_version').get()?.user_version, 2);
       assert.equal(reader.prepare('SELECT title FROM tasks').get()?.title, 'Retained through product migration');
     } finally { reader.close(); }
     assert.deepEqual(await readFile(source), before);
@@ -109,8 +110,9 @@ try {
     await page.getByRole('heading', { name: "You're clear for today" }).waitFor();
     const today = await page.getByLabel('Planned date').inputValue();
     const shift = (days: number) => { const date = new Date(today + 'T12:00:00'); date.setDate(date.getDate() + days); return localDay(date); };
-    async function add(title: string, date = today) {
+    async function add(title: string, date = today, frequency = 'none') {
       await page.getByLabel('Task title').fill(title);
+      await page.getByLabel('Repeat', { exact: true }).selectOption(frequency);
       await page.getByLabel('Planned date').fill(date);
       await page.getByRole('button', { name: 'Add task' }).click();
       await page.getByRole('status').filter({ hasText: 'Task added.' }).waitFor();
@@ -136,19 +138,63 @@ try {
     await page.getByRole('button', { name: /History/ }).click();
     await page.getByText('Finish a small task', { exact: true }).waitFor();
     await page.getByText('An optional task', { exact: true }).waitFor();
+    mark('repeating-task-controls');
+    await add('Daily check-in', today, 'daily');
+    await page.getByRole('checkbox', { name: 'Complete Daily check-in', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Task completed.' }).waitFor();
+    await add('Weekly review', today, 'weekly');
+    await page.getByRole('button', { name: 'Cancel Weekly review', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Task cancelled.' }).waitFor();
+    await add('Daily unfinished', today, 'daily');
+    await add('Future repeat', shift(1), 'weekly');
+    await page.locator('.recurrences summary').click();
+    await page.getByRole('button', { name: 'Stop repeating Future repeat', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Repeating stopped.' }).waitFor();
+    let repeatView = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
+    assert.equal(repeatView.recurrences.length, 3);
+    assert.equal(repeatView.history.find(task => task.title === 'Future repeat')?.status, 'cancelled');
     mark('second-instance');
     await promisify(execFile)(executable, [], { env: environment, timeout: 20_000, windowsHide: true });
     mark('close-and-relaunch'); await closeApp(); page = await launch();
     await page.getByText('Review the first Today workflow', { exact: true }).waitFor();
-    const view = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
-    assert.equal(view.due.length, 3); assert.equal(view.upcoming.length, 1); assert.equal(view.history.length, 2);
+    repeatView = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
+    assert.equal(repeatView.due.length, 4); assert.equal(repeatView.upcoming.length, 1); assert.equal(repeatView.history.length, 5);
+    // Seed the disposable profile as if its last run was in the previous period.
+    // The installed app then reconciles using its real clock, with no product clock override.
+    mark('seed-previous-periods'); await closeApp();
+    const writer = new DatabaseSync(join(data, 'tracker.db'));
+    try {
+      writer.exec('BEGIN IMMEDIATE');
+      for (const rule of repeatView.recurrences) {
+        const previous = shift(rule.frequency === 'daily' ? -1 : -7);
+        writer.prepare('UPDATE tasks SET planned_date=? WHERE recurrence_id=?').run(previous, rule.id);
+        writer.prepare('UPDATE recurrence_rules SET start_date=?,next_date=? WHERE id=?').run(previous, today, rule.id);
+      }
+      writer.exec('COMMIT');
+    } finally { writer.close(); }
+    mark('installed-period-rollover'); page = await launch();
+    await page.getByRole('checkbox', { name: 'Complete Daily check-in', exact: true }).waitFor();
+    await page.getByRole('checkbox', { name: 'Complete Weekly review', exact: true }).waitFor();
+    await page.getByRole('checkbox', { name: 'Complete Daily unfinished', exact: true }).waitFor();
+    const rolled = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
+    assert.equal(rolled.due.length, 6); assert.equal(rolled.upcoming.length, 1); assert.equal(rolled.history.length, 6);
+    assert.ok(rolled.due.filter(task => task.recurrenceId).every(task => task.plannedDate === today));
+    assert.equal(rolled.history.find(task => task.title === 'Daily unfinished')?.status, 'missed');
+    assert.equal(rolled.history.find(task => task.title === 'Daily check-in')?.status, 'completed');
+    assert.equal(rolled.history.find(task => task.title === 'Weekly review')?.status, 'cancelled');
+    await page.getByRole('button', { name: /History/ }).click();
+    await page.getByText('Missed', { exact: true }).waitFor();
+    await page.screenshot({ path: join(artifacts, 'recurrence-history.png'), fullPage: true });
+    mark('repeat-rollover-restart'); await closeApp(); page = await launch();
+    const reopened = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
+    assert.deepEqual(reopened, rolled);
   }
   mark('final-close'); await closeApp();
   assert.deepEqual(await readFile(join(root, 'phase0.db')), sentinelBytes);
   assert.ok(!resolve(profile).startsWith(dirname(executable)), 'Product data is outside installation output.');
   await writeFile(join(artifacts, 'report.json'), JSON.stringify({ status: 'verified',
-    scope: recovery ? 'Synthetic prior product schema migration and separate snapshot recovery; no historic product release is claimed.'
-      : 'Installed Today add/complete/cancel, date filtering, Unicode/XSS display, second instance and restart persistence.',
+    scope: recovery ? 'Schema 2 task data migration and separate snapshot recovery.'
+      : 'Installed Today, daily/weekly controls, stop, prior-period fixture rollover, restart, text escaping and second instance.',
     productDataSeparate: true, spikeUnchanged: true, rendererNodeAccess: false }, null, 2));
   console.log('TODAY_SMOKE_VERIFIED');
 } catch (error) {

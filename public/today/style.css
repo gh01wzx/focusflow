@@ -15,20 +15,23 @@ body {
   margin: 0;
 }
 button,
-input {
+input,
+select {
   font: inherit;
 }
 button {
   cursor: pointer;
 }
 button:disabled,
-input:disabled {
+input:disabled,
+select:disabled {
   opacity: .55;
   cursor: default;
 }
 button:focus-visible,
 a:focus-visible,
-input:focus-visible {
+input:focus-visible,
+select:focus-visible {
   outline: 3px solid #92b79b;
   outline-offset: 3px;
 }
@@ -286,13 +289,33 @@ h1 {
   color: #929d87;
   margin-bottom: 5px;
 }
-.date-field input {
+.date-field input,
+.date-field select {
   color: #6b7c5e;
   background: transparent;
   border: 0;
   font-size: 11px;
   width: 117px;
   min-height: 20px;
+}
+.date-field select {
+  width: 128px;
+}
+.repeat-help,
+.recurrences p {
+  font-size: 11px;
+  color: #718568;
+  line-height: 1.6;
+}
+.recurrences {
+  border-top: 1px solid #e5e9df;
+  padding-top: 18px;
+  margin-bottom: 24px;
+}
+.recurrences summary {
+  cursor: pointer;
+  color: #506447;
+  font-size: 12px;
 }
 .primary {
   flex-shrink: 0;
@@ -461,7 +484,8 @@ h2 span {
   width: 16px;
   height: 16px;
 }
-.resolved-mark.cancelled {
+.resolved-mark.cancelled,
+.resolved-mark.missed {
   background: #eee;
   color: #9ba291;
 }
@@ -472,7 +496,8 @@ h2 span {
   color: #738b61;
   font-size: 9px;
 }
-.state.cancelled {
+.state.cancelled,
+.state.missed {
   color: #8e9687;
   background: #edf0e9;
 }
@@ -551,6 +576,11 @@ footer {
   }
   .composer {
     gap: 8px;
+    flex-wrap: wrap;
+  }
+  .composer > input {
+    flex: 1;
+    min-width: 170px;
   }
   .primary {
     padding: 12px;

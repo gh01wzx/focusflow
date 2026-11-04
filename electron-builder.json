@@ -1,12 +1,12 @@
 {
-  "appId": "dev.focusflow.phase0",
-  "productName": "FocusFlow Phase 0",
+  "appId": "dev.focusflow.desktop",
+  "productName": "FocusFlow",
   "directories": { "output": "release" },
   "files": ["dist/src/**/*", "dist/public/**/*", "package.json"],
-  "artifactName": "FocusFlow-Phase0-${version}-${arch}.${ext}",
+  "artifactName": "FocusFlow-${version}-${arch}.${ext}",
   "win": {
     "target": [{ "target": "nsis", "arch": ["x64"] }],
-    "executableName": "FocusFlow-Phase0"
+    "executableName": "FocusFlow"
   },
   "nsis": {
     "oneClick": true,

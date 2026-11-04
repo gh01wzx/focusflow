@@ -5,4 +5,6 @@ const destination = resolve('dist', 'public');
 await mkdir(destination, { recursive: true });
 for (const name of ['index.html', 'style.css']) {
   await copyFile(resolve('public', name), resolve(destination, name));
+  await mkdir(resolve(destination, 'today'), { recursive: true });
+  await copyFile(resolve('public', 'today', name), resolve(destination, 'today', name));
 }

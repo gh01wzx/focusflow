@@ -6,5 +6,5 @@
     "rootDir": ".",
     "outDir": "dist"
   },
-  "include": ["src/desktop/**/*.ts", "scripts/smoke-desktop.ts", "scripts/smoke-upgrade.ts"]
+  "include": ["src/desktop/**/*.ts", "scripts/smoke-desktop.ts", "scripts/smoke-upgrade.ts", "scripts/smoke-today.ts"]
 }

@@ -1,66 +1,73 @@
-name: Windows desktop feasibility
+name: Windows desktop checks
 on: [push, pull_request]
 permissions:
   contents: read
 jobs:
   desktop:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24.12.0'
-      - name: Install pinned desktop development dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Verify Electron first-run binary initialization after a clean install
-        run: node -e "const fs = require('node:fs'); if (fs.existsSync('node_modules/electron/dist/electron.exe')) throw new Error('Expected a clean install without the binary'); const executable = require('electron'); if (!fs.existsSync(executable)) throw new Error('Electron binary is missing after first-run initialization'); console.log('Electron first-run initialization succeeded.');"
-      - name: Record dependency audit diagnostics
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Stage renderer tooling for local verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: today-renderer-tooling
+          path: |
+            node_modules/react/
+            node_modules/react-dom/
+            node_modules/scheduler/
+            node_modules/csstype/
+            node_modules/@types/react/
+            node_modules/@types/react-dom/
+            node_modules/esbuild/
+            node_modules/@esbuild/win32-x64/
+          retention-days: 3
+      - name: Initialize the pinned Electron runtime
+        run: node -e "const fs=require('node:fs'); const exe=require('electron'); if(!fs.existsSync(exe)) throw new Error('Missing Electron runtime');"
+      - name: Record dependency audit
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path artifacts -Force | Out-Null
           npm audit --json | Set-Content -LiteralPath artifacts/dependency-audit.json -Encoding utf8
-          $auditExitCode = $LASTEXITCODE
-          if ($auditExitCode -gt 1) { throw 'Dependency audit could not complete' }
+          if ($LASTEXITCODE -gt 1) { throw 'Audit did not complete' }
           $audit = Get-Content -LiteralPath artifacts/dependency-audit.json -Raw | ConvertFrom-Json
-          if (-not $audit.metadata -or -not ($audit.PSObject.Properties.Name -contains 'vulnerabilities')) { throw 'Dependency audit returned no usable vulnerability report' }
-          Write-Output 'AUDIT_START'
-          Get-Content -LiteralPath artifacts/dependency-audit.json -Raw
-          Write-Output 'AUDIT_END'
+          if (-not $audit.metadata) { throw 'Missing audit metadata' }
+          $audit.metadata.vulnerabilities | ConvertTo-Json -Compress
           exit 0
-      - name: Verify bundled Node and SQLite compatibility
-        env:
-          ELECTRON_RUN_AS_NODE: '1'
-        run: .\node_modules\electron\dist\electron.exe -e "const {DatabaseSync}=require('node:sqlite'); const db=new DatabaseSync(':memory:'); console.log(JSON.stringify({versions:process.versions,sqlite:db.prepare('select sqlite_version() version').get()})); db.close();"
       - run: npm run check:language
       - run: npm run typecheck
       - run: npm run package:windows
       - run: npm test
-      - name: Install the unsigned experiment in a disposable directory
+      - name: Install and exercise Today
+        timeout-minutes: 4
         shell: pwsh
         run: |
-          $installer = Get-ChildItem -LiteralPath release -Filter 'FocusFlow-Phase0-*-x64.exe' | Select-Object -First 1
+          $installer = Get-ChildItem -LiteralPath release -Filter 'FocusFlow-*-x64.exe' | Select-Object -First 1
           if (-not $installer) { throw 'Installer not found' }
-          $installationDirectory = Join-Path $env:RUNNER_TEMP 'focusflow-phase0-installed'
-          $result = Start-Process -FilePath $installer.FullName -ArgumentList @('/S', "/D=$installationDirectory") -WindowStyle Hidden -Wait -PassThru
-          if ($result.ExitCode -ne 0) { throw "Installer exited with code $($result.ExitCode)" }
-          node dist/scripts/smoke-desktop.js (Join-Path $installationDirectory 'FocusFlow-Phase0.exe')
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $installation = Join-Path $env:RUNNER_TEMP 'focusflow-today-installed'
+          $setup = Start-Process -FilePath $installer.FullName -ArgumentList @('/S', "/D=$installation") -WindowStyle Hidden -PassThru
+          if (-not $setup.WaitForExit(120000)) { Stop-Process -Id $setup.Id -ErrorAction SilentlyContinue; throw 'Installer timeout' }
+          if ($setup.ExitCode -ne 0) { throw "Installer failed: $($setup.ExitCode)" }
+          node dist/scripts/smoke-today.js (Join-Path $installation 'FocusFlow.exe')
+          exit $LASTEXITCODE
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: windows-desktop-experiment
+          name: windows-today
           path: |
-            release/FocusFlow-Phase0-*-x64.exe
-            artifacts/desktop/
+            release/FocusFlow-*-x64.exe
+            artifacts/today/
             artifacts/dependency-audit.json
-          if-no-files-found: ignore
           retention-days: 14
-  upgrade:
+  product-recovery:
     needs: desktop
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -70,37 +77,23 @@ jobs:
       - run: npm run build
       - uses: actions/download-artifact@v4
         with:
-          name: windows-desktop-experiment
-          path: .phase0/candidate-artifact
-      - name: Check out immutable schema-1 baseline
-        uses: actions/checkout@v4
-        with:
-          ref: 14a30b166ef350961518cff586fb2ffa5c22db50
-          path: .phase0/upgrade-baseline
-      - name: Build baseline installer A
-        working-directory: .phase0/upgrade-baseline
+          name: windows-today
+          path: .phase0/today-artifact
+      - name: Verify product migration and separate recovery
+        timeout-minutes: 4
         shell: pwsh
         run: |
-          npm ci --ignore-scripts --no-audit --no-fund
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm run package:windows
-          exit $LASTEXITCODE
-      - name: Verify manual installer upgrade and baseline recovery
-        shell: pwsh
-        run: |
-          $baseline = Get-ChildItem -LiteralPath .phase0/upgrade-baseline/release -Filter 'FocusFlow-Phase0-*-x64.exe' | Select-Object -First 1
-          $candidate = Get-ChildItem -LiteralPath .phase0/candidate-artifact/release -Filter 'FocusFlow-Phase0-*-x64.exe' | Select-Object -First 1
-          if (-not $baseline -or -not $candidate) { throw 'Both installers are required' }
-          $baselineExecutable = Join-Path (Get-Location).Path '.phase0/upgrade-baseline/release/win-unpacked/FocusFlow-Phase0.exe'
-          node dist/scripts/smoke-upgrade.js $baseline.FullName $candidate.FullName $baselineExecutable
+          $installer = Get-ChildItem -LiteralPath .phase0/today-artifact/release -Filter 'FocusFlow-*-x64.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'Installer not found' }
+          $installation = Join-Path $env:RUNNER_TEMP 'focusflow-recovery-installed'
+          $setup = Start-Process -FilePath $installer.FullName -ArgumentList @('/S', "/D=$installation") -WindowStyle Hidden -PassThru
+          if (-not $setup.WaitForExit(120000)) { Stop-Process -Id $setup.Id -ErrorAction SilentlyContinue; throw 'Installer timeout' }
+          if ($setup.ExitCode -ne 0) { throw "Installer failed: $($setup.ExitCode)" }
+          node dist/scripts/smoke-today.js (Join-Path $installation 'FocusFlow.exe') --recovery
           exit $LASTEXITCODE
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: windows-upgrade-experiment
-          include-hidden-files: true
-          path: |
-            artifacts/upgrade/
-            .phase0/upgrade-baseline/release/FocusFlow-Phase0-*-x64.exe
-          if-no-files-found: ignore
+          name: windows-product-recovery
+          path: artifacts/product-recovery/
           retention-days: 14

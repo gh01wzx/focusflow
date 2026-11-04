@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { migrateDatabase, NewerDatabaseError } from '../database/migrate.ts';
 import { createSnapshot, schemaVersion } from '../database/backup.ts';
 import { localDay, taskInput, TaskInputError } from './model.ts';
-import type { Task, TaskStatus, TaskView } from './model.ts';
+import type { Task, TaskView } from './model.ts';
 
 export const TASK_APPLICATION_ID = 0x46464c57;
 export const TASK_SCHEMA_VERSION = 2;
@@ -65,7 +65,7 @@ export async function openTaskStore(path: string, clock: () => Date = () => new 
       const task = readTask(id);
       if (!task) return undefined;
       if (task.status !== 'pending' && task.status !== status) throw new TaskInputError('This task is already resolved.');
-      db.prepare("UPDATE tasks SET status=?, resolved_at=? WHERE id=? AND status='pending'").run(status satisfies TaskStatus, clock().toISOString(), id);
+      db.prepare("UPDATE tasks SET status=?, resolved_at=? WHERE id=? AND status='pending'").run(status, clock().toISOString(), id);
       return readTask(id);
     },
     snapshot: () => createSnapshot(db, join(dirname(path), 'backups')),

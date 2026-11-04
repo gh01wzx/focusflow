@@ -3,7 +3,11 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { openTaskStore } from './store.ts';
 import { TaskInputError } from './model.ts';
-import type { LocalServer } from '../server.ts';
+
+export interface LocalServer {
+  origin: string;
+  close(): Promise<void>;
+}
 
 const assets = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],

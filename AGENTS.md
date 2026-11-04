@@ -1,15 +1,14 @@
 # FocusFlow development rules
 
-- The user-approved product brief is the baseline. `docs/PRODUCT_BASELINE.md` records its constraints; do not silently expand scope.
-- The owner approved the desktop direction on 2026-11-03 and explicitly authorized merge of closeout PR #18 and continuation on 2026-11-04. Its merge is observed at `2a538a76d3a533dac3d6e33fb70765f0d5d20b11`; the bounded Phase 1 handoff in `docs/PHASE0_REPORT.md` is now approved. The current individually started Ticket is Issue #19 (first Today slice).
-- After that owner-approved closeout merge, local Personal/manual Projects may proceed through individually authorized Tickets. Product GitHub authorization, AI coding permissions/approvals/recovery, and formal signing/updating remain blocking gates on Phases 2, 3 and 4 respectively. Never describe them as verified by a local-task feature. Follow the first Today slice and data-isolation acceptance in the closeout report.
-- On 2026-11-03 the owner explicitly authorized the public repository `gh01wzx/focusflow` and continued desktop development. GitHub login and public repository access are verified. Do not ask for the same repository authorization again. Other account scopes and remote operations must stay within the approved product workflow; no automatic merge or deployment.
-- Never commit user databases, tokens, credentials, personal configuration or execution logs. Keep release/user data outside source in the installed product.
-- Use small Tickets and small PRs after repository setup. Never auto-start a second programming Ticket or auto-merge.
-- Use TypeScript for application, browser, integration and test source. Enable strict compiler checks; generated JavaScript belongs only in ignored build output.
-- Use English for source identifiers, comments, application text, error messages, documentation, Issues, commits and PRs. Only the conversation with the owner is Chinese. Preserve user-entered content in its original language; represent non-English test fixtures with Unicode escapes.
-- A coding Ticket becomes Done only on observed GitHub merge, not Issue closure, model completion or a local status edit.
-- Distinguish observed test evidence, code observations, model inference and unverified claims. Bind review evidence to a commit SHA and invalidate approval when that SHA changes.
-- Run `npm run check:language`, `npm run typecheck`, `npm run build` and `npm test` for code changes. `npm run test:source` can additionally exercise TypeScript source on Node 24, but runtime type stripping is not type checking. Use disposable temporary directories for tests. No live model or authenticated GitHub write is part of the ordinary test suite.
-- Do not implement a custom installer/updater before validating maintained desktop tooling and its signing requirements.
-- The Phase 0 browser UI and experimental SQLite driver are not permanent architecture commitments.
+- Follow [the product baseline](docs/PRODUCT_BASELINE.md); do not expand scope silently.
+- Phase 1 local Personal/manual Projects are approved by observed PR #18 merge at 2a538a76d3a533dac3d6e33fb70765f0d5d20b11. The current Ticket is #19 / PR #20, under review.
+- Product GitHub authorization, coding permissions/approvals/recovery and formal signing/updating still gate Phases 2, 3 and 4. A local-task feature does not verify them.
+- The owner authorized public gh01wzx/focusflow and desktop development on 2026-11-03. Do not repeat that authorization request. New account scopes and external actions must stay within the approved workflow.
+- Work on one individually authorized Ticket at a time, using small PRs. No automatic next-Ticket start, merge or deployment. A coding Ticket is Done only after its linked PR is observed merged.
+- Never commit databases, credentials, personal configuration, execution logs or installer output. Installed user data stays outside source/install directories.
+- Use strict TypeScript for first-party app, browser, integration and test code. Generated JavaScript belongs only in ignored build output.
+- Use English in source, comments, UI, docs, Issues, commits and PRs. Conversation with the owner is Chinese. Preserve user-entered text; escape non-English test fixtures.
+- Separate executed tests, code observations, model inference and unverified claims. Bind review evidence/approval to a commit SHA; changes invalidate approval.
+- For code changes run npm run check:language, npm run typecheck, npm run build and npm test. Optional test:source is not type checking.
+- Tests use disposable directories. No live model or authenticated GitHub write in ordinary tests.
+- Validate maintained desktop/signing tooling before considering a custom installer/updater. SQLite driver and interface choices remain reviewable engineering decisions.

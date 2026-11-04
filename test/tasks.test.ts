@@ -120,3 +120,15 @@ test('product task HTTP operations persist separately from spike notes and prese
   assert.equal(view.due.length, 0); assert.equal(view.history[0]?.status, 'completed');
   assert.deepEqual(await readFile(join(directory, 'phase0.db')), spikeBytes);
 });
+
+test('task API rejects missing origin, malformed JSON and unsupported media without changes', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'focusflow-task-http-validation-'));
+  const app = await startTaskServer({ dataDirectory: directory });
+  t.after(async () => { await app.close(); await rm(directory, { recursive: true, force: true }); });
+  const send = (headers: Record<string, string>, body: string) => fetch(app.origin + '/api/tasks', { method: 'POST', headers, body });
+  assert.equal((await send({ 'Content-Type': 'application/json' }, '{}')).status, 403);
+  assert.equal((await send({ Origin: app.origin, 'Content-Type': 'text/plain' }, '{}')).status, 415);
+  assert.equal((await send({ Origin: app.origin, 'Content-Type': 'application/json' }, '{')).status, 400);
+  const view = await (await fetch(app.origin + '/api/tasks')).json() as TaskView;
+  assert.equal(view.due.length + view.upcoming.length + view.history.length, 0);
+});

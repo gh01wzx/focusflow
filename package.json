@@ -15,20 +15,16 @@
     "start:web": "node dist/src/main.js --open",
     "prestart:web": "npm run build",
     "package:windows": "npm run build && electron-builder --win --x64 --publish never --config electron-builder.json",
-    "build": "tsc -p tsconfig.json && tsc -p tsconfig.desktop.json && node scripts/copy-assets.ts && node scripts/build-renderer.ts",
+    "build": "node scripts/clean-build.ts && tsc -p tsconfig.json && tsc -p tsconfig.desktop.json && node scripts/copy-assets.ts && node scripts/build-renderer.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.browser.json --noEmit && tsc -p tsconfig.desktop.json --noEmit && tsc -p tsconfig.tools.json --noEmit",
     "check:language": "node scripts/check-language.ts",
     "test": "node --test dist/test/*.test.js",
     "test:source": "node --test test/*.test.ts",
-    "probe:codex": "node scripts/probe-codex.ts",
-    "probe:github": "node scripts/probe-github.ts",
     "codex:install": "node scripts/codex-verify.ts install",
     "codex:login": "node scripts/codex-verify.ts login",
     "codex:status": "node scripts/codex-verify.ts status",
     "codex:probe": "node scripts/codex-verify.ts live",
-    "codex:cancel": "node scripts/codex-verify.ts cancel",
-    "start:spike:web": "node dist/src/main.js --spike --open",
-    "prestart:spike:web": "npm run build"
+    "codex:cancel": "node scripts/codex-verify.ts cancel"
   },
   "devDependencies": {
     "@types/node": "24.10.0",

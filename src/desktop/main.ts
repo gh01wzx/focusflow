@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog } from 'electron';
 import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { startTaskServer } from '../tasks/server.ts';
-import type { LocalServer } from '../server.ts';
+import type { LocalServer } from '../tasks/server.ts';
 import { MigrationError, NewerDatabaseError } from '../database/migrate.ts';
 
 app.setName('FocusFlow');

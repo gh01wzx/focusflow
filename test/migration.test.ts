@@ -5,7 +5,8 @@ import { access, appendFile, mkdtemp, readFile, readdir, rm, writeFile } from 'n
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { openTaskStore, TASK_MIGRATIONS, TASK_SCHEMA_VERSION } from '../src/tasks/store.ts';
+import { openTaskStore } from '../src/tasks/store.ts';
+import { TASK_MIGRATIONS, TASK_SCHEMA_VERSION } from '../src/tasks/schema.ts';
 import { restoreSnapshot, schemaVersion } from '../src/database/backup.ts';
 import { migrateDatabase, MigrationError } from '../src/database/migrate.ts';
 

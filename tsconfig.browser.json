@@ -7,5 +7,5 @@
     "rootDir": ".",
     "noEmit": true
   },
-  "include": ["public/**/*.ts", "public/**/*.tsx", "src/tasks/model.ts"]
+  "include": ["public/**/*.ts", "public/**/*.tsx", "src/shared/**/*.ts", "src/client/**/*.ts"]
 }

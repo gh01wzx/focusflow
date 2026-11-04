@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { localDay, nextOccurrence, validDate } from '../src/tasks/model.ts';
+import { localDay, nextOccurrence, validDate } from '../src/shared/calendar.ts';
 
 test('local calendar day follows Auckland midnight and DST rather than UTC date slicing', () => {
   const previous = process.env.TZ;

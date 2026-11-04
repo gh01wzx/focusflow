@@ -7,10 +7,10 @@ import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { TASK_MIGRATIONS, TASK_SCHEMA_VERSION, TASK_APPLICATION_ID } from '../src/tasks/store.ts';
+import { TASK_MIGRATIONS, TASK_SCHEMA_VERSION, TASK_APPLICATION_ID } from '../src/tasks/schema.ts';
 import { restoreSnapshot } from '../src/database/backup.ts';
-import { localDay } from '../src/tasks/model.ts';
-import type { TaskView } from '../src/tasks/model.ts';
+import { localDay } from '../src/shared/calendar.ts';
+import type { TaskView } from '../src/shared/tasks.ts';
 
 const argument = process.argv[2];
 assert.ok(argument, 'Provide the installed FocusFlow executable.');
@@ -118,11 +118,55 @@ try {
       await page.getByRole('status').filter({ hasText: 'Task added.' }).waitFor();
       await page.getByText(title, { exact: true }).waitFor();
     }
-    mark('add-and-resolve-tasks');
+    mark('save-failure-keeps-input');
+    await page.route('**/api/tasks', async route => {
+      if (route.request().method() !== 'POST') return route.continue();
+      await route.fulfill({ status: 500, contentType: 'application/json',
+        body: JSON.stringify({ error: 'Could not save local data. Check disk space and try again.' }) });
+    });
+    await page.getByLabel('Task title').fill('Review the first Today workflow');
+    await page.getByRole('button', { name: 'Add task' }).click();
+    await page.getByRole('alert').filter({ hasText: 'Could not save local data.' }).waitFor();
+    assert.equal(await page.getByLabel('Task title').inputValue(), 'Review the first Today workflow');
+    await page.unroute('**/api/tasks');
+    await page.getByRole('button', { name: 'Retry', exact: true }).click();
+    await page.getByRole('alert').waitFor({ state: 'hidden' });
+    assert.equal(await page.getByLabel('Task title').inputValue(), 'Review the first Today workflow');
     await add('Review the first Today workflow');
     await add('Finish a small task');
-    await page.getByRole('checkbox', { name: 'Complete Finish a small task' }).click();
-    await page.getByRole('status').filter({ hasText: 'Task completed.' }).waitFor();
+    mark('stale-read-cannot-undo-completion');
+    const beforeCompletion = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
+    let releaseRead = () => {};
+    let signalRead = () => {};
+    const readStarted = new Promise<void>(resolveRead => { signalRead = resolveRead; });
+    const readReleased = new Promise<void>(resolveRead => { releaseRead = resolveRead; });
+    await page.route('**/api/tasks', async route => {
+      if (route.request().method() !== 'GET') return route.continue();
+      signalRead();
+      await readReleased;
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify(beforeCompletion) });
+    });
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+      await Promise.race([readStarted, new Promise<never>((_, reject) => {
+        refreshTimer = setTimeout(() => reject(new Error('Refresh did not start.')), 10_000);
+      })]);
+      const staleResponse = page.waitForResponse(response => response.url().endsWith('/api/tasks')
+        && response.request().method() === 'GET');
+      await page.getByRole('checkbox', { name: 'Complete Finish a small task' }).click();
+      await page.getByRole('status').filter({ hasText: 'Task completed.' }).waitFor();
+      releaseRead();
+      await (await staleResponse).finished();
+      await page.evaluate(() => new Promise<void>(resolveFrame => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolveFrame()));
+      }));
+      assert.equal(await page.getByRole('checkbox', { name: 'Complete Finish a small task' }).count(), 0);
+    } finally {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      releaseRead();
+      await page.unroute('**/api/tasks');
+    }
     await add('An optional task');
     await page.getByRole('button', { name: 'Cancel An optional task' }).click();
     await page.getByRole('status').filter({ hasText: 'Task cancelled.' }).waitFor();

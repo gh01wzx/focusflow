@@ -2,7 +2,7 @@
 
 A Windows desktop task tracker built with TypeScript, React, Electron and SQLite. Data stays on your computer; no Tracker account is required.
 
-**Status:** Today PR #20 is merged. Issue #21 adds daily/weekly tasks for review. This is an unsigned development build, not the complete MVP.
+**Status:** Today and repeating tasks are merged. Task #24 reorganizes the existing code for review; it adds no feature. This is an unsigned development build, not the complete MVP.
 
 ## Available now
 

@@ -17,7 +17,8 @@ Link the Issue with Closes #ID. Passing checks means ready for review; only an o
 | npm start | Clean/build and open the desktop app |
 | npm run start:web | Open the same task service in a browser |
 | npm run check:language | Check maintained source/docs for accidental Han-script text |
-| npm run typecheck | Strict checks for Node, browser, desktop and build tooling |
+| npm run typecheck | Dependency boundaries plus strict Node, browser, desktop and tooling checks |
+| npm run check:boundaries | Static module boundaries, unresolved imports and runtime cycles |
 | npm run build | Clean ignored dist output, compile TypeScript and bundle assets |
 | npm test | Run compiled tests |
 | npm run test:source | Optional Node type-stripping execution; not a type check |
@@ -30,7 +31,10 @@ The launcher is Start-FocusFlow.cmd. Run npm ci again when dependencies change. 
 | Directory | Contents |
 | --- | --- |
 | public/today | React interface and readable source styles |
-| src/tasks | Task model, API and SQLite storage |
+| src/shared | Browser-safe contracts, codecs and calendar helpers |
+| src/client | Typed browser API client |
+| src/http | Local server lifecycle and request checks |
+| src/tasks | Separate service/rules, routes, repository and database composition |
 | src/desktop | Electron window and lifecycle |
 | src/database | Reusable migration/backup protection |
 | src/codex | Standalone integration groundwork |

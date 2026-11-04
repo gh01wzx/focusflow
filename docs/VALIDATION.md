@@ -4,7 +4,8 @@ Review evidence belongs to a commit, not a branch name. Check the current PR hea
 
 ## Current verification
 
-- Language, strict TypeScript, build and compiled behavior tests.
+- Language, strict TypeScript, static dependency boundaries, build and compiled behavior tests.
+- Browser client against the real local API; malformed response rejection; architecture-guard failure cases.
 - Real SQLite/HTTP/calendar checks with disposable directories.
 - Migration rollback, backup failure, WAL snapshot consistency, checksum/target protection and product identity/newer-schema refusal.
 - Windows installed UI: add/complete/cancel, overdue/future/history, text escaping, second instance, graceful exit and restart.
@@ -14,7 +15,7 @@ Review evidence belongs to a commit, not a branch name. Check the current PR hea
 
 The retired note-app tests were removed or transferred to product fixtures. A smaller test count does not imply the removed note UI is still maintained. Exact current results/counts are recorded in the PR.
 
-The merged cleanup passed 38 compiled tests. Current recurrence results belong to Issue #21's PR. Renderer bundling in this restricted host is blocked by an ancestor-directory read denial; use exact-head hosted checks for full build evidence. This does not diagnose an ordinary Windows launch. CI screenshots are in windows-today; artifact presence alone is not a pass. Installed recurrence rollover uses prior-period fixtures and the real app clock; disposable store tests separately advance injected clocks across midnight/DST.
+The merged cleanup passed 38 compiled tests. The merged recurrence work passed 49 tests. Task #24's refactor adds boundary/client regression checks; exact-head results belong to its PR. Renderer bundling in this restricted host is blocked by an ancestor-directory read denial; use exact-head hosted checks for full build evidence. This does not diagnose an ordinary Windows launch. CI screenshots are in windows-today; artifact presence alone is not a pass. Installed recurrence rollover uses prior-period fixtures and the real app clock; disposable store tests separately advance injected clocks across midnight/DST.
 
 ## Retained evidence
 
@@ -30,7 +31,7 @@ GitHub Issues/PRs and Git history are the development record. Old experiment doc
 
 ## Known limits
 
-- MVP features beyond temporary tasks are unfinished; see [roadmap](ROADMAP.md).
+- Projects and later MVP phases are unfinished; see [roadmap](ROADMAP.md).
 - Product schema 1 is a synthetic test baseline, not a shipped older product.
 - Installed checks have seen close/cancellation timeouts. Current smoke requires observed native exit code 0 and bounded stage waits; a retry does not establish a root cause.
 - Last captured initial-Today audit: 15 moderate affected development packages, no high/critical entries. This is not a security-clean claim; advisories may change.

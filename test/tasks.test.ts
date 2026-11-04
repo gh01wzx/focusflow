@@ -5,11 +5,12 @@ import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { openTaskStore, TASK_APPLICATION_ID, TASK_MIGRATIONS } from '../src/tasks/store.ts';
+import { openTaskStore } from '../src/tasks/store.ts';
+import { TASK_APPLICATION_ID, TASK_MIGRATIONS } from '../src/tasks/schema.ts';
 import { startTaskServer } from '../src/tasks/server.ts';
 import { migrateDatabase } from '../src/database/migrate.ts';
 import { restoreSnapshot } from '../src/database/backup.ts';
-import type { TaskView } from '../src/tasks/model.ts';
+import type { TaskView } from '../src/shared/tasks.ts';
 import { request as httpRequest } from 'node:http';
 
 async function fixture(t: TestContext) {

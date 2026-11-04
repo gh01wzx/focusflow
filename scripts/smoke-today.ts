@@ -40,8 +40,10 @@ async function closeApp() {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const exited = child.exitCode !== null ? Promise.resolve(child.exitCode) : new Promise<number | null>(resolveExit => child.once('exit', code => resolveExit(code)));
-    // Exercise the application's real quit path; a framework context-close acknowledgement is insufficient.
-    void owned.evaluate(({ app }) => app.quit()).catch(() => {});
+    // Close the real window as a user would. A driver acknowledgement is not
+    // success: the owned native process must still exit with code zero below.
+    const window = owned.windows()[0];
+    if (window) void window.close().catch(() => console.log('DESKTOP_CLOSE_REQUEST_ENDED'));
     const code = await Promise.race([exited, new Promise<never>((_, reject) => {
       timer = setTimeout(() => reject(new Error('Owned desktop did not close within 15 seconds.')), 15_000);
     })]);
@@ -59,6 +61,22 @@ async function closeApp() {
 }
 async function launch() {
   application = await electron.launch({ executablePath: executable, env: environment, timeout: 30_000 });
+  let lifecycleOutput = '';
+  application.process().stdout?.on('data', (chunk: Buffer) => {
+    lifecycleOutput += chunk.toString('utf8');
+    const lines = lifecycleOutput.split(/\r?\n/);
+    lifecycleOutput = lines.pop() ?? '';
+    if (lifecycleOutput.length > 1024) lifecycleOutput = '';
+    for (const line of lines) {
+      if (/^FOCUSFLOW_LIFECYCLE:(before-quit|window-all-closed|will-quit|quit)$/.test(line)) console.log(line);
+    }
+  });
+  await application.evaluate(({ app }) => {
+    app.on('before-quit', () => console.log('FOCUSFLOW_LIFECYCLE:before-quit'));
+    app.on('window-all-closed', () => console.log('FOCUSFLOW_LIFECYCLE:window-all-closed'));
+    app.on('will-quit', () => console.log('FOCUSFLOW_LIFECYCLE:will-quit'));
+    app.on('quit', () => console.log('FOCUSFLOW_LIFECYCLE:quit'));
+  });
   const page = await application.firstWindow({ timeout: 15_000 });
   page.setDefaultTimeout(10_000);
   await page.getByRole('heading', { name: 'Today.', exact: true }).waitFor();

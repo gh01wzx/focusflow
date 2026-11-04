@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { createTaskClient } from '../src/client/tasks.ts';
-import { startTaskServer } from '../src/tasks/server.ts';
+import { startWorkspaceServer } from '../src/workspace/server.ts';
 import type { TaskView } from '../src/shared/tasks.ts';
 
 const emptyView: TaskView = { today: '2026-11-04', due: [], upcoming: [], history: [], recurrences: [] };
@@ -12,7 +12,7 @@ const emptyView: TaskView = { today: '2026-11-04', due: [], upcoming: [], histor
 test('browser client uses the real task API for one-time and repeating task lifecycles', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'focusflow-task-client-'));
   let now = new Date(2026, 10, 4);
-  const server = await startTaskServer({ dataDirectory: directory, clock: () => now });
+  const server = await startWorkspaceServer({ dataDirectory: directory, clock: () => now });
   t.after(async () => {
     await server.close();
     assert.equal(dirname(resolve(directory)), resolve(tmpdir()));

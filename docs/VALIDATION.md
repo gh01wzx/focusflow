@@ -5,17 +5,19 @@ Review evidence belongs to a commit, not a branch name. Check the current PR hea
 ## Current verification
 
 - Language, strict TypeScript, static dependency boundaries, build and compiled behavior tests.
-- Browser client against the real local API; malformed response rejection; architecture-guard failure cases.
+- Browser clients against the real local API; malformed response rejection; architecture-guard failure cases.
 - Real SQLite/HTTP/calendar checks with disposable directories.
 - Migration rollback, backup failure, WAL snapshot consistency, checksum/target protection and product identity/newer-schema refusal.
 - Windows installed UI: add/complete/cancel, overdue/future/history, text escaping, second instance, graceful exit and restart.
 - Synthetic prior product schema migration and separate snapshot recovery.
 - Daily/weekly rollover, closed-app catch-up, completion/cancellation, stop, restart, clock rollback, Auckland DST and failed reconciliation rollback.
 - Schema 2 migration retains task identities/states; its backup can be restored separately.
+- Schema 3 to 4 retains Personal/repeating data and a separate recovery point; project hierarchy/statuses survive restart and snapshots.
+- Manual ticket validation, parent isolation, SQL constraints and HTTP request/size boundaries.
 
 The retired note-app tests were removed or transferred to product fixtures. A smaller test count does not imply the removed note UI is still maintained. Exact current results/counts are recorded in the PR.
 
-The merged cleanup passed 38 compiled tests. The merged recurrence work passed 49 tests. Task #24's refactor adds boundary/client regression checks; exact-head results belong to its PR. Renderer bundling in this restricted host is blocked by an ancestor-directory read denial; use exact-head hosted checks for full build evidence. This does not diagnose an ordinary Windows launch. CI screenshots are in windows-today; artifact presence alone is not a pass. Installed recurrence rollover uses prior-period fixtures and the real app clock; disposable store tests separately advance injected clocks across midnight/DST.
+The merged cleanup passed 38 compiled tests. The merged recurrence work passed 49 tests. The merged refactor passed 56 tests. Task #26 adds manual-project checks; exact-head results belong to its PR. Renderer bundling in this restricted host is blocked by an ancestor-directory read denial; use exact-head hosted checks for full build evidence. This does not diagnose an ordinary Windows launch. CI screenshots are in windows-today; artifact presence alone is not a pass. Installed recurrence rollover uses prior-period fixtures and the real app clock; disposable store tests separately advance injected clocks across midnight/DST.
 
 ## Retained evidence
 
@@ -31,7 +33,7 @@ GitHub Issues/PRs and Git history are the development record. Old experiment doc
 
 ## Known limits
 
-- Projects and later MVP phases are unfinished; see [roadmap](ROADMAP.md).
+- Project action center/dependencies and later MVP phases are unfinished; see [roadmap](ROADMAP.md).
 - Product schema 1 is a synthetic test baseline, not a shipped older product.
 - Installed checks have seen close/cancellation timeouts. Current smoke requires observed native exit code 0 and bounded stage waits; a retry does not establish a root cause.
 - Last captured initial-Today audit: 15 moderate affected development packages, no high/critical entries. This is not a security-clean claim; advisories may change.

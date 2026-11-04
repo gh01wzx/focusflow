@@ -1,4 +1,7 @@
-import type { TaskStore } from './store.ts';
+import type { createTaskService } from './service.ts';
+import type { Snapshot } from '../database/backup.ts';
+
+type TaskApi = ReturnType<typeof createTaskService> & { snapshot(): Promise<Snapshot> };
 
 export type TaskRoute =
   | { kind: 'view' | 'add' | 'addRecurrence' | 'backup' }
@@ -18,7 +21,7 @@ export function matchTaskRoute(method: string | undefined, path: string): TaskRo
 }
 
 export async function dispatchTaskRoute(
-  route: TaskRoute, input: unknown, store: TaskStore,
+  route: TaskRoute, input: unknown, store: TaskApi,
 ): Promise<{ status: number; body: unknown }> {
   switch (route.kind) {
     case 'view': return { status: 200, body: store.view() };

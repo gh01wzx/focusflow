@@ -1,3 +1,5 @@
+import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
+import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
 import { useTodayController } from './useTodayController.ts';
 import { labels, tabText } from './view-options.ts';
 import { TaskComposer } from './components/TaskComposer.tsx';
@@ -5,7 +7,7 @@ import { TaskRow } from './components/TaskRow.tsx';
 import { RepeatingTasks } from './components/RepeatingTasks.tsx';
 import { CheckIcon } from './components/CheckIcon.tsx';
 
-export function TodayApp() {
+export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const state = useTodayController();
   const { view, tab, setTab, busy, error, message, refresh } = state;
   const rows = view?.[tab] ?? [];
@@ -13,15 +15,7 @@ export function TodayApp() {
   const text = tabText[tab];
 
   return (
-    <div className="shell">
-      <aside className="sidebar">
-        <a className="brand" href="/" aria-label="FocusFlow home">
-          <span className="brand-mark">f<span>.</span></span>FocusFlow
-        </a>
-        <div className="workspace-label">YOUR WORKSPACE</div>
-        <div className="space-title">
-          <span className="avatar">P</span>Personal<span className="local-pill">Local</span>
-        </div>
+    <WorkspaceShell workspace="personal" busy={busy} onWorkspaceChange={onWorkspaceChange} navigation={
         <nav aria-label="Personal views">
           {(['due', 'upcoming', 'history'] as const).map(key => (
             <button
@@ -36,8 +30,7 @@ export function TodayApp() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-note"><span className="local-dot" />Saved on this computer</div>
-      </aside>
+    }>
       <main>
         <div className="breadcrumb">Personal <span>/</span> {labels[tab]}</div>
         <header className="page-header">
@@ -99,6 +92,6 @@ export function TodayApp() {
           <span className="footer-detail">Personal · Local tasks</span>
         </footer>
       </main>
-    </div>
+    </WorkspaceShell>
   );
 }

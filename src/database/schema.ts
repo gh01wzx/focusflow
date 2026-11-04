@@ -1,8 +1,8 @@
-export const TASK_APPLICATION_ID = 0x46464c57;
-export const TASK_SCHEMA_VERSION = 3;
+export const APPLICATION_ID = 0x46464c57;
+export const SCHEMA_VERSION = 4;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
-export const TASK_MIGRATIONS = [
-  { version: 1, sql: `PRAGMA application_id=${TASK_APPLICATION_ID};
+export const MIGRATIONS = [
+  { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
     CREATE TABLE tracker_meta (format TEXT NOT NULL);
     INSERT INTO tracker_meta VALUES('focusflow-tasks');
     CREATE TABLE tasks (
@@ -31,4 +31,20 @@ export const TASK_MIGRATIONS = [
       SELECT id,title,planned_date,status,created_at,resolved_at FROM previous_tasks;
     DROP TABLE previous_tasks;
     CREATE INDEX tasks_status_date ON tasks(status, planned_date, created_at);` },
+  { version: 4, sql: `CREATE TABLE projects (
+      id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT NOT NULL, created_at TEXT NOT NULL
+    );
+    CREATE TABLE milestones (
+      id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
+      title TEXT NOT NULL, description TEXT NOT NULL, created_at TEXT NOT NULL
+    );
+    CREATE INDEX milestones_project ON milestones(project_id);
+    CREATE TABLE project_tickets (
+      id TEXT PRIMARY KEY, milestone_id TEXT NOT NULL REFERENCES milestones(id),
+      title TEXT NOT NULL, description TEXT NOT NULL, acceptance_criteria TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('backlog','ready','in_progress','review','done','blocked')),
+      execution_mode TEXT NOT NULL CHECK(execution_mode='manual'),
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
+    CREATE INDEX project_tickets_milestone ON project_tickets(milestone_id);` },
 ] as const;

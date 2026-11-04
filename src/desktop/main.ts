@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog } from 'electron';
 import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { startTaskServer } from '../tasks/server.ts';
+import { startWorkspaceServer } from '../workspace/server.ts';
 import type { LocalServer } from '../http/local-server.ts';
 import { MigrationError, NewerDatabaseError } from '../database/migrate.ts';
 
@@ -37,7 +37,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('window-all-closed', () => { if (!closing) app.quit(); });
 
   void app.whenReady().then(async () => {
-    service = await startTaskServer({ dataDirectory: join(profileDirectory, 'data') });
+    service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data') });
     const origin = service.origin;
     window = new BrowserWindow({
       width: 1120,

@@ -7,10 +7,12 @@ import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { TASK_MIGRATIONS, TASK_SCHEMA_VERSION, TASK_APPLICATION_ID } from '../src/tasks/schema.ts';
+import { MIGRATIONS, SCHEMA_VERSION, APPLICATION_ID } from '../src/database/schema.ts';
 import { restoreSnapshot } from '../src/database/backup.ts';
-import { localDay } from '../src/shared/calendar.ts';
+import { localDay, nextOccurrence } from '../src/shared/calendar.ts';
 import type { TaskView } from '../src/shared/tasks.ts';
+import type { ProjectView } from '../src/shared/projects.ts';
+import { exerciseProjectUI, PROJECT_SMOKE_TITLE } from './project-ui.ts';
 
 const argument = process.argv[2];
 assert.ok(argument, 'Provide the installed FocusFlow executable.');
@@ -76,9 +78,13 @@ try {
   if (recovery) {
     await mkdir(data, { recursive: true });
     const db = new DatabaseSync(join(data, 'tracker.db'));
-    for (const migration of TASK_MIGRATIONS.slice(0, 2)) db.exec(migration.sql);
-    db.exec('PRAGMA user_version=2');
-    db.prepare("INSERT INTO tasks VALUES('prior-product-task','Retained through product migration',?,'pending',?,NULL)")
+    for (const migration of MIGRATIONS.slice(0, 3)) db.exec(migration.sql);
+    db.exec('PRAGMA user_version=3');
+    db.prepare("INSERT INTO tasks VALUES('prior-product-task','Retained through product migration',?,'pending',?,NULL,NULL)")
+      .run(localDay(new Date()), new Date().toISOString());
+    db.prepare("INSERT INTO recurrence_rules VALUES('prior-rule','Retained repeating task','daily',?,?,?,NULL)")
+      .run(localDay(new Date()), nextOccurrence(localDay(new Date()), 'daily'), new Date().toISOString());
+    db.prepare("INSERT INTO tasks VALUES('prior-repeat','Retained repeating task',?,'pending',?,NULL,'prior-rule')")
       .run(localDay(new Date()), new Date().toISOString());
     db.close();
   }
@@ -86,11 +92,12 @@ try {
   let page = await launch();
   if (recovery) {
     await page.getByText('Retained through product migration', { exact: true }).waitFor();
+    await page.getByText('Retained repeating task', { exact: true }).waitFor();
     mark('close-after-product-migration'); await closeApp();
     const db = new DatabaseSync(join(data, 'tracker.db'), { readOnly: true });
     try {
-      assert.equal(db.prepare('PRAGMA user_version').get()?.user_version, TASK_SCHEMA_VERSION);
-      assert.equal(db.prepare('PRAGMA application_id').get()?.application_id, TASK_APPLICATION_ID);
+      assert.equal(db.prepare('PRAGMA user_version').get()?.user_version, SCHEMA_VERSION);
+      assert.equal(db.prepare('PRAGMA application_id').get()?.application_id, APPLICATION_ID);
     } finally { db.close(); }
     const snapshots = (await readdir(join(data, 'backups'))).filter(name => name.endsWith('.db'));
     assert.equal(snapshots.length, 1);
@@ -99,8 +106,9 @@ try {
     await restoreSnapshot(join(data, 'backups', snapshots[0]!), restored);
     const reader = new DatabaseSync(restored, { readOnly: true });
     try {
-      assert.equal(reader.prepare('PRAGMA user_version').get()?.user_version, 2);
-      assert.equal(reader.prepare('SELECT title FROM tasks').get()?.title, 'Retained through product migration');
+      assert.equal(reader.prepare('PRAGMA user_version').get()?.user_version, 3);
+      assert.equal(reader.prepare('SELECT title FROM tasks WHERE id=?').get('prior-product-task')?.title, 'Retained through product migration');
+      assert.equal(reader.prepare('SELECT title FROM recurrence_rules').get()?.title, 'Retained repeating task');
     } finally { reader.close(); }
     assert.deepEqual(await readFile(source), before);
     mark('relaunch-after-migration'); page = await launch();
@@ -232,13 +240,25 @@ try {
     mark('repeat-rollover-restart'); await closeApp(); page = await launch();
     const reopened = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
     assert.deepEqual(reopened, rolled);
+    mark('manual-project-hierarchy');
+    const projects = await exerciseProjectUI(page);
+    await page.screenshot({ path: join(artifacts, 'projects.png'), fullPage: true });
+    mark('project-restart'); await closeApp(); page = await launch();
+    const personalAfterProjects = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
+    assert.deepEqual(personalAfterProjects, rolled);
+    await page.getByRole('navigation', { name: 'Workspaces', exact: true })
+      .getByRole('button', { name: 'Projects', exact: true }).click();
+    await page.getByLabel('Status for ' + PROJECT_SMOKE_TITLE, { exact: true }).waitFor();
+    assert.equal(await page.getByLabel('Status for ' + PROJECT_SMOKE_TITLE, { exact: true }).inputValue(), 'done');
+    const projectsAfterRestart = await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
+    assert.deepEqual(projectsAfterRestart, projects);
   }
   mark('final-close'); await closeApp();
   assert.deepEqual(await readFile(join(root, 'phase0.db')), sentinelBytes);
   assert.ok(!resolve(profile).startsWith(dirname(executable)), 'Product data is outside installation output.');
   await writeFile(join(artifacts, 'report.json'), JSON.stringify({ status: 'verified',
-    scope: recovery ? 'Schema 2 task data migration and separate snapshot recovery.'
-      : 'Installed Today, daily/weekly controls, stop, prior-period fixture rollover, restart, text escaping and second instance.',
+    scope: recovery ? 'Schema 3 Personal/repeating data migration and separate snapshot recovery.'
+      : 'Installed Personal and manual project hierarchy, statuses, selection, restart, text escaping and request guards.',
     productDataSeparate: true, spikeUnchanged: true, rendererNodeAccess: false }, null, 2));
   console.log('TODAY_SMOKE_VERIFIED');
 } catch (error) {

@@ -22,7 +22,7 @@ export function secureRequest(request: IncomingMessage, response: ServerResponse
   if (request.headers.origin && request.headers.origin !== origin) throw new HttpError(403, 'Invalid origin');
 }
 
-export async function readJson(request: IncomingMessage, origin: string): Promise<unknown> {
+export async function readJson(request: IncomingMessage, origin: string, limit = 4096): Promise<unknown> {
   if (request.headers.origin !== origin) throw new HttpError(403, 'Origin required');
   if (request.headers['content-type'] !== 'application/json') throw new HttpError(415, 'JSON required');
   const chunks: Buffer[] = [];
@@ -30,7 +30,7 @@ export async function readJson(request: IncomingMessage, origin: string): Promis
   for await (const chunk of request) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     size += buffer.length;
-    if (size > 4096) throw new HttpError(413, 'Request too large');
+    if (size > limit) throw new HttpError(413, 'Request too large');
     chunks.push(buffer);
   }
   try {

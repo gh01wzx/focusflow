@@ -1,6 +1,6 @@
 # Architecture
 
-FocusFlow is one local desktop application. It currently implements dated Personal tasks.
+FocusFlow is one local desktop application. It implements dated Personal tasks and daily/weekly schedules.
 
 ## Runtime
 
@@ -39,7 +39,21 @@ Electron starts the service on an OS-selected IPv4 loopback port and loads it in
 
 GET /api/tasks reads the lists. POST /api/tasks/:id/resolve completes/cancels a task. POST /api/tasks/backup creates a verified snapshot.
 
+POST /api/recurrences creates a schedule and its first occurrence. POST /api/recurrences/:id/stop stops future periods. Both use the same request checks as task writes.
+
 Today uses the computer's local calendar day. Planned dates are date-only strings; creation/resolution times are UTC instants. The renderer refreshes on focus/visibility and every 30 seconds while visible. A generation counter prevents stale reads replacing newer mutation results.
+
+## Repeating periods
+
+Schema 3 adds recurrence_rules and an optional tasks.recurrence_id. Existing schema 2 tasks retain IDs, dates and status; migration takes a verified pre-upgrade snapshot.
+
+Each rule holds its frequency, first date and next unmaterialized date. Occurrences have independent IDs/statuses and a unique rule/date pair. Daily periods span one local day; weekly periods span seven calendar days from the first date. Calendar arithmetic uses date-only UTC helpers, not 24-hour durations.
+
+Before reading/changing tasks, one writer transaction expires pending periods, materializes all elapsed periods as missed history plus the current pending period, and advances each active rule's cursor. A failure rolls back all three changes. Refresh/restart cannot create duplicates. Missed resolvedAt records detection time; plannedDate identifies the period.
+
+Stopping preserves history and the current period, cancels a future first occurrence and prevents further generation. A clock rollback does not reopen resolved periods. Device timezone changes follow the newly observed local date; this is not a timezone-locked reminder system.
+
+Catch-up/history are currently unpaginated. Long gaps or large datasets can take longer; no background scheduler runs while the app is closed. Reconciliation occurs on the next read/action.
 
 ## Boundaries worth reviewing
 

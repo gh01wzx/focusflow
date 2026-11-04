@@ -1,7 +1,7 @@
 # FocusFlow development rules
 
 - Follow [the product baseline](docs/PRODUCT_BASELINE.md); do not expand scope silently.
-- Phase 1 local Personal/manual Projects are approved by observed PR #18 merge at 2a538a76d3a533dac3d6e33fb70765f0d5d20b11. The current Ticket is #19 / PR #20, under review.
+- Phase 1 local Personal/manual Projects are approved by observed PR #18 merge at 2a538a76d3a533dac3d6e33fb70765f0d5d20b11. Today PR #20 merged at fde0fe128e420e6e175c13f630bf0e5e28e05e3a; the owner authorized continuation. Current Ticket: #21, daily/weekly Personal tasks.
 - Product GitHub authorization, coding permissions/approvals/recovery and formal signing/updating still gate Phases 2, 3 and 4. A local-task feature does not verify them.
 - The owner authorized public gh01wzx/focusflow and desktop development on 2026-11-03. Do not repeat that authorization request. New account scopes and external actions must stay within the approved workflow.
 - Work on one individually authorized Ticket at a time, using small PRs. No automatic next-Ticket start, merge or deployment. A coding Ticket is Done only after its linked PR is observed merged.

@@ -2,7 +2,7 @@
 
 A Windows desktop task tracker built with TypeScript, React, Electron and SQLite. Data stays on your computer; no Tracker account is required.
 
-**Status:** the first Today slice is in PR #20 and awaits review. This is an unsigned development build, not the complete MVP.
+**Status:** Today PR #20 is merged. Issue #21 adds daily/weekly tasks for review. This is an unsigned development build, not the complete MVP.
 
 ## Available now
 
@@ -10,8 +10,17 @@ A Windows desktop task tracker built with TypeScript, React, Electron and SQLite
 - Complete or cancel tasks; keep their records in History.
 - See due/overdue tasks in Today and future tasks in Upcoming.
 - Keep tasks across restarts, with original planned dates.
+- Choose daily/weekly repetition, retain missed periods in History and stop future repeats.
 
-Recurrence, editing/reopening, Projects, AI planning, coding/review and one-click updates are not implemented.
+Editing/reopening, Projects, AI planning, coding/review and one-click updates are not implemented.
+
+## Repeating tasks
+
+Choose **Repeat** and a first date of today or later. Daily tasks reset at local midnight. Weekly tasks last seven calendar days from their first date, including that date.
+
+Completing/cancelling affects one occurrence. Unfinished periods become **Missed** in History; reopening catches up closed-app periods without overdue accumulation. Temporary tasks keep their original dates and stay pending.
+
+Expand **Repeating tasks** to stop a schedule. Its current-period task stays available; a future first occurrence is cancelled. History is retained. Upcoming shows the first scheduled task, not an infinite preview.
 
 ## Run on Windows
 

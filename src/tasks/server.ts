@@ -38,7 +38,8 @@ export async function startTaskServer(options: { dataDirectory: string; clock?: 
       }
       if (request.method === 'GET' && resource === '/api/tasks') return send(200, store.view());
       const match = /^\/api\/tasks\/([a-f0-9-]{36})\/resolve$/.exec(resource);
-      if (request.method !== 'POST' || (resource !== '/api/tasks' && !match && resource !== '/api/tasks/backup')) return send(404, { error: 'Not found' });
+      const stopMatch = /^\/api\/recurrences\/([a-f0-9-]{36})\/stop$/.exec(resource);
+      if (request.method !== 'POST' || (resource !== '/api/tasks' && !match && !stopMatch && resource !== '/api/recurrences' && resource !== '/api/tasks/backup')) return send(404, { error: 'Not found' });
       if (request.headers.origin !== origin) return send(403, { error: 'Origin required' });
       if (request.headers['content-type'] !== 'application/json') return send(415, { error: 'JSON required' });
       const chunks: Buffer[] = []; let size = 0;
@@ -56,6 +57,11 @@ export async function startTaskServer(options: { dataDirectory: string; clock?: 
         return send(201, { name: snapshot.name });
       }
       if (resource === '/api/tasks') return send(201, { task: store.add(input), view: store.view() });
+      if (resource === '/api/recurrences') return send(201, { rule: store.addRecurrence(input), view: store.view() });
+      if (stopMatch) {
+        const rule = store.stopRecurrence(stopMatch[1]!);
+        return rule ? send(200, { rule, view: store.view() }) : send(404, { error: 'Repeating task not found' });
+      }
       const status = typeof input === 'object' && input !== null && 'status' in input ? input.status : undefined;
       const task = store.resolve(match![1]!, status);
       return task ? send(200, { task, view: store.view() }) : send(404, { error: 'Task not found' });

@@ -8,10 +8,11 @@ export function ManualTicket({ ticket, busy, onStatus }: {
 }) {
   return (
     <li className="manual-ticket">
-      <div className="ticket-heading">
-        <h3>{ticket.title}</h3>
-        <span className="local-pill">Manual</span>
-        <label className="sr-only" htmlFor={'status-' + ticket.id}>Status for {ticket.title}</label>
+      <h3 className="ticket-title">{ticket.title}</h3>
+      <div className="ticket-status">
+        <label htmlFor={'status-' + ticket.id}>
+          Status<span className="sr-only"> for {ticket.title}</span>
+        </label>
         <select id={'status-' + ticket.id} value={ticket.status} disabled={busy}
           onChange={event => {
             if (isTicketStatus(event.target.value)) void onStatus(ticket.id, event.target.value);

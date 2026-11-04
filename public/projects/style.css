@@ -46,7 +46,7 @@
 .project-composer input,
 .project-composer textarea,
 .milestone-picker select,
-.ticket-heading select {
+.ticket-status select {
   min-width: 0;
   max-width: 100%;
   border: 1px solid #d9e2d1;
@@ -95,22 +95,25 @@
   border-bottom: 1px solid #e8ece2;
   padding: 20px 0;
 }
-.ticket-heading {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.ticket-heading h3 {
-  flex: 1;
+.ticket-title {
   min-width: 0;
   margin: 0;
   font-size: 15px;
+  line-height: 1.5;
   overflow-wrap: anywhere;
 }
-.ticket-heading .local-pill {
-  margin-left: 0;
+.ticket-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
 }
-.ticket-heading select {
+.ticket-status label {
+  font-size: 11px;
+  color: #718568;
+}
+.ticket-status select {
   flex-shrink: 0;
   width: 125px;
   font-size: 11px;
@@ -129,9 +132,6 @@ nav[aria-label="Project list"] .nav-item {
     margin: 16px 0 8px;
   }
   nav[aria-label="Project list"] {
-    flex-wrap: wrap;
-  }
-  .ticket-heading {
     flex-wrap: wrap;
   }
 }

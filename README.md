@@ -2,7 +2,7 @@
 
 Windows-first, local-first personal tasks and project delivery, with a planned Codex → GitHub PR → human review workflow.
 
-**Status: Phase 0 feasibility spike. Not a usable task tracker yet.** The [public repository](https://github.com/gh01wzx/focusflow) contains the local persistence experiment and an experimental Windows desktop packaging workflow. Check the exact PR's CI result before using an artifact. One authenticated read-only model turn has owner-reported Windows evidence; cancellation, coding execution and automatic updating remain unverified.
+**Status: Phase 0 core feasibility demonstrated; local-task handoff proposed. Not a usable task tracker yet.** Windows installation, SQLite upgrade/recovery and owner-reported real Codex streaming/cancellation have evidence. The [closeout report](docs/PHASE0_REPORT.md) proposes the bounded Phase 1 start for owner merge approval. Today/Projects, product GitHub authorization, coding/review and automatic updating remain future work. CI artifacts are unsigned development experiments, not formal releases.
 
 ## Run on Windows
 

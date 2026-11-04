@@ -1,5 +1,11 @@
 # Development log
 
+## 2026-11-04 - Phase 0 closeout proposal (Issue #17)
+
+Observed PR #16 merged at `4d5b6ebf58f3163a777724ff9b184d75ff8d7b80`. The owner reported successful real cancellation on tested head `56f73fec0cdc011ec9eebc56cd741cd8066365c1`, including interruption acknowledgement, interrupted terminal status, process closure and temp-directory removal. The exact-head Windows/Linux and desktop upgrade/recovery workflows passed; the captured packaging audit still reports 15 moderate affected development packages.
+
+Consolidated the evidence and proposed the local-task-only Phase 1 handoff, retaining GitHub product authorization, coding permissions/recovery and signed updating as explicit later-phase gates. The proposal changes the initial blanket gate only if the owner merges this closeout PR. The next candidate combines the proven shell/data foundation and dated temporary tasks in one Today Ticket. No feature/account connection/release starts in this documentation change. The referenced initial spike UI and remaining unmodified 2026-11-03 notes are historical; the closeout report is the current evidence ledger.
+
 ## 2026-11-04 - cancellation and failure boundary (Issue #15)
 
 Observed PR #14 merged at `62d02a98426e28df41e9972c7995ded0cd0e2f3a`. The owner supplied a successful Windows live-probe result from tested head `4540ccc36dd1d2a6e4f868c6b9cda84b15c8eab9`: CLI 0.166.0, ChatGPT authentication, 6 streamed delta events and matching final marker. This supersedes the pre-probe status below; raw execution logs and account identity are not committed.

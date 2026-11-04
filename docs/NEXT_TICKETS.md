@@ -1,6 +1,6 @@
-# Proposed next Tickets — not approved, started or published
+# Ticket roadmap and current handoff
 
-P0-01 is complete through merged PR #2. TypeScript/English follow-ups were merged as PRs #4/#6; the desktop shell and first-launch fix followed as PRs #8/#10. P0-03b upgrade/recovery evidence was merged as PR #12. PR #14's merge is observed at `62d02a98426e28df41e9972c7995ded0cd0e2f3a`; the owner reported a successful real streaming turn on its tested head. Continued P0-02 work is tracked in Issue #15: explicit cancellation evidence, structured failures and process cleanup tests. Real Codex cancellation and sandbox enforcement are still open gates. Signing, automatic updates and the other rows remain a working breakdown, not automatically started or batch-published.
+Merged PRs #2/#4/#6 established the public TypeScript/English baseline; #8/#10/#12 verified desktop packaging, first launch and upgrade/recovery. PRs #14/#16 added the official Codex client, failure handling and owner-reported real streaming/cancellation. The current single Ticket is Issue #17: review the [Phase 0 closeout and bounded Phase 1 handoff](PHASE0_REPORT.md). No Phase 1 Ticket is started by that proposal. Its owner-approved merge allows the next individually authorized Ticket to combine P1-01/P1-02 into the first usable Today slice; no separate empty-shell PR is required. Remaining rows are candidates, not batch approval.
 
 | ID | Phase | Small outcome / acceptance | Depends on |
 | --- | --- | --- | --- |

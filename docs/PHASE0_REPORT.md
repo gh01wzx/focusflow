@@ -1,47 +1,64 @@
-# Phase 0 technical validation report
+# Phase 0 closeout and Phase 1 handoff
 
-Date: 2026-11-03 (Pacific/Auckland). Status: **The local feasibility skeleton is complete. Integration and packaging checks remain; Phase 1 product features have not started.**
+Date: 2026-11-04 (Pacific/Auckland). Status: **core feasibility demonstrated; owner review requested for the bounded Phase 1 handoff in Issue #17**. This replaces the initial report. The MVP, product integrations and formal release are not complete.
 
-## Verified observations
+## Proposed decision
 
-| Area | Evidence | Scope of the result |
+Keep Electron + strict TypeScript + a React product renderer + SQLite. Retain the tested `node:sqlite` driver against pinned Electron; compatibility/migrations stay in CI. React is planned, not an already installed dependency. The current page remains a persistence experiment.
+
+After owner merge approval of this closeout PR, begin **local Personal tasks and manual Projects only**. This explicitly changes the initial blanket gate: remaining integrations block the phases that use them, rather than unrelated local-task work. Writing this proposal does not approve that change. No product account connection, coding runner, publication, updater or deployment is enabled by this handoff; all original MVP acceptance scenarios still apply.
+
+## Evidence ledger
+
+Principal tested head: `56f73fec0cdc011ec9eebc56cd741cd8066365c1`, merged by [PR #16](https://github.com/gh01wzx/focusflow/pull/16) at `4d5b6ebf58f3163a777724ff9b184d75ff8d7b80`. Evidence applies to named code/configuration, not arbitrary later changes.
+
+| Capability | Evidence | Limit |
 | --- | --- | --- |
-| Windows environment | Node 24.12.0, npm 11.6.2, Git 2.53.0.windows.2; SQLite 3.50.4 in-memory query succeeded | Supports the experiment; does not establish Electron packaging compatibility |
-| SQLite persistence | Database close/reopen preserves Unicode, emoji and SQL-like input | Demonstrates storage behavior, not task-management features |
-| Local HTTP service | Real random-port startup, save, server restart, read and backup integration test | Demonstrates the minimal local execution/storage path |
-| Backup and recovery | Online SQLite backup, integrity check and restoration into an independent database; later writes do not change the snapshot | Includes committed WAL data; not a software updater or automatic binary rollback |
-| Older-version protection | A schema-1 binary refuses a schema-999 test database; file bytes stay identical | Refuses an incompatible database; future business migrations remain untested |
-| Local HTTP boundaries | Cross-origin writes, incorrect Host and oversized requests are rejected | Limited to the spike; future execution/credential interfaces need separate validation |
-| Independent Codex process | A discovered `codex-cli 0.166.0-alpha.5.1` completes stdio `initialize`/`initialized` in an isolated temporary home | No account access, model turn, existing-session control or coding task was performed |
-| Public repository bootstrap | The owner created `gh01wzx/focusflow`; the connected development GitHub app wrote Issue/branch/commit/PR records | Demonstrates the assistant's integration, not the future Tracker app's authorization |
-| TypeScript migration | All six local source-runtime tests pass; PR #4 CI passed strict type checking, Node/browser builds and compiled tests on Windows and Ubuntu | Runtime type stripping alone is not type checking; hosted compiler evidence is recorded separately |
+| Strict TypeScript and behavior | [Windows/Linux checks](https://github.com/gh01wzx/focusflow/actions/runs/41757461328): language/type/build checks and 36 tests passed | Ordinary tests use no live model or authenticated remote write |
+| Windows runtime and installation | [Desktop workflow](https://github.com/gh01wzx/focusflow/actions/runs/41757461352): Electron 45.2.1, builder 26.18.0, Playwright 1.64.1; installed launch/relaunch and profile checks passed | Unsigned per-user NSIS artifact tested on CI Windows, not a signed public release |
+| Data protection | Real SQLite tests and that workflow's upgrade/recovery job | Committed-WAL snapshots, transactional migration rollback, newer-schema refusal and separate-profile restoration tested |
+| Manual upgrade | Baseline `14a30b166ef350961518cff586fb2ffa5c22db50` (app 0.0.1/schema 1) to app 0.0.2/schema 2 | Note data retained at the same install/profile paths; recovery preserved the upgraded database |
+| Official Codex transport | Windows CI installs CLI 0.166.0, initializes and reads fresh unauthenticated status | Owned process and disposable directory close normally; no model runs in CI |
+| Real streaming turn | Owner-reported Windows result at `4540ccc36dd1d2a6e4f868c6b9cda84b15c8eab9`: ChatGPT auth, 6 deltas, matching marker | One read-only model turn; owner evidence, not an independently repeated call |
+| Real cancellation | Owner-reported Windows result at `56f73fec0cdc011ec9eebc56cd741cd8066365c1`: acknowledgement, interrupted terminal event, process closed, temp directory removed | One controlled turn; process termination alone never counts as cancellation |
+| Approval/provider failures | Deterministic stream/process fixtures deny approvals and inject typed auth/quota/rate-limit, timeout and cleanup failures | Handling demonstrated; actual expired accounts and exhausted quota were not tested |
+| GitHub development workflow | Real Issues, branches, PRs, checks and observed merges in `gh01wzx/focusflow` | The assistant's connector works; it does not authorize the installed Tracker product |
 
-The six storage/HTTP tests passed locally. The initial Host-header test used Node fetch, which did not preserve the custom test header; switching the test transport to `http.request` produced the intended boundary check. This original failure was corrected before reporting a passing result.
+The desktop compatibility experiment observed Node 24.22.1 and SQLite 3.53.4 inside Electron. Source development remains Node 24.12.x or later 24.x. Later Electron/driver changes require fresh compatibility evidence.
 
-The original test page was loaded in a browser and its initial data-loaded state inspected. Behavioral evidence comes from HTTP/SQLite tests, not from the screenshot alone. English interface copy is a subsequent change; a new visual browser check has not been claimed.
+An earlier upgrade job was cancelled and passed on retry; its cancellation cause was not established. The later exact-head workflow above passed. This establishes feasibility, not exhaustive installer reliability. Artifacts expire; preserve commit/run references and repeat relevant checks for later builds.
 
-`Start-FocusFlow.cmd` opens the experiment through `npm start`, which builds the TypeScript source first. It requires Node and a one-time `npm ci` developer setup. Initial runtime testing started Node directly; Explorer double-click acceptance has not been claimed. The proposed installed desktop product will bundle its runtime. Spike-only data remains in `.phase0/data/`.
+## Remaining gates
 
-## Documented capabilities that still need integration tests
+| Blocks | Required work | Current state |
+| --- | --- | --- |
+| Local tasks/manual Projects: Phase 1 | Product-specific data/profile isolation, task schema/UI, restart and migration acceptance | Foundation demonstrated; product implementation is next. No silent import of spike notes |
+| Planning/Issue publication: Phase 2 | Product-owned authorization/secret storage, approved-plan boundary, repository association, durable outbox, timeout reconciliation and remote-edit conflicts | Not implemented; connector authorization cannot be reused as app authorization |
+| Coding/review: Phase 3 | Restricted worktree/sandbox, visible approvals, least-privilege credentials, durable run recovery, real tests/branch/PR evidence, independent review and SHA invalidation | Read-only invocation/cancellation demonstrated; code-writing sandbox enforcement and approval UI remain unverified |
+| Formal releases/updates: Phase 4 | Signing identity/cost decision, pinned updater verification, trusted metadata, user-triggered download/restart, data protection, failed install/migration recovery and dependency triage | Unsigned development artifacts only; no updater/feed configured and no GitHub Release published |
 
-- Official Codex app-server documentation describes thread/turn lifecycle, streamed progress, approvals and authentication. Only an isolated handshake was verified locally. A supported CLI version, login, sandbox/approval behavior, model quota/cost and interrupted-run recovery remain unverified. Desktop-app login does not establish that a custom client can execute tasks.
-- GitHub REST supports Issues, branches and PRs. The assistant exercised this through its connected development app. Tracker's own authentication, durable publication outbox, conflict handling, retry reconciliation and merge synchronization are still product work.
-- Electron, NSIS and electron-updater provide candidate release tooling. Package signing, installation, version A-to-B updating, database migrations and failure recovery have not been tested. Availability of a library is not evidence that updating works.
+Actual expired-auth/quota failures remain unobserved. Injected structured errors exercise handling without altering credentials or deliberately exhausting quota. Later integration acceptance must cover realistic failures and label unobserved cases.
 
-## Resolved initial blockers and continuing limitations
+The captured desktop audit on the tested head reported **15 moderate** affected development-toolchain packages, with no high/critical entries. This is not a security-clean result and may change. Breaking forced dependency upgrades and bypassed signature verification are not approved fixes; release hardening remains required.
 
-The repository destination and public authorization were initially missing. The owner later approved the desktop direction, created the repository, connected GitHub, and approved merges of PR #2 (bootstrap) and PR #4 (TypeScript). Those initial setup blockers are resolved.
+## Maintained tooling and authorization
 
-The execution environment still restricts direct network access: unauthenticated public GitHub GET probes and npm registry access returned `EACCES`. This does not diagnose the user's account, the remote service or their ordinary terminal. Local Git staging was also denied at `.git/index.lock`. No permissions were changed; the connected GitHub API publishes audited source snapshots. CI installs the committed lockfile and performs compiler/build checks in its own normal build environment.
+Keep unsigned NSIS artifacts for development validation. Maintained `electron-updater` with NSIS/GitHub Releases remains the release candidate; there is no demonstrated need for a custom installer/updater. Signing identity, operating requirements/costs and update metadata trust must be settled before formal distribution. No signing service, purchase or new account is authorized by this handoff.
 
-Codex is not on PATH. The discovered internal executable is an alpha build and is not a production dependency commitment. Authenticated model calls, generated changes, tests/PR creation by the future Tracker runner and quota handling remain unverified.
+References checked on 2026-11-04: [v26 updater](https://www.electron.build/v26/docs/features/auto-update/) and [v26 signing](https://www.electron.build/v26/docs/features/code-signing/). Unversioned builder documentation currently describes unreleased v27 behavior; do not attribute its configuration/signing rules to pinned 26.18.0. Repeat verification against the versions selected for release.
 
-Electron is not installed in the owner's tested local environment. The subsequent [desktop experiment](DESKTOP_EXPERIMENT.md) adds separate Windows CI packaging and installed-app checks; its exact run result establishes what passed. Signing and real updates remain unverified. A dotnet host was found, but `dotnet --list-sdks` produced no SDKs; Rust/cargo were not found on PATH.
+[GitHub CLI browser login](https://cli.github.com/manual/gh_auth_login) is a maintained product-auth candidate, not an implemented connection. It can fall back from OS credential storage to a plaintext file; requested scopes and storage behavior must be validated before adoption. OAuth/GitHub App authorization remains an alternative. No token is requested in chat or committed.
 
-## Approved direction and next gates
+## Next single Ticket: first usable Today slice
 
-The approved desktop direction is Electron + TypeScript/React + SQLite with a separate Codex app-server adapter. NSIS-based release tooling is a candidate pending its feasibility experiment. This is an engineering recommendation based on daily launch and integration costs, not a measured claim of optimal performance. See [ADR-001](ADR-001.md).
+After owner approval, start one Ticket combining the proven shell/storage foundation with dated temporary tasks. Do not start it or batch-publish later Tickets in this closeout change.
 
-Proposed task defaults retain original dates for pending temporary tasks and use local-calendar recurrence. Day boundaries, offline periods, timezone changes and DST require explicit behavior and tests. Unconfirmed defaults are listed in the [product baseline](PRODUCT_BASELINE.md).
+Acceptance:
 
-Next gates are supported Codex/runtime authentication and execution checks, Windows packaging/update feasibility, and individually reviewed Tickets from the [working roadmap](NEXT_TICKETS.md). **Neither the full MVP nor all Phase 0 acceptance criteria are complete.**
+1. Open Personal / Today with clear English empty/loading/error states and the planned React/TypeScript renderer. Keep Node and credentials unavailable in the renderer. Do not show simulated Projects data.
+2. Quickly add a nonempty temporary task with a valid planned date defaulting to the local calendar date. Preserve user-entered text in its original language.
+3. Complete/cancel tasks and retain basic visible records and original planned dates. Pending tasks due today or earlier stay visible; future tasks remain accessible without appearing due today. Editing and recurrence may be small follow-ups.
+4. Persist across app restarts in an explicit product profile outside source/install output. Do not overwrite or import `.phase0` notes or the dedicated Codex profile. Test the product's own data-upgrade path.
+5. Test real SQLite/HTTP behavior, input/date validation, overdue/future filtering and restart persistence with disposable directories and an injectable local-date clock. Run required language/compiler/build checks and installed desktop smoke for the changed UI.
+
+This slice adds no account connection, model call, app-created GitHub Issue or updater. Daily/weekly recurrence, Projects/action center, AI planning, coding/review and releases remain individually started Tickets. Recurrence/week/timezone defaults remain proposals for the recurrence Ticket. No complete MVP acceptance scenario is claimed here.

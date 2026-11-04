@@ -2,7 +2,7 @@
 
 A Windows desktop task tracker built with TypeScript, React, Electron and SQLite. Data stays on your computer; no Tracker account is required.
 
-**Status:** Today and repeating tasks are merged. Task #24 reorganizes the existing code for review; it adds no feature. This is an unsigned development build, not the complete MVP.
+**Status:** Personal and the maintainability refactor are merged. Task #26 adds the manual project hierarchy for review. This is an unsigned development build, not the complete MVP.
 
 ## Available now
 
@@ -11,8 +11,9 @@ A Windows desktop task tracker built with TypeScript, React, Electron and SQLite
 - See due/overdue tasks in Today and future tasks in Upcoming.
 - Keep tasks across restarts, with original planned dates.
 - Choose daily/weekly repetition, retain missed periods in History and stop future repeats.
+- Switch to Projects, create projects/milestones/manual tickets, write acceptance criteria and change ticket status.
 
-Editing/reopening, Projects, AI planning, coding/review and one-click updates are not implemented.
+Action center, dependencies, editing/deletion, Kanban, AI planning, coding/review and one-click updates are not implemented.
 
 ## Repeating tasks
 
@@ -21,6 +22,12 @@ Choose **Repeat** and a first date of today or later. Daily tasks reset at local
 Completing/cancelling affects one occurrence. Unfinished periods become **Missed** in History; reopening catches up closed-app periods without overdue accumulation. Temporary tasks keep their original dates and stay pending.
 
 Expand **Repeating tasks** to stop a schedule. Its current-period task stays available; a future first occurrence is cancelled. History is retained. Upcoming shows the first scheduled task, not an infinite preview.
+
+## Manual projects
+
+Choose **Projects**, add a project, then a milestone and its tickets. Each ticket can move between Backlog, Ready, In Progress, Review, Done and Blocked. Descriptions and acceptance criteria support multiple lines.
+
+The sidebar selects a project; the milestone selector limits the visible ticket list. Manual tickets have no GitHub/Codex controls. Everything stays in the local database across restarts. Switching workspaces starts their default view; unsaved form drafts are not retained across workspace changes.
 
 ## Run on Windows
 

@@ -20,9 +20,10 @@ function allowedDependency(from: string, to: string, typeOnly: boolean): boolean
       return to.startsWith(`src/${layer}/`) || to.startsWith('src/shared/');
     }
   }
-  if (from.startsWith('src/tasks/') && domainFiles.has(posix.basename(from)) && !typeOnly) {
+  const feature = ['tasks', 'projects'].find(name => from.startsWith(`src/${name}/`));
+  if (feature && domainFiles.has(posix.basename(from)) && !typeOnly) {
     return to.startsWith('src/shared/')
-      || (to.startsWith('src/tasks/') && domainFiles.has(posix.basename(to)));
+      || (to.startsWith(`src/${feature}/`) && domainFiles.has(posix.basename(to)));
   }
   return !to.startsWith('public/');
 }

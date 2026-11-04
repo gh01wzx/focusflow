@@ -34,9 +34,11 @@ The launcher is Start-FocusFlow.cmd. Run npm ci again when dependencies change. 
 | src/shared | Browser-safe contracts, codecs and calendar helpers |
 | src/client | Typed browser API client |
 | src/http | Local server lifecycle and request checks |
-| src/tasks | Separate service/rules, routes, repository and database composition |
+| src/tasks | Personal service/rules, routes and repository |
+| src/projects | Manual hierarchy service, validation, routes and repository |
+| src/workspace | Shared database ownership and HTTP composition |
 | src/desktop | Electron window and lifecycle |
-| src/database | Reusable migration/backup protection |
+| src/database | Shared schema/connection, migrations and backup/recovery |
 | src/codex | Standalone integration groundwork |
 | scripts | Build, explicit verification and recovery tools |
 | test | Disposable calendar, storage, API and protocol tests |
@@ -55,7 +57,7 @@ Do not point test overrides at real data. Do not commit databases, credentials, 
 
 ## Backup and recovery
 
-Existing product schema changes take a verified snapshot before transactional migration. A fresh database needs no pre-upgrade snapshot.
+Existing product schema changes take a verified snapshot before transactional migration. Schema 4 adds the manual hierarchy while retaining Personal/repeating data. Append migrations; do not rewrite an applied migration. A fresh database needs no pre-upgrade snapshot.
 
 To restore a snapshot manually, close all app instances and preserve the original database plus any WAL/SHM sidecars. Keep the snapshot and matching .db.json manifest together, then run:
 

@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client';
-import { TodayApp } from './TodayApp.tsx';
+import { WorkspaceApp } from '../workspace/WorkspaceApp.tsx';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing application root');
-createRoot(root).render(<TodayApp />);
+createRoot(root).render(<WorkspaceApp />);

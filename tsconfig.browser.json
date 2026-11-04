@@ -2,9 +2,10 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "types": [],
-    "rootDir": "public",
-    "outDir": "dist/public"
+    "types": ["react", "react-dom"],
+    "jsx": "react-jsx",
+    "rootDir": ".",
+    "noEmit": true
   },
-  "include": ["public/**/*.ts"]
+  "include": ["public/**/*.ts", "public/**/*.tsx", "src/tasks/model.ts"]
 }

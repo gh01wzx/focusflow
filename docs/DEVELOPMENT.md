@@ -1,0 +1,62 @@
+# Development
+
+Prerequisite: Node 24.12.x or later 24.x. Install exact dependencies with npm ci.
+
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| npm start | Clean/build and open the desktop app |
+| npm run start:web | Open the same task service in a browser |
+| npm run check:language | Check maintained source/docs for accidental Han-script text |
+| npm run typecheck | Strict checks for Node, browser, desktop and build tooling |
+| npm run build | Clean ignored dist output, compile TypeScript and bundle assets |
+| npm test | Run compiled tests |
+| npm run test:source | Optional Node type-stripping execution; not a type check |
+| npm run package:windows | Build an unsigned NSIS installer; publication is disabled |
+
+The launcher is Start-FocusFlow.cmd. Run npm ci again when dependencies change. The installed app bundles its runtime.
+
+## Layout
+
+| Directory | Contents |
+| --- | --- |
+| public/today | React interface and readable source styles |
+| src/tasks | Task model, API and SQLite storage |
+| src/desktop | Electron window and lifecycle |
+| src/database | Reusable migration/backup protection |
+| src/codex | Standalone integration groundwork |
+| scripts | Build, explicit verification and recovery tools |
+| test | Disposable calendar, storage, API and protocol tests |
+
+Build scripts remove only the validated project dist directory. This prevents deleted source tests/modules surviving as stale compiled output.
+
+## Data paths
+
+- Product profile: %LOCALAPPDATA%\FocusFlow\desktop
+- Product database: data\tracker.db within that profile.
+- FOCUSFLOW_DATA_DIR explicitly overrides browser-development data.
+- FOCUSFLOW_TEST_PROFILE selects a disposable desktop-test profile.
+- Previous spike data and the separate Codex profile are never imported or deleted by source cleanup.
+
+Do not point test overrides at real data. Do not commit databases, credentials, local config or logs.
+
+## Backup and recovery
+
+Existing product schema changes take a verified snapshot before transactional migration. A fresh database needs no pre-upgrade snapshot.
+
+To restore a snapshot manually, close all app instances and preserve the original database plus any WAL/SHM sidecars. Keep the snapshot and matching .db.json manifest together, then run:
+
+~~~powershell
+node scripts/restore-snapshot.ts BACKUP_DB NEW_DATABASE_PATH
+~~~
+
+The destination must be new. The helper verifies checksum, integrity and schema, and refuses existing files/sidecars. Use a compatible app with the restored data; later edits remain in the preserved original database.
+
+This is developer recovery tooling, not an automatic updater or user recovery UI.
+
+## Checks before review
+
+Run language, typecheck, build and test commands. CI repeats cross-platform checks and operates an installed Windows app, including restart and synthetic prior-schema recovery.
+
+Tests never use a live model, authenticated GitHub writes or real personal data. Keep evidence tied to the reviewed commit. See [validation](VALIDATION.md) and [Codex commands](CODEX.md).

@@ -29,7 +29,7 @@ async function digest(path: string): Promise<string> {
 
 export async function createSnapshot(source: DatabaseSync, directory: string, targetSchemaVersion?: number): Promise<Snapshot> {
   await mkdir(directory, { recursive: true });
-  const prefix = targetSchemaVersion === undefined ? 'probe' : `before-migration-to-${targetSchemaVersion}`;
+  const prefix = targetSchemaVersion === undefined ? 'snapshot' : `before-migration-to-${targetSchemaVersion}`;
   const name = `${prefix}-${Date.now()}-${randomUUID()}.db`;
   const path = join(directory, name);
   await backup(source, path);

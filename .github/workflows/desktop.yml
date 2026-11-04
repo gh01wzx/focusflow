@@ -1,0 +1,85 @@
+name: Windows desktop checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  desktop:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.12.0'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Initialize the pinned Electron runtime
+        run: node -e "const fs=require('node:fs'); const exe=require('electron'); if(!fs.existsSync(exe)) throw new Error('Missing Electron runtime');"
+      - name: Record dependency audit
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          npm audit --json | Set-Content -LiteralPath artifacts/dependency-audit.json -Encoding utf8
+          if ($LASTEXITCODE -gt 1) { throw 'Audit did not complete' }
+          $audit = Get-Content -LiteralPath artifacts/dependency-audit.json -Raw | ConvertFrom-Json
+          if (-not $audit.metadata) { throw 'Missing audit metadata' }
+          $audit.metadata.vulnerabilities | ConvertTo-Json -Compress
+          exit 0
+      - run: npm run check:language
+      - run: npm run typecheck
+      - run: npm run package:windows
+      - run: npm test
+      - name: Install and exercise Today
+        timeout-minutes: 4
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -LiteralPath release -Filter 'FocusFlow-*-x64.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'Installer not found' }
+          $installation = Join-Path $env:RUNNER_TEMP 'focusflow-today-installed'
+          $setup = Start-Process -FilePath $installer.FullName -ArgumentList @('/S', "/D=$installation") -WindowStyle Hidden -PassThru
+          if (-not $setup.WaitForExit(120000)) { Stop-Process -Id $setup.Id -ErrorAction SilentlyContinue; throw 'Installer timeout' }
+          if ($setup.ExitCode -ne 0) { throw "Installer failed: $($setup.ExitCode)" }
+          node dist/scripts/smoke-today.js (Join-Path $installation 'FocusFlow.exe')
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-today
+          path: |
+            release/FocusFlow-*-x64.exe
+            artifacts/today/
+            artifacts/dependency-audit.json
+          retention-days: 14
+  product-recovery:
+    needs: desktop
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.12.0'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-today
+          path: .phase0/today-artifact
+      - name: Verify product migration and separate recovery
+        timeout-minutes: 4
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -LiteralPath .phase0/today-artifact/release -Filter 'FocusFlow-*-x64.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'Installer not found' }
+          $installation = Join-Path $env:RUNNER_TEMP 'focusflow-recovery-installed'
+          $setup = Start-Process -FilePath $installer.FullName -ArgumentList @('/S', "/D=$installation") -WindowStyle Hidden -PassThru
+          if (-not $setup.WaitForExit(120000)) { Stop-Process -Id $setup.Id -ErrorAction SilentlyContinue; throw 'Installer timeout' }
+          if ($setup.ExitCode -ne 0) { throw "Installer failed: $($setup.ExitCode)" }
+          node dist/scripts/smoke-today.js (Join-Path $installation 'FocusFlow.exe') --recovery
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-product-recovery
+          path: artifacts/product-recovery/
+          retention-days: 14

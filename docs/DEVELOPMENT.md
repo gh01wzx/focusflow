@@ -2,6 +2,14 @@
 
 Prerequisite: Node 24.12.x or later 24.x. Install exact dependencies with npm ci.
 
+## Tickets and PRs
+
+Use the Issue number as the task ID from task 21 onward. Issue and PR titles share [ID] plus a plain-English user outcome; the branch starts with the same ID. Example: [21] Create tasks that repeat daily or weekly, on branch 21-repeat-daily-or-weekly. GitHub assigns a separate, immutable PR number; it is not another task ID.
+
+Describe the user's need and acceptance steps they can try in the app. A PR starts with what changed for the user, how to try it, and verification/limitations. Put database, protocol and implementation details in expandable engineering notes. For maintenance, explain the user impact before the mechanism.
+
+Link the Issue with Closes #ID. Passing checks means ready for review; only an observed merge completes the coding Ticket. Replacing a PR or renaming a branch never counts as completion.
+
 ## Commands
 
 | Command | Purpose |

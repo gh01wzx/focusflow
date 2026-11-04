@@ -5,6 +5,8 @@
 - Product GitHub authorization, coding permissions/approvals/recovery and formal signing/updating still gate Phases 2, 3 and 4. A local-task feature does not verify them.
 - The owner authorized public gh01wzx/focusflow and desktop development on 2026-11-03. Do not repeat that authorization request. New account scopes and external actions must stay within the approved workflow.
 - Work on one individually authorized Ticket at a time, using small PRs. No automatic next-Ticket start, merge or deployment. A coding Ticket is Done only after its linked PR is observed merged.
+- Write Tickets as user stories: lead with what the user can do and observable acceptance steps. Keep implementation details in the PR's expandable engineering notes.
+- Use the Issue number as the task ID. Start Issue/PR titles with [ID] and branches with ID- followed by a short English outcome, for example [21] Create tasks that repeat daily or weekly and 21-repeat-daily-or-weekly. GitHub's separate PR number is only a platform reference; link the Issue with Closes #ID. Apply this from task 21 onward.
 - Never commit databases, credentials, personal configuration, execution logs or installer output. Installed user data stays outside source/install directories.
 - Use strict TypeScript for first-party app, browser, integration and test code. Generated JavaScript belongs only in ignored build output.
 - Use English in source, comments, UI, docs, Issues, commits and PRs. Conversation with the owner is Chinese. Preserve user-entered text; escape non-English test fixtures.

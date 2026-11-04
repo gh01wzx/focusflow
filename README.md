@@ -2,7 +2,7 @@
 
 Windows-first, local-first personal tasks and project delivery, with a planned Codex → GitHub PR → human review workflow.
 
-**Status: Phase 0 feasibility spike. Not a usable task tracker yet.** The [public repository](https://github.com/gh01wzx/focusflow) contains the local persistence experiment and an experimental Windows desktop packaging workflow. Check the exact PR's CI result before using an artifact. Authenticated AI execution and updating remain unverified.
+**Status: Phase 0 feasibility spike. Not a usable task tracker yet.** The [public repository](https://github.com/gh01wzx/focusflow) contains the local persistence experiment and an experimental Windows desktop packaging workflow. Check the exact PR's CI result before using an artifact. One authenticated read-only model turn has owner-reported Windows evidence; cancellation, coding execution and automatic updating remain unverified.
 
 ## Run on Windows
 
@@ -29,7 +29,7 @@ npm run probe:github
 
 Codex discovery is intentionally explicit. The transport probe launches a separate process in a temporary isolated Codex home, sends only `initialize`/`initialized`, then stops it. It does not log in, invoke a model, inspect tokens, or attach to a running Codex conversation. Public GitHub probes send only unauthenticated GET requests; failure is reported honestly.
 
-The opt-in [Codex verification commands](docs/CODEX_VERIFICATION.md) add a pinned standalone CLI, separate developer login profile and one disposable read-only model probe. The JSONL client is tested with fake streams; a separate Windows CI job checks standalone installation and unauthenticated status. Authenticated model execution remains unverified. Desktop launch never runs these commands; CI never logs in or invokes a model.
+The opt-in [Codex verification commands](docs/CODEX_VERIFICATION.md) add a pinned standalone CLI, separate developer login profile, a disposable read-only model probe and a separate cancellation probe. The JSONL client has fake-stream and real child-process fixture tests; a separate Windows CI job checks standalone installation and unauthenticated status. The owner reported one successful live streaming turn on Windows. Desktop launch never runs these commands; CI never logs in or invokes a model.
 
 ## What this spike proves
 

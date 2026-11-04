@@ -1,17 +1,18 @@
 // Explicit developer commands only. Ordinary tests never execute this file.
 import { spawn } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
-import { tmpdir, homedir } from 'node:os';
-import { join, resolve, dirname, basename, isAbsolute } from 'node:path';
+import { mkdir, readFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join, dirname, basename, isAbsolute } from 'node:path';
 import { once } from 'node:events';
-import { CodexClient, CodexFailure, record } from '../src/codex/client.ts';
-import { readOnlyProbe, ProbeFailure } from '../src/codex/read-only-probe.ts';
+import { CodexFailure, record } from '../src/codex/client.ts';
+import { readOnlyProbe, cancelReadOnlyProbe, ProbeFailure } from '../src/codex/read-only-probe.ts';
+import { withCodexProcess, CodexProcessFailure } from '../src/codex/process.ts';
 
 const VERSION = '0.166.0';
 const mode = process.argv[2];
-if (!['install', 'login', 'status', 'live'].includes(mode ?? '') ||
-    (mode === 'live' && process.argv[3] !== '--live')) {
-  console.error('Usage: npm run codex:install | codex:login | codex:status | codex:probe -- --live');
+if (!['install', 'login', 'status', 'live', 'cancel'].includes(mode ?? '') ||
+    ((mode === 'live' || mode === 'cancel') && process.argv[3] !== '--live')) {
+  console.error('Usage: npm run codex:install | codex:login | codex:status | codex:probe -- --live | codex:cancel -- --live');
   process.exit(2);
 }
 
@@ -56,67 +57,42 @@ async function verify(): Promise<void> {
     return;
   }
 
-  const cwd = await mkdtemp(join(tmpdir(), 'focusflow-codex-turn-'));
-  const child = spawn(process.execPath, [cli, ...config, 'app-server', '--listen', 'stdio://'], {
-    cwd, env: environment, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
-  });
-  child.stderr.resume(); // Raw host diagnostics can contain account details or configuration paths.
-  const client = new CodexClient(child.stdout, child.stdin);
-  child.on('error', () => client.close());
   const controller = new AbortController();
   const cancel = () => controller.abort();
   process.on('SIGINT', cancel);
-  let exited = false;
-  child.once('exit', () => { exited = true; client.close(); });
-  // Attach before cleanup; only this owned process tree may be terminated.
-  const closed = new Promise<void>(resolveClosed => child.once('close', () => resolveClosed()));
   try {
-    await client.initialize();
-    const account = record(record(await client.request('account/read', { refreshToken: false })).account);
-    const auth = account.type === 'chatgpt' ? 'chatgpt' : account.type === 'apiKey' ? 'apiKey' : 'none';
-    console.log(JSON.stringify({ check: 'account-status', cliVersion: VERSION, auth }));
-    if (mode === 'status') return;
-    if (auth !== 'chatgpt') throw new ProbeFailure('CHATGPT_LOGIN_REQUIRED');
-    console.log('Starting one read-only model turn. This uses your Codex allowance. Ctrl+C cancels.');
-    let lastKind = '';
-    const evidence = await readOnlyProbe(client, cwd, { signal: controller.signal, onProgress: kind => {
-      if (lastKind !== kind) console.log(`Progress: ${kind}`);
-      lastKind = kind;
-    } });
-    console.log(JSON.stringify({ ...evidence, cliVersion: VERSION }));
+    const lifecycle = await withCodexProcess(process.execPath,
+      [cli, ...config, 'app-server', '--listen', 'stdio://'], environment, async (client, cwd) => {
+        await client.initialize();
+        const account = record(record(await client.request('account/read', { refreshToken: false })).account);
+        const auth = account.type === 'chatgpt' ? 'chatgpt' : account.type === 'apiKey' ? 'apiKey' : 'none';
+        const accountStatus = { check: 'account-status', cliVersion: VERSION, auth };
+        if (mode === 'status') return accountStatus;
+        console.log(JSON.stringify(accountStatus));
+        if (auth !== 'chatgpt') throw new ProbeFailure('CHATGPT_LOGIN_REQUIRED');
+        console.log(mode === 'cancel'
+          ? 'Starting one read-only turn and requesting immediate cancellation. This uses your Codex allowance.'
+          : 'Starting one read-only model turn. This uses your Codex allowance. Ctrl+C cancels.');
+        let lastKind = '';
+        const probe = mode === 'cancel' ? cancelReadOnlyProbe : readOnlyProbe;
+        return probe(client, cwd, { signal: controller.signal, onProgress: kind => {
+          if (lastKind !== kind) console.log(`Progress: ${kind}`);
+          lastKind = kind;
+        } });
+      });
+    // Verified output is emitted only after owned-process closure and temp cleanup succeed.
+    console.log(JSON.stringify({ ...lifecycle.result, cliVersion: VERSION,
+      processClosed: lifecycle.processClosed, temporaryDirectoryRemoved: lifecycle.temporaryDirectoryRemoved }));
   } finally {
     process.off('SIGINT', cancel);
-    client.close();
-    child.stdin.end();
-    let killTimer: ReturnType<typeof setTimeout> | undefined;
-    let deadline: ReturnType<typeof setTimeout> | undefined;
-    try {
-      killTimer = setTimeout(() => {
-        if (!exited && child.pid) {
-          if (process.platform === 'win32') {
-            const killer = spawn(join(environment.SystemRoot ?? 'C:\\Windows', 'System32', 'taskkill.exe'),
-              ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
-            killer.on('error', () => child.kill());
-          } else child.kill('SIGKILL');
-        }
-      }, 2000);
-      await Promise.race([closed, new Promise<never>((_, reject) => {
-        deadline = setTimeout(() => reject(new ProbeFailure('PROCESS_CLEANUP_FAILED')), 10_000);
-      })]);
-    } finally {
-      if (killTimer) clearTimeout(killTimer);
-      if (deadline) clearTimeout(deadline);
-    }
-    if (dirname(resolve(cwd)) !== resolve(tmpdir()) || !basename(cwd).startsWith('focusflow-codex-turn-')) {
-      throw new ProbeFailure('CLEANUP_PATH_REJECTED');
-    }
-    await rm(cwd, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
   }
 }
 
 try { await verify(); }
 catch (error) {
-  const reason = error instanceof CodexFailure || error instanceof ProbeFailure ? error.code : 'LOCAL_COMMAND_FAILED';
-  console.error(JSON.stringify({ status: 'blocked', reason }));
+  const reason = error instanceof CodexFailure || error instanceof ProbeFailure || error instanceof CodexProcessFailure
+    ? error.code : 'LOCAL_COMMAND_FAILED';
+  console.error(JSON.stringify({ status: 'blocked', reason,
+    ...(error instanceof CodexProcessFailure && error.cleanupFailed ? { cleanupFailed: true } : {}) }));
   process.exitCode = 1;
 }

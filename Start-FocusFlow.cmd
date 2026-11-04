@@ -17,5 +17,10 @@ if not exist node_modules\electron\cli.js (
   pause
   exit /b 1
 )
+if not exist node_modules\esbuild\package.json (
+  echo Run npm ci in this folder to install the updated Today interface dependencies.
+  pause
+  exit /b 1
+)
 call npm start
 if errorlevel 1 pause

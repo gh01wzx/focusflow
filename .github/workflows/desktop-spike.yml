@@ -12,20 +12,6 @@ jobs:
         with:
           node-version: '24.12.0'
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Stage renderer tooling for local verification
-        uses: actions/upload-artifact@v4
-        with:
-          name: today-renderer-tooling
-          path: |
-            node_modules/react/
-            node_modules/react-dom/
-            node_modules/scheduler/
-            node_modules/csstype/
-            node_modules/@types/react/
-            node_modules/@types/react-dom/
-            node_modules/esbuild/
-            node_modules/@esbuild/win32-x64/
-          retention-days: 3
       - name: Initialize the pinned Electron runtime
         run: node -e "const fs=require('node:fs'); const exe=require('electron'); if(!fs.existsSync(exe)) throw new Error('Missing Electron runtime');"
       - name: Record dependency audit

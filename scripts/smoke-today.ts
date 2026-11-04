@@ -34,13 +34,17 @@ const mark = (name: string) => { stage = name; console.log(`SMOKE_STAGE: ${name}
 async function closeApp() {
   if (!application) return;
   const owned = application; application = undefined;
+  const child = owned.process();
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    await Promise.race([owned.close(), new Promise<never>((_, reject) => {
+    const exited = child.exitCode !== null ? Promise.resolve(child.exitCode) : new Promise<number | null>(resolveExit => child.once('exit', code => resolveExit(code)));
+    // Exercise the application's real quit path; a framework context-close acknowledgement is insufficient.
+    void owned.evaluate(({ app }) => app.quit()).catch(() => {});
+    const code = await Promise.race([exited, new Promise<never>((_, reject) => {
       timer = setTimeout(() => reject(new Error('Owned desktop did not close within 15 seconds.')), 15_000);
     })]);
+    assert.equal(code, 0, 'The desktop must exit gracefully.');
   } catch (error) {
-    const child = owned.process();
     if (child.pid && child.exitCode === null) {
       if (process.platform === 'win32') {
         const killer = spawn(join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'taskkill.exe'),
@@ -126,9 +130,9 @@ try {
     await page.getByRole('heading', { name: 'Upcoming.', exact: true }).waitFor();
     await page.getByRole('button', { name: /Today/ }).click();
     assert.equal(await page.getByText('Plan tomorrow', { exact: true }).count(), 0);
+    await page.screenshot({ path: join(artifacts, 'today.png'), fullPage: true });
     await add('\u4fdd\u7559\u539f\u6587 <img src=x onerror=alert(1)>');
     assert.equal(await page.locator('img').count(), 0);
-    await page.screenshot({ path: join(artifacts, 'today.png'), fullPage: true });
     await page.getByRole('button', { name: /History/ }).click();
     await page.getByText('Finish a small task', { exact: true }).waitFor();
     await page.getByText('An optional task', { exact: true }).waitFor();

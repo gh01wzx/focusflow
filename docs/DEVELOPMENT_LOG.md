@@ -1,5 +1,9 @@
 # Development log
 
+## 2026-11-04 - first Today slice (Issue #19)
+
+Observed the owner-authorized PR #18 merge at `2a538a76d3a533dac3d6e33fb70765f0d5d20b11`, approving bounded local-task development. Added React/TypeScript Today, dated temporary tasks, complete/cancel, overdue/upcoming/history views and an isolated product profile. The existing spike database and Codex profile are not imported. Added real product SQLite/HTTP/calendar tests and installed Today/migration/recovery smoke scenarios. Source/installer version is `0.1.0-alpha.1`, not a formal release; see `TODAY_SLICE.md` for evidence boundaries.
+
 ## 2026-11-04 - Phase 0 closeout proposal (Issue #17)
 
 Observed PR #16 merged at `4d5b6ebf58f3163a777724ff9b184d75ff8d7b80`. The owner reported successful real cancellation on tested head `56f73fec0cdc011ec9eebc56cd741cd8066365c1`, including interruption acknowledgement, interrupted terminal status, process closure and temp-directory removal. The exact-head Windows/Linux and desktop upgrade/recovery workflows passed; the captured packaging audit still reports 15 moderate affected development packages.

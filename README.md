@@ -1,74 +1,71 @@
-# FocusFlow — Personal & Projects Tracker
+# FocusFlow
 
-Windows-first, local-first personal tasks and project delivery, with a planned Codex → GitHub PR → human review workflow.
+A Windows-first, local-first personal task and project tracker. TypeScript, React, Electron and SQLite. No Tracker account is required.
 
-**Status: Phase 0 core feasibility demonstrated; local-task handoff proposed. Not a usable task tracker yet.** Windows installation, SQLite upgrade/recovery and owner-reported real Codex streaming/cancellation have evidence. The [closeout report](docs/PHASE0_REPORT.md) proposes the bounded Phase 1 start for owner merge approval. Today/Projects, product GitHub authorization, coding/review and automatic updating remain future work. CI artifacts are unsigned development experiments, not formal releases.
+**Status: Phase 1 development.** The first Today slice supports dated temporary tasks; this is not the complete MVP or a signed formal release. Recurrence, Projects, AI planning, the coding/review loop and one-click updates are still future work.
 
-## Run on Windows
+## Use Today
 
-Prerequisite for source development: Node.js **24.12.x or a later 24.x release**. Run `npm ci` once to install the pinned compiler, Electron launcher package and development tools. Electron 45 downloads its binary on first use, so a successful `npm ci` does not need to create `node_modules/electron/dist/electron.exe`. The first `npm start` can take longer while the official loader downloads and verifies the runtime; subsequent starts reuse it. No API key is required. The experimental installer already bundles its runtime and has a separate setup flow.
+- Add a task and a planned date, defaulting to today.
+- Check it to complete it, or cancel it. Both remain in History.
+- Today keeps overdue pending tasks with their original planned dates; Upcoming holds future tasks.
+- Tasks persist on this computer across restarts. Titles retain the language entered by the user.
 
-1. Double-click `Start-FocusFlow.cmd`.
-2. The experiment opens in a desktop window. Keep the development console open while using it.
-3. Save test text, stop the app with Ctrl+C, reopen, and confirm it persists.
-4. Create a backup of the last saved value using the second button.
+The page refreshes its local calendar date on focus and periodically while visible. Today uses the computer's local calendar, not a UTC date slice. There is no recurrence, edit/reopen control or automatic reminder in this first slice.
 
-The development launcher requires the installed compiler and Electron runtime. For the browser-only experiment, run `npm run start:web` and use the printed local URL. It listens only on IPv4 loopback. The desktop shell adds a single-instance lifecycle and a separate profile outside source/install directories. The unsigned installer and its limits are described in the [desktop experiment guide](docs/DESKTOP_EXPERIMENT.md).
+## Run from source on Windows
+
+Install Node **24.12.x or a later 24.x release**, then run once after downloading/updating source dependencies:
 
 ```powershell
 npm ci
+```
+
+Double-click `Start-FocusFlow.cmd`, or run `npm start`. The launcher builds the renderer before opening the desktop window. Electron's official launcher downloads its pinned binary on first use; later launches reuse it. The source console stays open while the app runs. The packaged app bundles its runtime.
+
+The passing **Windows desktop checks** workflow provides a `windows-today` artifact with an unsigned development installer, screenshot and test report. Extract the artifact and run `FocusFlow-0.1.0-alpha.1-x64.exe`, then use the installed FocusFlow shortcut. Artifact availability alone is not a test pass; check the exact run conclusion. This is a development build, with no formal release/update channel. Signing and one-click updates remain Phase 4 work.
+
+## Private local data
+
+Desktop product profile: `%LOCALAPPDATA%\FocusFlow\desktop`. SQLite data: `data\tracker.db` under that profile. It is outside the source and installation directories. The installer preserves app data on uninstall. Product identity checks reject an unrelated database rather than treating it as task data.
+
+The prior Phase 0 note experiment remains separate at `%APPDATA%\FocusFlow\phase0-desktop` (desktop) or `.phase0/data/` (browser spike). Its notes are not imported or overwritten. The dedicated Codex profile remains separate at `%LOCALAPPDATA%\FocusFlow\codex-phase0`; the Today app does not access it or call a model. Personal tasks are not sent to GitHub or any AI service.
+
+For a browser development session, `npm run start:web` uses the product data path. `FOCUSFLOW_DATA_DIR` can explicitly select another development data directory. Avoid running multiple source sessions against the same data while testing migrations. `npm run start:spike:web` opens the preserved persistence experiment instead. Test automation uses disposable directories and `FOCUSFLOW_TEST_PROFILE`, never the normal profile.
+
+Database migrations take a verified pre-upgrade snapshot and run transactionally. Newer product schemas and unrelated databases are refused. The test suite exercises a **synthetic prior product schema** and separate snapshot recovery; no historic product release is fabricated. The old two-installer Phase 0 result remains historical evidence, not a claim that Phase 0 notes are upgraded into tasks. Recovery tooling is developer-facing; a user recovery/update UI is not implemented.
+
+Never commit databases, credentials, local config, logs or installer output. Source is public at [gh01wzx/focusflow](https://github.com/gh01wzx/focusflow); personal data stays local.
+
+## Architecture and verification
+
+```text
+public/today/   React/TypeScript Today UI and static styles
+src/tasks/     Task validation, SQLite store and loopback HTTP API
+src/desktop/   Sandboxed Electron window, profile and lifecycle
+src/database/  Verified snapshots, restoration and transactional migrations
+src/codex/     Separately verified protocol client; not invoked by Today
+scripts/       Build, explicit probes and disposable installed-app checks
+test/          Calendar, storage, HTTP, migration and protocol tests
+docs/          Product baseline, decisions and evidence ledger
+```
+
+The renderer has no Node/credential access or preload bridge. Its service listens only on IPv4 loopback, rejects wrong Host/Origin and oversized writes, and serves a restrictive CSP. React escapes task text; all renderer assets are bundled locally, with no CDN or remote font dependency. Source stays strict TypeScript; generated JavaScript is ignored build output. React 19.3.1, matching React DOM, type declarations and esbuild are exactly pinned in the lockfile.
+
+```powershell
+npm run check:language
 npm run typecheck
 npm run build
 npm test
-npm start
-npm run start:web
 npm run package:windows
-node scripts/probe-codex.ts 'ABSOLUTE_PATH_TO_CODEX_EXE'
-npm run probe:github
 ```
 
-Codex discovery is intentionally explicit. The transport probe launches a separate process in a temporary isolated Codex home, sends only `initialize`/`initialized`, then stops it. It does not log in, invoke a model, inspect tokens, or attach to a running Codex conversation. Public GitHub probes send only unauthenticated GET requests; failure is reported honestly.
+Windows/Linux checks run real SQLite/HTTP/calendar tests and controlled protocol fixtures. Windows packaging checks operate the installed Today UI, restart it, verify renderer isolation and test product schema migration/recovery. Smoke checks have stage output and bounded launch/locator/close waits. No live model or authenticated GitHub write belongs to ordinary tests. Check the exact PR head's CI results for hosted evidence. Dependency audit findings are retained as diagnostics, not presented as a clean security result.
 
-The opt-in [Codex verification commands](docs/CODEX_VERIFICATION.md) add a pinned standalone CLI, separate developer login profile, a disposable read-only model probe and a separate cancellation probe. The JSONL client has fake-stream and real child-process fixture tests; a separate Windows CI job checks standalone installation and unauthenticated status. The owner reported one successful live streaming turn on Windows. Desktop launch never runs these commands; CI never logs in or invokes a model.
+## Roadmap
 
-## What this spike proves
+The owner-approved [Phase 0 handoff](docs/PHASE0_REPORT.md) permits local Personal/manual Projects through small, individually started Tickets. Next slices include recurrence and manual Projects/action center. Product-owned GitHub authorization, reviewed AI planning and controlled Codex coding/review come later, followed by verified formal releases/updates. Coding Tickets become Done only after an observed PR merge.
 
-- A local browser UI backed by real SQLite persistence.
-- Online database backup, integrity checking and restoration into a separate test database.
-- Refusal to open a newer schema with an older binary.
-- A reproducible Codex stdio handshake experiment, distinct from authenticated execution.
-- A read-only GitHub connectivity probe, distinct from Issue/PR write integration.
+The [Codex probe guide](docs/CODEX_VERIFICATION.md) records owner-reported real streaming and cancellation with ChatGPT login. This does not establish the future code-writing sandbox, product authorization or independent review workflow. No existing Codex App session is controlled.
 
-Current Windows test results and limitations: [Phase 0 report](docs/PHASE0_REPORT.md).
-
-## Architecture
-
-The spike uses **TypeScript throughout application, browser, probes and tests**, with strict checks and separate Node/browser compiler configurations. TypeScript emits JavaScript into ignored `dist/`; browser HTML/CSS assets are copied alongside it. `npm start` builds before launching. `npm test` runs the built tests; `npm run test:source` additionally exercises erasable TypeScript directly on Node 24 and does not perform type checking.
-
-The Electron shell hosts Node's built-in HTTP server and `node:sqlite`, with no third-party database driver or production npm dependency. Electron, its packager, Playwright, TypeScript and Node type definitions are pinned development dependencies. `node:sqlite` is experimental in the original Node 24.12.0 spike; bundled compatibility is verified separately for the desktop runtime. The approved product direction remains Electron + TypeScript/React + SQLite + a Codex app-server adapter; see [architecture decisions](docs/ADR-001.md) for the remaining integration/update gates.
-
-```text
-public/   Browser UI for the persistence experiment
-src/      HTTP adapter and versioned SQLite store
-scripts/  Non-mutating integration probes
-test/     Real database and local HTTP integration checks
-docs/     Requirements baseline, decisions, evidence, proposed Tickets
-```
-
-## Data and credentials
-
-Browser-spike data is stored in `.phase0/data/` relative to the project directory; `FOCUSFLOW_DATA_DIR` can select another browser test directory. The desktop experiment uses `%APPDATA%\FocusFlow\phase0-desktop\data\phase0.db`, outside the source/installation directories. Its disposable smoke profile uses the explicit `FOCUSFLOW_DESKTOP_TEST_DATA_DIR` override. The two experiments do not import each other's data. Do not use this experiment to store private tasks.
-
-SQLite snapshots use its backup API, including committed WAL data. They are not a complete update rollback mechanism. Stop all app instances before manual recovery; preserve the original database and its WAL/SHM files together, then restore a verified snapshot into a separate empty directory and launch with that directory. Do not overwrite a live database. The automated recovery experiment uses disposable databases only.
-
-Version 0.0.2 introduces schema 2 format metadata and transactional migrations. Existing data is snapshotted and verified before migration; failure rolls back the transaction. Recovery verifies the matching manifest and creates a new database without overwriting the original. The [manual upgrade/recovery guide](docs/UPGRADE_RECOVERY_EXPERIMENT.md) separates the two-installer test from automatic updates and production recovery, which remain unimplemented.
-
-Personal data, credentials, local configuration, logs and release output are ignored by default. No token belongs in a Ticket, commit, screenshot or archive. The repository is public; the user's data remains local. The included CI workflow runs tests on Windows and Linux; the PR's Checks panel reports hosted results separately from the local results in the Phase 0 report.
-
-## Product direction
-
-The application, source comments, project documentation and GitHub development records use English. User-entered data keeps its original language. `npm run check:language` checks maintained source and documentation for accidental Han-script text; it does not inspect databases, credentials, dependencies or build output. Unicode persistence coverage uses escaped test fixtures.
-
-Personal: Today, recurring tasks, dated temporary tasks and history. Projects: Project → Milestone → Ticket, action center, manual workflows, reviewed AI planning, individually started Codex runs, evidence-based AI review, and completion only after confirmed merge. Formal releases will be separately built and updated while preserving data.
-
-See [requirements baseline](docs/PRODUCT_BASELINE.md) and [proposed Tickets](docs/NEXT_TICKETS.md). Product screenshots and the full installation/update guide will accompany the first functional release; the current test page is not the product UI.
+Application/source/documentation and GitHub development records use English. User-entered data keeps its original language. Screenshots and reports in CI artifacts use disposable test data.

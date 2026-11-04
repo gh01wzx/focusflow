@@ -36,6 +36,11 @@ function App() {
   const busyRef = useRef(false);
   const generation = useRef(0);
   const mounted = useRef(true);
+  const focusAfterSave = useRef(false);
+
+  useEffect(() => {
+    if (!busy && focusAfterSave.current) { titleInput.current?.focus(); focusAfterSave.current = false; }
+  }, [busy]);
 
   function apply(next: TaskView) {
     const oldDay = previousDay.current;
@@ -76,8 +81,8 @@ function App() {
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Could not save. Please try again.');
     } finally {
+      focusAfterSave.current = added;
       busyRef.current = false; setBusy(false);
-      if (added) titleInput.current?.focus();
     }
   }
   function add(event: FormEvent) {

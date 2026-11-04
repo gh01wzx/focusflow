@@ -1,7 +1,7 @@
 # FocusFlow development rules
 
 - The user-approved product brief is the baseline. `docs/PRODUCT_BASELINE.md` records its constraints; do not silently expand scope.
-- The owner approved the desktop direction on 2026-11-03. `docs/PHASE0_REPORT.md` proposes the Phase 0 closeout and bounded Phase 1 handoff in Issue #17. This boundary takes effect only after the owner merges its PR; writing the proposal does not approve it. Until then, do not start Phase 1 features.
+- The owner approved the desktop direction on 2026-11-03 and explicitly authorized merge of closeout PR #18 and continuation on 2026-11-04. Its merge is observed at `2a538a76d3a533dac3d6e33fb70765f0d5d20b11`; the bounded Phase 1 handoff in `docs/PHASE0_REPORT.md` is now approved. The current individually started Ticket is Issue #19 (first Today slice).
 - After that owner-approved closeout merge, local Personal/manual Projects may proceed through individually authorized Tickets. Product GitHub authorization, AI coding permissions/approvals/recovery, and formal signing/updating remain blocking gates on Phases 2, 3 and 4 respectively. Never describe them as verified by a local-task feature. Follow the first Today slice and data-isolation acceptance in the closeout report.
 - On 2026-11-03 the owner explicitly authorized the public repository `gh01wzx/focusflow` and continued desktop development. GitHub login and public repository access are verified. Do not ask for the same repository authorization again. Other account scopes and remote operations must stay within the approved product workflow; no automatic merge or deployment.
 - Never commit user databases, tokens, credentials, personal configuration or execution logs. Keep release/user data outside source in the installed product.

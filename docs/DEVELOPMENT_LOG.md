@@ -1,5 +1,11 @@
 # Development log
 
+## 2026-11-04 - cancellation and failure boundary (Issue #15)
+
+Observed PR #14 merged at `62d02a98426e28df41e9972c7995ded0cd0e2f3a`. The owner supplied a successful Windows live-probe result from tested head `4540ccc36dd1d2a6e4f868c6b9cda84b15c8eab9`: CLI 0.166.0, ChatGPT authentication, 6 streamed delta events and matching final marker. This supersedes the pre-probe status below; raw execution logs and account identity are not committed.
+
+Added a separate opt-in cancellation command that requires interruption acknowledgement plus an interrupted terminal event, bounded cancellation of pending start requests, typed redacted auth/quota failure codes and real child-process fixture tests for shutdown/cleanup. Final verified CLI output now follows successful process and temporary-directory cleanup. Ordinary tests still use no live model or credentials. Real Codex cancellation remains for explicit owner verification.
+
 ## P0-02 protocol boundary (Issue #13)
 
 Added a strict TypeScript JSONL app-server client, deterministic in-memory transport tests and explicit standalone CLI install/login/status/live-probe commands. The CLI compatibility target is `@openai/codex@0.166.0`, installed separately from the desktop application. Local language, compiler, build and 24 tests passed before publication; the PR's exact head and hosted checks are the review evidence boundary. No real authenticated model turn was performed. The development host cannot download the standalone CLI from npm (`EACCES`); the App's internal alpha CLI is not treated as a supported runtime. Remaining live gates and short user commands are in `CODEX_VERIFICATION.md`.

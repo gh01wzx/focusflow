@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PassThrough } from 'node:stream';
-import { CodexClient, CodexFailure } from '../src/codex/client.ts';
-import { readOnlyProbe, PROBE_MARKER } from '../src/codex/read-only-probe.ts';
+import { CodexClient, CodexFailure, modelFailureCode } from '../src/codex/client.ts';
+import { readOnlyProbe, cancelReadOnlyProbe, PROBE_MARKER } from '../src/codex/read-only-probe.ts';
 
 function fixture(timeout = 1000, maxLine = 1024 * 1024) {
   const input = new PassThrough();
@@ -93,7 +93,7 @@ test('malformed, oversized and unsolicited responses close the connection', asyn
   }
 });
 
-async function session(onTurn: (f: ReturnType<typeof fixture>) => void) {
+async function session(onTurn: (f: ReturnType<typeof fixture>) => void, interruptStatus: string | null = 'interrupted') {
   const f = fixture(); await f.initialize();
   f.output.on('data', chunk => {
     const message = JSON.parse(String(chunk)) as Record<string, unknown>;
@@ -103,7 +103,10 @@ async function session(onTurn: (f: ReturnType<typeof fixture>) => void) {
       onTurn(f);
       f.reply({ id: message.id, result: { turn: { id: 'turn-1' } } });
     }
-    if (message.method === 'turn/interrupt') f.reply({ id: message.id, result: {} });
+    if (message.method === 'turn/interrupt') {
+      if (interruptStatus) event(f, 'turn/completed', { turn: { id: 'turn-1', status: interruptStatus } });
+      f.reply({ id: message.id, result: {} });
+    }
   });
   return f;
 }
@@ -168,4 +171,83 @@ test('an already cancelled probe cannot start a thread or model turn', async t =
   const f = await session(() => {}); t.after(() => f.client.close());
   await assert.rejects(readOnlyProbe(f.client, 'disposable-directory', { signal: AbortSignal.abort() }), { code: 'CANCELLED' });
   assert.equal(f.sent.length, 2);
+});
+
+test('cancellation verification requires acknowledgement and an interrupted terminal event', async t => {
+  for (const status of ['interrupted', 'completed', null]) {
+    const f = await session(() => {}, status); t.after(() => f.client.close());
+    const probe = cancelReadOnlyProbe(f.client, 'disposable-directory', { interruptTimeoutMs: 20 });
+    if (status === 'interrupted') {
+      assert.deepEqual(await probe, { status: 'verified', check: 'read-only-turn-cancellation', interruptAcknowledged: true, interruptedObserved: true });
+    } else await assert.rejects(probe, { code: 'CANCELLATION_NOT_CONFIRMED' });
+    assert.equal(f.sent.filter(x => x.method === 'turn/start').length, 1);
+    assert.equal(f.sent.filter(x => x.method === 'turn/interrupt').length, 1);
+  }
+});
+
+test('structured model failures distinguish quota and auth; free-form prose never does', async t => {
+  for (const [info, code] of [['unauthorized', 'AUTH_REQUIRED'], ['usageLimitExceeded', 'USAGE_LIMIT'],
+    ['rateLimitExceeded', 'RATE_LIMITED'], ['sandboxError', 'SANDBOX_FAILED'], ['futureError', 'RPC_FAILED']] as const) {
+    const f = await session(f => event(f, 'turn/completed', {
+      turn: { id: 'turn-1', status: 'failed', error: { codexErrorInfo: info, message: 'private@example.test' } },
+    }));
+    t.after(() => f.client.close());
+    await assert.rejects(readOnlyProbe(f.client, 'disposable-directory'), { code });
+  }
+  assert.equal(modelFailureCode({ httpConnectionFailed: { httpStatusCode: 401 } }), 'AUTH_REQUIRED');
+  assert.equal(modelFailureCode({ responseStreamDisconnected: { httpStatusCode: 429 } }), 'RATE_LIMITED');
+  assert.equal(modelFailureCode({ httpConnectionFailed: { httpStatusCode: 503 } }), 'CONNECTION_FAILED');
+  assert.equal(modelFailureCode('unauthorized sk-private'), 'RPC_FAILED');
+});
+
+test('RPC structured errors are classified without retaining their payload', async t => {
+  const f = fixture(); t.after(() => f.client.close()); await f.initialize();
+  const request = f.client.request('thread/start', {});
+  f.reply({ id: 2, error: { message: 'private', data: { codexErrorInfo: 'usageLimitExceeded', token: 'private' } } });
+  await assert.rejects(request, { code: 'USAGE_LIMIT', message: 'Codex request failed: USAGE_LIMIT' });
+});
+
+test('retry notifications do not turn a later successful response into failure', async t => {
+  const f = await session(f => {
+    event(f, 'error', { willRetry: true, error: { codexErrorInfo: 'rateLimitExceeded', message: 'private' } });
+    event(f, 'item/completed', { item: { type: 'agentMessage', text: PROBE_MARKER } });
+    event(f, 'turn/completed', { turn: { id: 'turn-1', status: 'completed' } });
+  }); t.after(() => f.client.close());
+  const kinds: string[] = [];
+  assert.equal((await readOnlyProbe(f.client, 'disposable-directory', { onProgress: kind => kinds.push(kind) })).markerMatched, true);
+  assert.ok(kinds.includes('retrying'));
+});
+
+test('an abort settles a pending thread-start request without waiting for the RPC timeout', async t => {
+  const f = fixture(); t.after(() => f.client.close()); await f.initialize();
+  const controller = new AbortController();
+  const probe = readOnlyProbe(f.client, 'disposable-directory', { signal: controller.signal });
+  controller.abort();
+  await assert.rejects(probe, { code: 'CANCELLED' });
+  assert.equal(f.sent.filter(x => x.method === 'turn/start').length, 0);
+});
+
+test('another turn cannot supply the cancellation terminal event', async t => {
+  const f = await session(() => {}, null); t.after(() => f.client.close());
+  f.output.on('data', chunk => {
+    const message = JSON.parse(String(chunk)) as Record<string, unknown>;
+    if (message.method === 'turn/interrupt') event(f, 'turn/completed', { turnId: 'other-turn', turn: { id: 'other-turn', status: 'interrupted' } });
+  });
+  await assert.rejects(cancelReadOnlyProbe(f.client, 'disposable-directory', { interruptTimeoutMs: 20 }), { code: 'CANCELLATION_NOT_CONFIRMED' });
+});
+
+test('non-retrying auth notification keeps its reason even when interruption lacks terminal evidence', async t => {
+  const f = await session(f => event(f, 'error', {
+    willRetry: false, error: { codexErrorInfo: 'unauthorized', message: 'private@example.test' },
+  }), null);
+  t.after(() => f.client.close());
+  await assert.rejects(readOnlyProbe(f.client, 'disposable-directory', { interruptTimeoutMs: 20 }), {
+    code: 'AUTH_REQUIRED', message: 'Codex probe blocked: AUTH_REQUIRED',
+  });
+});
+
+test('whole-turn timeout also bounds an unanswered thread-start request', async t => {
+  const f = fixture(); t.after(() => f.client.close()); await f.initialize();
+  await assert.rejects(readOnlyProbe(f.client, 'disposable-directory', { timeoutMs: 15 }), { code: 'TURN_TIMEOUT' });
+  assert.equal(f.sent.filter(x => x.method === 'turn/start').length, 0);
 });

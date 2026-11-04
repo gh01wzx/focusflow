@@ -1,7 +1,8 @@
 import { EventEmitter } from 'node:events';
 import type { Readable, Writable } from 'node:stream';
 
-export type FailureCode = 'CLOSED' | 'PROTOCOL' | 'TIMEOUT' | 'RPC_FAILED' | 'NOT_INITIALIZED';
+export type FailureCode = 'CLOSED' | 'PROTOCOL' | 'TIMEOUT' | 'RPC_FAILED' | 'NOT_INITIALIZED'
+  | 'AUTH_REQUIRED' | 'USAGE_LIMIT' | 'RATE_LIMITED' | 'SANDBOX_FAILED' | 'CONNECTION_FAILED';
 export class CodexFailure extends Error {
   readonly code: FailureCode;
   constructor(code: FailureCode) {
@@ -19,6 +20,23 @@ interface Pending {
   resolve: (value: unknown) => void;
   reject: (error: CodexFailure) => void;
   timer: ReturnType<typeof setTimeout>;
+}
+
+/** Only pinned protocol discriminants are interpreted; provider prose is discarded. */
+export function modelFailureCode(info: unknown): FailureCode {
+  if (info === 'unauthorized') return 'AUTH_REQUIRED';
+  if (info === 'usageLimitExceeded' || info === 'sessionBudgetExceeded') return 'USAGE_LIMIT';
+  if (info === 'rateLimitExceeded') return 'RATE_LIMITED';
+  if (info === 'sandboxError') return 'SANDBOX_FAILED';
+  for (const kind of ['httpConnectionFailed', 'responseStreamConnectionFailed', 'responseStreamDisconnected', 'responseTooManyFailedAttempts']) {
+    if (kind in record(info)) {
+      const status = record(record(info)[kind]).httpStatusCode;
+      if (status === 401) return 'AUTH_REQUIRED';
+      if (status === 429) return 'RATE_LIMITED';
+      return 'CONNECTION_FAILED';
+    }
+  }
+  return 'RPC_FAILED';
 }
 
 /** JSONL transport only. Consumers must not persist raw notifications or responses. */
@@ -126,7 +144,7 @@ export class CodexClient extends EventEmitter {
     if (!pending) { this.fail('PROTOCOL'); return; }
     this.pending.delete(id);
     clearTimeout(pending.timer);
-    if ('error' in message) pending.reject(new CodexFailure('RPC_FAILED'));
+    if ('error' in message) pending.reject(new CodexFailure(modelFailureCode(record(record(message.error).data).codexErrorInfo)));
     else pending.resolve(message.result);
   }
 

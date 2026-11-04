@@ -1,6 +1,6 @@
 # Proposed next Tickets — not approved, started or published
 
-P0-01 is complete through merged PR #2. TypeScript/English follow-ups were merged as PRs #4/#6; the desktop shell and first-launch fix followed as PRs #8/#10. P0-03b upgrade/recovery evidence was merged as PR #12. The owner authorized continued work on P0-02 through Issue #13: an isolated protocol client and opt-in live verification. Its offline tests do not complete the authenticated integration gate. Signing, automatic updates and the other rows remain a working breakdown, not automatically started or batch-published. Existing feasibility work is recorded honestly, not fabricated historic Issues/PRs.
+P0-01 is complete through merged PR #2. TypeScript/English follow-ups were merged as PRs #4/#6; the desktop shell and first-launch fix followed as PRs #8/#10. P0-03b upgrade/recovery evidence was merged as PR #12. PR #14's merge is observed at `62d02a98426e28df41e9972c7995ded0cd0e2f3a`; the owner reported a successful real streaming turn on its tested head. Continued P0-02 work is tracked in Issue #15: explicit cancellation evidence, structured failures and process cleanup tests. Real Codex cancellation and sandbox enforcement are still open gates. Signing, automatic updates and the other rows remain a working breakdown, not automatically started or batch-published.
 
 | ID | Phase | Small outcome / acceptance | Depends on |
 | --- | --- | --- | --- |

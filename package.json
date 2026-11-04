@@ -25,7 +25,8 @@
     "codex:install": "node scripts/codex-verify.ts install",
     "codex:login": "node scripts/codex-verify.ts login",
     "codex:status": "node scripts/codex-verify.ts status",
-    "codex:probe": "node scripts/codex-verify.ts live"
+    "codex:probe": "node scripts/codex-verify.ts live",
+    "codex:cancel": "node scripts/codex-verify.ts cancel"
   },
   "devDependencies": {
     "@types/node": "24.10.0",

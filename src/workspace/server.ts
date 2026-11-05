@@ -16,8 +16,10 @@ const assets = new Map([
   ['/projects.css', ['projects/style.css', 'text/css; charset=utf-8']],
 ]);
 
-export async function startWorkspaceServer(options: { dataDirectory: string; clock?: () => Date }): Promise<LocalServer> {
-  const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock);
+export async function startWorkspaceServer(options: {
+  dataDirectory: string; clock?: () => Date; sampleLabel?: string | null;
+}): Promise<LocalServer> {
+  const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock, !!options.sampleLabel);
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
   return listenLocal(async (request, response, origin) => {
     try {
@@ -26,7 +28,15 @@ export async function startWorkspaceServer(options: { dataDirectory: string; clo
       const asset = assets.get(resource);
       if (request.method === 'GET' && asset) {
         const [name, type] = asset;
-        const content = await readFile(new URL(`../../public/${name}`, import.meta.url));
+        let content = await readFile(new URL(`../../public/${name}`, import.meta.url), 'utf8');
+        if (resource === '/') {
+          const label = (options.sampleLabel ?? '').replace(/[&<>"']/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+          })[character]!);
+          const notice = label ? `<div class="sample-notice" role="note"><strong>Sample data</strong> &middot; ${label}. Everyday tasks are separate.</div>` : '';
+          content = content.replace('<!-- sample-data-notice -->', notice);
+          if (label) content = content.replace('<title>FocusFlow</title>', `<title>FocusFlow - ${label} - Sample data</title>`);
+        }
         response.writeHead(200, { 'Content-Type': type! });
         response.end(content);
         return;

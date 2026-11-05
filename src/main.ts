@@ -2,11 +2,18 @@ import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { startWorkspaceServer } from './workspace/server.ts';
 import { homedir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { SCHEMA_VERSION } from './database/schema.ts';
+import { selectProfile } from './runtime/profile.ts';
 
-const dataDirectory = process.env.FOCUSFLOW_DATA_DIR
-  ? resolve(process.env.FOCUSFLOW_DATA_DIR)
-  : join(process.env.LOCALAPPDATA ?? join(homedir(), '.local', 'share'), 'FocusFlow', 'desktop', 'data');
-const app = await startWorkspaceServer({ dataDirectory });
+const profile = selectProfile({ packaged: false, args: process.argv,
+  localDataDirectory: process.env.LOCALAPPDATA ?? join(homedir(), '.local', 'share'),
+  checkoutDirectory: fileURLToPath(new URL('../..', import.meta.url)), schemaVersion: SCHEMA_VERSION });
+const customData = !process.argv.includes('--review') && process.env.FOCUSFLOW_DATA_DIR;
+const dataDirectory = customData
+  ? resolve(customData)
+  : join(profile.directory, 'data');
+const app = await startWorkspaceServer({ dataDirectory, sampleLabel: customData ? null : profile.sampleLabel });
 console.log(`FocusFlow: ${app.origin}`);
 console.log(`Local data: ${dataDirectory}`);
 console.log('Keep this window open. Ctrl+C stops the server.');

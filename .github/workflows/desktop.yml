@@ -40,6 +40,13 @@ jobs:
           if ($setup.ExitCode -ne 0) { throw "Installer failed: $($setup.ExitCode)" }
           node dist/scripts/smoke-today.js (Join-Path $installation 'FocusFlow.exe')
           exit $LASTEXITCODE
+      - name: Verify separate review data
+        timeout-minutes: 3
+        shell: pwsh
+        run: |
+          $installation = Join-Path $env:RUNNER_TEMP 'focusflow-today-installed'
+          node dist/scripts/smoke-review.js (Join-Path $installation 'FocusFlow.exe')
+          exit $LASTEXITCODE
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -47,6 +54,7 @@ jobs:
           path: |
             release/FocusFlow-*-x64.exe
             artifacts/today/
+            artifacts/review/
             artifacts/dependency-audit.json
           retention-days: 14
   product-recovery:

@@ -2,7 +2,23 @@
 
 FocusFlow is one local Windows desktop application. It supports dated Personal tasks, daily/weekly repeats and a manual Project / Milestone / Ticket hierarchy.
 
-## Read the code
+## Start with one feature
+
+Read [README](../README.md) for what the app does, then follow Add task below. The [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) describes planned work; it is not a list of implemented features.
+
+| Location | Purpose | Example |
+| --- | --- | --- |
+| public | React screens, form controls and styles | The title field and Add task button |
+| src | Local application logic, HTTP, database access and desktop startup | Validate and save a task |
+| scripts | Commands used to build, verify, package or recover the app | Bundle React; exercise an installed app |
+| test | Automated scenarios using disposable data | Check that tasks survive a restart |
+| docs | Product scope, architecture, development and evidence | This reading guide |
+| .github/workflows | Checks run by GitHub when code is pushed or a PR changes | Windows/Linux tests and installed-app checks |
+| package.json | Dependencies and named development commands | npm run build and npm test |
+
+Files ending in .tsx contain React interface code; .ts files contain TypeScript logic; .css controls appearance. The ignored dist directory contains generated runnable output. Edit the source files listed here.
+
+## Find a responsibility
 
 | Responsibility | Start here |
 | --- | --- |
@@ -22,11 +38,21 @@ FocusFlow is one local Windows desktop application. It supports dated Personal t
 
 ## Trace Add task
 
-1. TaskComposer submits through useTodayController; the controller disables conflicting actions.
-2. The task client sends JSON to the local API and checks the returned data before updating the page.
-3. The HTTP boundary enforces Host, Origin, content type and a bounded body limit; routes select the action.
-4. The task service validates input and uses repository operations inside one writer transaction.
-5. SQLite commits, the API returns refreshed lists, and the controller reports success. Failed saves preserve form input.
+Use a task with Repeat set to Does not repeat for the first read. Follow these files in order; there is no need to understand every helper first.
+
+| Step | File | What to look for |
+| --- | --- | --- |
+| 1. Submit the form | [TaskComposer.tsx](../public/today/components/TaskComposer.tsx) | onSubmit calls state.add; fields call their state setters |
+| 2. Coordinate saving | [useTodayController.ts](../public/today/useTodayController.ts) | add passes the draft to client.add through change; change manages busy/error state |
+| 3. Send the request | [client/tasks.ts](../src/client/tasks.ts) | add selects POST /api/tasks; request sends JSON and checks the response |
+| 4. Receive and route it | [workspace/server.ts](../src/workspace/server.ts), [tasks/routes.ts](../src/tasks/routes.ts) | The server checks the request; matchTaskRoute selects add and dispatchTaskRoute calls store.add |
+| 5. Apply the rules | [tasks/service.ts](../src/tasks/service.ts), [validation.ts](../src/tasks/validation.ts) | add validates the title/date, assigns an ID and requests insertTask inside a transaction |
+| 6. Write the row | [tasks/repository.ts](../src/tasks/repository.ts) | insertTask executes the parameterized SQL INSERT |
+| 7. Display the result | [useTodayController.ts](../public/today/useTodayController.ts), [TodayApp.tsx](../public/today/TodayApp.tsx) | The response contains refreshed lists; apply updates React state and the page renders it |
+
+[workspace/store.ts](../src/workspace/store.ts) supplies the shared database and transaction to the services. Failed saves preserve form input. For a repeating task, the client selects /api/recurrences instead; then read service.addRecurrence, [weekdays.ts](../src/shared/weekdays.ts) and [recurrence.ts](../src/tasks/recurrence.ts).
+
+After this path, read [tasks.test.ts](../test/tasks.test.ts) for temporary-task examples and [weekdays.test.ts](../test/weekdays.test.ts) for selected weekdays and old-schedule migration. Projects follows the same component/controller/client/routes/service/repository split.
 
 Electron owns the window and an OS-selected IPv4 loopback service. The renderer has no Node integration. Restrictive navigation, permissions and CSP remain in place. There is no cloud backend or Tracker login.
 
@@ -64,4 +90,4 @@ npm run typecheck also checks static import boundaries, unresolved local imports
 
 [src/codex](../src/codex) remains standalone groundwork invoked only by explicit developer commands. Today has no AI execution path.
 
-Product GitHub authorization, coding permissions/recovery, independent review and signed updates remain future work. See [roadmap](ROADMAP.md) and [validation](VALIDATION.md).
+Product GitHub authorization, coding permissions/recovery, independent review and signed updates remain future work. See the [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) and [validation](VALIDATION.md).

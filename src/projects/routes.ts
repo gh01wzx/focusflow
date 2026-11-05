@@ -1,6 +1,6 @@
 import type { ProjectService } from './service.ts';
 
-export type ProjectRoute =
+type ProjectRoute =
   | { kind: 'view'; projectId?: string }
   | { kind: 'addProject' | 'addMilestone' | 'addTicket' }
   | { kind: 'setStatus'; id: string };

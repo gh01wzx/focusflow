@@ -34,4 +34,3 @@ export async function openWorkspaceStore(path: string, clock: () => Date = () =>
     throw error;
   }
 }
-export type WorkspaceStore = Awaited<ReturnType<typeof openWorkspaceStore>>;

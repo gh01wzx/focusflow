@@ -56,12 +56,15 @@ It is outside source and installation output. The app does not import the old Ph
 
 ## Read the project
 
+Start with [Architecture](docs/ARCHITECTURE.md): it follows one Add task action from the screen to SQLite. Open `public/today/components/TaskComposer.tsx` alongside it; read one path before browsing every folder.
+
+The [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) is the roadmap. Feature labels group the user stories; the owner selects one task at a time.
+
 | Document | Purpose |
 | --- | --- |
 | [Architecture](docs/ARCHITECTURE.md) | Components, request flow and code-reading order |
 | [Development](docs/DEVELOPMENT.md) | Build, tests, data paths and recovery |
 | [Product baseline](docs/PRODUCT_BASELINE.md) | Approved MVP requirements |
-| [Roadmap](docs/ROADMAP.md) | What is implemented and what remains |
 | [Validation](docs/VALIDATION.md) | Evidence and known limitations |
 | [Codex commands](docs/CODEX.md) | Optional standalone integration checks |
 

@@ -13,11 +13,14 @@ Review evidence belongs to a commit, not a branch name. Check the current PR hea
 - Daily/weekly rollover, closed-app catch-up, completion/cancellation, stop, restart, clock rollback, Auckland DST and failed reconciliation rollback.
 - Schema 2 migration retains task identities/states; its backup can be restored separately.
 - Schema 3 to 4 retains Personal/repeating data and a separate recovery point; project hierarchy/statuses survive restart and snapshots.
+- Schema 4 to 5 retains existing weekly periods and project data; weekday selections survive restart and snapshot recovery.
+- Selected weekdays skip unselected dates, catch up missed days and follow Auckland local dates across DST.
+- Installed weekday controls retain choices after failed saves and across restart.
 - Manual ticket validation, parent isolation, SQL constraints and HTTP request/size boundaries.
 
 The retired note-app tests were removed or transferred to product fixtures. A smaller test count does not imply the removed note UI is still maintained. Exact current results/counts are recorded in the PR.
 
-The merged cleanup passed 38 compiled tests. The merged recurrence work passed 49 tests. The merged refactor passed 56 tests. Task #26 adds manual-project checks; exact-head results belong to its PR. Renderer bundling in this restricted host is blocked by an ancestor-directory read denial; use exact-head hosted checks for full build evidence. This does not diagnose an ordinary Windows launch. CI screenshots are in windows-today; artifact presence alone is not a pass. Installed recurrence rollover uses prior-period fixtures and the real app clock; disposable store tests separately advance injected clocks across midnight/DST.
+Exact results, counts and tested commit SHAs belong to each PR and its Checks tab. Earlier runs do not verify a later commit. Renderer bundling in this restricted host has encountered an ancestor-directory read denial; a failed local build does not count as a pass. Use hosted checks for full build evidence when that restriction applies. This does not diagnose an ordinary Windows launch. CI screenshots are in windows-today; artifact presence alone is not a pass. Installed recurrence rollover uses prior-period fixtures and the real app clock; disposable store tests separately advance injected clocks across midnight/DST.
 
 ## Retained evidence
 
@@ -33,7 +36,7 @@ GitHub Issues/PRs and Git history are the development record. Old experiment doc
 
 ## Known limits
 
-- Project action center/dependencies and later MVP phases are unfinished; see [roadmap](ROADMAP.md).
+- Project action center/dependencies and later MVP phases are unfinished; see the [MVP task index](https://github.com/gh01wzx/focusflow/issues/28).
 - Product schema 1 is a synthetic test baseline, not a shipped older product.
 - Installed checks have seen close/cancellation timeouts. Current smoke requires observed native exit code 0 and bounded stage waits; a retry does not establish a root cause.
 - Last captured initial-Today audit: 15 moderate affected development packages, no high/critical entries. This is not a security-clean claim; advisories may change.

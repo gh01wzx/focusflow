@@ -2,7 +2,7 @@
 
 A Windows desktop task tracker built with TypeScript, React, Electron and SQLite. Data stays on your computer; no Tracker account is required.
 
-**Status:** Personal and the manual project hierarchy are merged. Task #37 adds weekday selection and Personal acceptance checks for review. This is an unsigned development build, not the complete MVP.
+**Status:** Personal tasks, selected-weekday repeats and manual Projects are available. This is an unsigned development build; the complete MVP remains in progress.
 
 ## Available now
 
@@ -10,7 +10,7 @@ A Windows desktop task tracker built with TypeScript, React, Electron and SQLite
 - Complete or cancel tasks; keep their records in History.
 - See due/overdue tasks in Today and future tasks in Upcoming.
 - Keep tasks across restarts, with original planned dates.
-- Choose daily/weekly repetition, retain missed periods in History and stop future repeats.
+- Repeat daily or on selected weekdays, retain missed periods in History and stop future repeats.
 - Switch to Projects, create projects/milestones/manual tickets, write acceptance criteria and change ticket status.
 
 Action center, dependencies, editing/deletion, Kanban, AI planning, coding/review and one-click updates are not implemented.
@@ -19,7 +19,7 @@ Action center, dependencies, editing/deletion, Kanban, AI planning, coding/revie
 
 Choose **Repeat** and a start date of today or later. Daily tasks reset at local midnight. For **Weekly**, select one or more weekdays, such as Mon, Tue and Sat. Each selected date is a separate task, starting on the first matching date on or after the start date. Unselected days have no task. Dates follow the computer's current local timezone.
 
-Existing weekly schedules retain their original seven-day periods after upgrading. Their schedule list explicitly identifies this behavior; weekday editing is not included in this task.
+Existing weekly schedules retain their original seven-day periods after upgrading. Their schedule list explicitly identifies this behavior; editing weekdays is not available.
 
 Completing/cancelling affects one occurrence. Unfinished periods become **Missed** in History; reopening catches up closed-app periods without overdue accumulation. Temporary tasks keep their original dates and stay pending.
 
@@ -65,7 +65,7 @@ The [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) is the road
 | [Architecture](docs/ARCHITECTURE.md) | Components, request flow and code-reading order |
 | [Development](docs/DEVELOPMENT.md) | Build, tests, data paths and recovery |
 | [Product baseline](docs/PRODUCT_BASELINE.md) | Approved MVP requirements |
-| [Validation](docs/VALIDATION.md) | Evidence and known limitations |
+| [Validation](docs/VALIDATION.md) | Verification coverage, retained evidence and known limits |
 | [Codex commands](docs/CODEX.md) | Optional standalone integration checks |
 
 Source, app text and repository documentation use English. User-entered content keeps its original language.

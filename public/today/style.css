@@ -247,19 +247,55 @@ h1 {
   background: #fff;
   border: 1px solid #dfe6d8;
   border-radius: 12px;
-  display: flex;
-  align-items: center;
+  display: grid;
   padding: 13px 14px;
   gap: 12px;
   box-shadow: 0 4px 14px #334a2c04;
 }
+.composer-fields {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.weekday-picker {
+  border: 0;
+  border-top: 1px solid #edf0e8;
+  padding: 14px 0 0;
+  margin: 0;
+}
+.weekday-picker legend {
+  color: #6b7c5e;
+  font-size: 12px;
+  padding: 0 8px 0 0;
+}
+.weekday-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.weekday-options label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid #dfe6d8;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.weekday-options label:has(input:checked) {
+  background: #edf4e8;
+  border-color: #6d855b;
+}
+.weekday-options input { accent-color: #35543c; }
+.weekday-picker p { margin: 10px 0 0; font-size: 11px; color: #718568; }
 .add-symbol {
   font-size: 25px;
   font-weight: 300;
   color: #96a38a;
   padding-left: 5px;
 }
-.composer > input {
+.composer-fields > input {
   min-width: 70px;
   width: 100%;
   border: 0;
@@ -269,10 +305,10 @@ h1 {
   background: transparent;
   padding: 12px 0;
 }
-.composer > input::placeholder {
+.composer-fields > input::placeholder {
   color: #a0aa98;
 }
-.composer > input:focus-visible {
+.composer-fields > input:focus-visible {
   outline: 2px solid #92b79b;
   border-radius: 4px;
 }
@@ -574,11 +610,11 @@ footer {
   .shell {
     grid-template-columns: 208px 1fr;
   }
-  .composer {
+  .composer-fields {
     gap: 8px;
     flex-wrap: wrap;
   }
-  .composer > input {
+  .composer-fields > input {
     flex: 1;
     min-width: 170px;
   }
@@ -629,10 +665,10 @@ footer {
   h1 {
     font-size: 39px;
   }
-  .composer {
+  .composer-fields {
     flex-wrap: wrap;
   }
-  .composer > input {
+  .composer-fields > input {
     flex: 1;
   }
   .date-field {

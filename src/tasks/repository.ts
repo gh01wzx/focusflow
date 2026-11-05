@@ -1,6 +1,17 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { parseTask, parseRecurrenceRule } from '../shared/task-codec.ts';
 import type { RecurrenceRule, Task, TaskResolution } from '../shared/tasks.ts';
+import { WEEKDAYS } from '../shared/weekdays.ts';
+
+function storedRule(value: unknown): RecurrenceRule {
+  if (typeof value !== 'object' || value === null || !('weekdaysMask' in value)) throw new Error('Invalid stored schedule.');
+  const { weekdaysMask: mask, ...rule } = value;
+  if (mask !== null && (typeof mask !== 'number' || !Number.isInteger(mask) || mask < 1 || mask > 127)) {
+    throw new Error('Invalid stored weekdays.');
+  }
+  return parseRecurrenceRule({ ...rule, weekdays: mask === null ? null
+    : WEEKDAYS.filter(day => (mask & (1 << day.value)) !== 0).map(day => day.value) });
+}
 
 // SQL and row decoding stay here. Business rules belong to the service.
 export function createTaskRepository(db: DatabaseSync) {
@@ -8,7 +19,7 @@ export function createTaskRepository(db: DatabaseSync) {
     t.resolved_at AS resolvedAt,t.recurrence_id AS recurrenceId,r.frequency
     FROM tasks t LEFT JOIN recurrence_rules r ON r.id=t.recurrence_id`;
   const ruleColumns = `SELECT id,title,frequency,start_date AS startDate,next_date AS nextDate,
-    created_at AS createdAt,stopped_at AS stoppedAt FROM recurrence_rules`;
+    created_at AS createdAt,stopped_at AS stoppedAt,weekdays_mask AS weekdaysMask FROM recurrence_rules`;
 
   const tasks = db.prepare(taskColumns + ' ORDER BY t.planned_date,t.created_at,t.id');
   const taskById = db.prepare(taskColumns + ' WHERE t.id=?');
@@ -17,7 +28,7 @@ export function createTaskRepository(db: DatabaseSync) {
   const dueRules = db.prepare(ruleColumns + ' WHERE stopped_at IS NULL AND next_date<=?');
   const pendingOccurrences = db.prepare(taskColumns + " WHERE t.status='pending' AND t.recurrence_id IS NOT NULL");
   const insertTask = db.prepare('INSERT INTO tasks(id,title,planned_date,status,created_at,resolved_at,recurrence_id) VALUES(?,?,?,?,?,?,?)');
-  const insertRule = db.prepare('INSERT INTO recurrence_rules(id,title,frequency,start_date,next_date,created_at,stopped_at) VALUES(?,?,?,?,?,?,?)');
+  const insertRule = db.prepare('INSERT INTO recurrence_rules(id,title,frequency,start_date,next_date,created_at,stopped_at,weekdays_mask) VALUES(?,?,?,?,?,?,?,?)');
   const expire = db.prepare("UPDATE tasks SET status='missed',resolved_at=? WHERE id=?");
   const advance = db.prepare('UPDATE recurrence_rules SET next_date=? WHERE id=?');
   const stop = db.prepare('UPDATE recurrence_rules SET stopped_at=? WHERE id=? AND stopped_at IS NULL');
@@ -26,8 +37,8 @@ export function createTaskRepository(db: DatabaseSync) {
 
   return {
     listTasks: () => tasks.all().map(parseTask),
-    listActiveRules: () => activeRules.all().map(parseRecurrenceRule),
-    listDueRules: (today: string) => dueRules.all(today).map(parseRecurrenceRule),
+    listActiveRules: () => activeRules.all().map(storedRule),
+    listDueRules: (today: string) => dueRules.all(today).map(storedRule),
     listPendingOccurrences: () => pendingOccurrences.all().map(parseTask),
     findTask(id: string): Task | undefined {
       const row = taskById.get(id);
@@ -35,13 +46,14 @@ export function createTaskRepository(db: DatabaseSync) {
     },
     findRule(id: string): RecurrenceRule | undefined {
       const row = ruleById.get(id);
-      return row === undefined ? undefined : parseRecurrenceRule(row);
+      return row === undefined ? undefined : storedRule(row);
     },
     insertTask(task: Task) {
       insertTask.run(task.id, task.title, task.plannedDate, task.status, task.createdAt, task.resolvedAt, task.recurrenceId);
     },
     insertRule(rule: RecurrenceRule) {
-      insertRule.run(rule.id, rule.title, rule.frequency, rule.startDate, rule.nextDate, rule.createdAt, rule.stoppedAt);
+      const mask = rule.weekdays === null ? null : rule.weekdays.reduce<number>((bits, day) => bits | (1 << day), 0);
+      insertRule.run(rule.id, rule.title, rule.frequency, rule.startDate, rule.nextDate, rule.createdAt, rule.stoppedAt, mask);
     },
     expireTask: (id: string, at: string) => { expire.run(at, id); },
     advanceRule: (id: string, date: string | null) => { advance.run(date, id); },

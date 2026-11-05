@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import type { Readable, Writable } from 'node:stream';
 
-export type FailureCode = 'CLOSED' | 'PROTOCOL' | 'TIMEOUT' | 'RPC_FAILED' | 'NOT_INITIALIZED'
+type FailureCode = 'CLOSED' | 'PROTOCOL' | 'TIMEOUT' | 'RPC_FAILED' | 'NOT_INITIALIZED'
   | 'AUTH_REQUIRED' | 'USAGE_LIMIT' | 'RATE_LIMITED' | 'SANDBOX_FAILED' | 'CONNECTION_FAILED';
 export class CodexFailure extends Error {
   readonly code: FailureCode;

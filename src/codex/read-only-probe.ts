@@ -6,13 +6,13 @@ export class ProbeFailure extends Error {
   constructor(code: string) { super(`Codex probe blocked: ${code}`); this.code = code; }
 }
 
-export interface ProbeEvidence {
+interface ProbeEvidence {
   status: 'verified';
   check: 'read-only-model-turn';
   deltaEvents: number;
   markerMatched: true;
 }
-export interface CancellationEvidence {
+interface CancellationEvidence {
   status: 'verified';
   check: 'read-only-turn-cancellation';
   interruptAcknowledged: true;

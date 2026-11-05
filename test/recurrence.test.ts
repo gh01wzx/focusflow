@@ -21,6 +21,16 @@ async function fixture(t: TestContext) {
   return { directory, path: join(directory, 'tracker.db') };
 }
 
+function seedLegacyWeekly(path: string, title: string): void {
+  const db = new DatabaseSync(path);
+  try {
+    for (const migration of MIGRATIONS.slice(0, 4)) db.exec(migration.sql);
+    db.exec('PRAGMA user_version=4');
+    db.prepare('INSERT INTO recurrence_rules VALUES(?,?,?,?,?,?,?)')
+      .run('legacy-weekly', title, 'weekly', '2026-11-04', '2026-11-04', '2026-11-04T00:00:00Z', null);
+  } finally { db.close(); }
+}
+
 test('daily rollover and closed-app catch-up record missed periods without overdue accumulation', async t => {
   const { path } = await fixture(t);
   let now = new Date(2026, 10, 4, 23, 59);
@@ -75,10 +85,10 @@ test('completion and cancellation affect one occurrence and survive restart', as
 
 test('weekly periods last seven calendar days from the first date and do not reset on Monday', async t => {
   const { path } = await fixture(t);
+  seedLegacyWeekly(path, 'Weekly review');
   let now = new Date(2026, 10, 4);
   const store = await openWorkspaceStore(path, () => now);
   try {
-    store.tasks.addRecurrence({ title: 'Weekly review', plannedDate: '2026-11-04', frequency: 'weekly' });
     const first = store.tasks.view().due[0]!;
     now = new Date(2026, 10, 10, 23, 59);
     assert.equal(store.tasks.view().due[0]?.id, first.id);
@@ -99,11 +109,12 @@ test('weekly periods last seven calendar days from the first date and do not res
 
 test('stopping future and current rules preserves history and never schedules another period', async t => {
   const { path } = await fixture(t);
+  seedLegacyWeekly(path, 'This week');
   let now = new Date(2026, 10, 4);
   let store = await openWorkspaceStore(path, () => now);
   try {
     const future = store.tasks.addRecurrence({ title: 'Start later', plannedDate: '2026-11-06', frequency: 'daily' });
-    const current = store.tasks.addRecurrence({ title: 'This week', plannedDate: '2026-11-04', frequency: 'weekly' });
+    const current = store.tasks.view().recurrences.find(rule => rule.id === 'legacy-weekly')!;
     assert.equal(store.tasks.view().upcoming.length, 1);
     const stopped = store.tasks.stopRecurrence(future.id)!;
     now = new Date(2026, 10, 5);

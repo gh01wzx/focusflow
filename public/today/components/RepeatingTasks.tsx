@@ -1,5 +1,6 @@
 import type { RecurrenceRule } from '../../../src/shared/tasks.ts';
 import { dateText } from '../view-options.ts';
+import { WEEKDAYS } from '../../../src/shared/weekdays.ts';
 
 interface RepeatingTasksProps {
   rules: RecurrenceRule[];
@@ -19,6 +20,10 @@ export function RepeatingTasks({ rules, busy, onStop }: RepeatingTasksProps) {
             <div className="task-content">
               <span className="task-title">{rule.title} · {rule.frequency === 'daily' ? 'Daily' : 'Weekly'}</span>
               <div className="task-meta">From {dateText(rule.startDate)}</div>
+              {rule.frequency === 'weekly' && <div className="task-meta">
+                {rule.weekdays === null ? 'Every 7 days from the first date (existing schedule)'
+                  : WEEKDAYS.filter(day => rule.weekdays!.includes(day.value)).map(day => day.label).join(', ')}
+              </div>}
             </div>
             <button
               className="cancel"

@@ -1,9 +1,11 @@
 export type TaskStatus = 'pending' | 'completed' | 'cancelled' | 'missed';
 export type Frequency = 'daily' | 'weekly';
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export interface RecurrenceRule {
   id: string;
   title: string;
   frequency: Frequency;
+  weekdays: Weekday[] | null;
   startDate: string;
   nextDate: string | null;
   createdAt: string;
@@ -32,4 +34,5 @@ export interface TaskDraft {
   title: string;
   plannedDate: string;
   frequency: 'none' | Frequency;
+  weekdays?: Weekday[];
 }

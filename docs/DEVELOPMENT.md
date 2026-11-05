@@ -26,24 +26,11 @@ Link the Issue with Closes #ID. Passing checks means ready for review; only an o
 
 The launcher is Start-FocusFlow.cmd. Run npm ci again when dependencies change. The installed app bundles its runtime.
 
-## Layout
+## Source and generated files
 
-| Directory | Contents |
-| --- | --- |
-| public/today | React interface and readable source styles |
-| src/shared | Browser-safe contracts, codecs and calendar helpers |
-| src/client | Typed browser API client |
-| src/http | Local server lifecycle and request checks |
-| src/tasks | Personal service/rules, routes and repository |
-| src/projects | Manual hierarchy service, validation, routes and repository |
-| src/workspace | Shared database ownership and HTTP composition |
-| src/desktop | Electron window and lifecycle |
-| src/database | Shared schema/connection, migrations and backup/recovery |
-| src/codex | Standalone integration groundwork |
-| scripts | Build, explicit verification and recovery tools |
-| test | Disposable calendar, storage, API and protocol tests |
+[Architecture](ARCHITECTURE.md) maps the folders and the code-reading path. Source lives in public and src; scripts prepare or check the app; test contains automated scenarios. Generated dist files and installer output are ignored by Git.
 
-Build scripts remove only the validated project dist directory. This prevents deleted source tests/modules surviving as stale compiled output.
+The build removes only the validated project dist directory before compiling. Deleted source files therefore cannot survive as stale compiled code.
 
 ## Data paths
 
@@ -57,7 +44,7 @@ Do not point test overrides at real data. Do not commit databases, credentials, 
 
 ## Backup and recovery
 
-Existing product schema changes take a verified snapshot before transactional migration. Schema 4 adds the manual hierarchy while retaining Personal/repeating data. Append migrations; do not rewrite an applied migration. A fresh database needs no pre-upgrade snapshot.
+Existing product schema changes take a verified snapshot before transactional migration. Schema 5 adds weekday selection while retaining Personal/project data and existing weekly periods. Append migrations; do not rewrite an applied migration. A fresh database needs no pre-upgrade snapshot.
 
 To restore a snapshot manually, close all app instances and preserve the original database plus any WAL/SHM sidecars. Keep the snapshot and matching .db.json manifest together, then run:
 

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { createTaskClient } from '../../src/client/tasks.ts';
-import type { Frequency, TaskResolution, TaskView } from '../../src/shared/tasks.ts';
+import type { Frequency, TaskResolution, TaskView, Weekday } from '../../src/shared/tasks.ts';
+import { firstSelectedDate } from '../../src/shared/weekdays.ts';
 import type { Tab } from './view-options.ts';
 
 const client = createTaskClient();
@@ -12,6 +13,7 @@ export function useTodayController() {
   const [title, setTitle] = useState('');
   const [plannedDate, setPlannedDate] = useState('');
   const [frequency, setFrequency] = useState<'none' | Frequency>('none');
+  const [weekdays, setWeekdays] = useState<Weekday[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -79,7 +81,8 @@ export function useTodayController() {
       setMessage(success);
       if (added) {
         setTitle('');
-        setTab(plannedDate > (view?.today ?? '') ? 'upcoming' : 'due');
+        const firstDate = frequency === 'weekly' ? firstSelectedDate(plannedDate, weekdays) : plannedDate;
+        setTab((firstDate ?? plannedDate) > (view?.today ?? '') ? 'upcoming' : 'due');
       }
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Could not save. Please try again.');
@@ -91,12 +94,13 @@ export function useTodayController() {
   }
   function add(event: FormEvent) {
     event.preventDefault();
-    void change(() => client.add({ title, plannedDate, frequency }), 'Task added.', true);
+    void change(() => client.add({ title, plannedDate, frequency,
+      ...(frequency === 'weekly' ? { weekdays } : {}) }), 'Task added.', true);
   }
 
   return {
     view, tab, setTab, title, setTitle, plannedDate, setPlannedDate,
-    frequency, setFrequency, busy, error, message, titleInput, add, refresh,
+    frequency, setFrequency, weekdays, setWeekdays, busy, error, message, titleInput, add, refresh,
     resolve: (id: string, status: TaskResolution) => change(
       () => client.resolve(id, status), status === 'completed' ? 'Task completed.' : 'Task cancelled.',
     ),

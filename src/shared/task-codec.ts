@@ -1,4 +1,5 @@
 import { validDate } from './calendar.ts';
+import { validWeekdays } from './weekdays.ts';
 import type { Frequency, RecurrenceRule, Task, TaskStatus, TaskView } from './tasks.ts';
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -31,6 +32,7 @@ function task(value: unknown): value is Task {
 function rule(value: unknown): value is RecurrenceRule {
   return record(value) && typeof value.id === 'string' && typeof value.title === 'string'
     && frequency(value.frequency) && validDate(value.startDate)
+    && (value.weekdays === null || (value.frequency === 'weekly' && validWeekdays(value.weekdays)))
     && (value.nextDate === null || validDate(value.nextDate))
     && timestamp(value.createdAt) && (value.stoppedAt === null || timestamp(value.stoppedAt));
 }

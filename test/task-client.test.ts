@@ -44,13 +44,17 @@ test('client rejects malformed nested tasks and schedules before they reach the 
   const task = { id: 'example', title: 'Read', plannedDate: '2026-11-04', status: 'pending',
     createdAt: '2026-11-04T00:00:00Z', resolvedAt: null, recurrenceId: null, frequency: null };
   const rule = { id: 'rule', title: 'Repeat', frequency: 'weekly', startDate: '2026-11-04',
-    nextDate: '2026-11-11', createdAt: '2026-11-04T00:00:00Z', stoppedAt: null };
+    nextDate: '2026-11-11', weekdays: [3], createdAt: '2026-11-04T00:00:00Z', stoppedAt: null };
   for (const payload of [null, [], { ...emptyView, today: '2026-02-30' },
     { ...emptyView, due: [{ ...task, title: {} }] },
     { ...emptyView, due: [{ ...task, status: 'completed', resolvedAt: null }] },
     { ...emptyView, due: [{ ...task, plannedDate: '2026-02-29' }] },
     { ...emptyView, recurrences: [{ ...rule, frequency: 'monthly' }] },
     { ...emptyView, recurrences: [{ ...rule, nextDate: 42 }] },
+    { ...emptyView, recurrences: [{ ...rule, weekdays: [] }] },
+    { ...emptyView, recurrences: [{ ...rule, weekdays: [1, 1] }] },
+    { ...emptyView, recurrences: [{ ...rule, weekdays: [7] }] },
+    { ...emptyView, recurrences: [{ ...rule, frequency: 'daily' }] },
   ]) {
     const client = createTaskClient(async () => new Response(JSON.stringify(payload)));
     await assert.rejects(client.read(), /Could not read local tasks/);

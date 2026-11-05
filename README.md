@@ -2,7 +2,7 @@
 
 A Windows desktop task tracker built with TypeScript, React, Electron and SQLite. Data stays on your computer; no Tracker account is required.
 
-**Status:** Personal and the maintainability refactor are merged. Task #26 adds the manual project hierarchy for review. This is an unsigned development build, not the complete MVP.
+**Status:** Personal and the manual project hierarchy are merged. Task #37 adds weekday selection and Personal acceptance checks for review. This is an unsigned development build, not the complete MVP.
 
 ## Available now
 
@@ -17,7 +17,9 @@ Action center, dependencies, editing/deletion, Kanban, AI planning, coding/revie
 
 ## Repeating tasks
 
-Choose **Repeat** and a first date of today or later. Daily tasks reset at local midnight. Weekly tasks last seven calendar days from their first date, including that date.
+Choose **Repeat** and a start date of today or later. Daily tasks reset at local midnight. For **Weekly**, select one or more weekdays, such as Mon, Tue and Sat. Each selected date is a separate task, starting on the first matching date on or after the start date. Unselected days have no task. Dates follow the computer's current local timezone.
+
+Existing weekly schedules retain their original seven-day periods after upgrading. Their schedule list explicitly identifies this behavior; weekday editing is not included in this task.
 
 Completing/cancelling affects one occurrence. Unfinished periods become **Missed** in History; reopening catches up closed-app periods without overdue accumulation. Temporary tasks keep their original dates and stay pending.
 
@@ -54,12 +56,15 @@ It is outside source and installation output. The app does not import the old Ph
 
 ## Read the project
 
+Start with [Architecture](docs/ARCHITECTURE.md): it follows one Add task action from the screen to SQLite. Open `public/today/components/TaskComposer.tsx` alongside it; read one path before browsing every folder.
+
+The [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) is the roadmap. Feature labels group the user stories; the owner selects one task at a time.
+
 | Document | Purpose |
 | --- | --- |
 | [Architecture](docs/ARCHITECTURE.md) | Components, request flow and code-reading order |
 | [Development](docs/DEVELOPMENT.md) | Build, tests, data paths and recovery |
 | [Product baseline](docs/PRODUCT_BASELINE.md) | Approved MVP requirements |
-| [Roadmap](docs/ROADMAP.md) | What is implemented and what remains |
 | [Validation](docs/VALIDATION.md) | Evidence and known limitations |
 | [Codex commands](docs/CODEX.md) | Optional standalone integration checks |
 

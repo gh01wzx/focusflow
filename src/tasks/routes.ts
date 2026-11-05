@@ -3,7 +3,7 @@ import type { Snapshot } from '../database/backup.ts';
 
 type TaskApi = ReturnType<typeof createTaskService> & { snapshot(): Promise<Snapshot> };
 
-export type TaskRoute =
+type TaskRoute =
   | { kind: 'view' | 'add' | 'addRecurrence' | 'backup' }
   | { kind: 'resolve' | 'stop'; id: string };
 

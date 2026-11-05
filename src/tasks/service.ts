@@ -1,4 +1,5 @@
-import { localDay, nextOccurrence } from '../shared/calendar.ts';
+import { localDay } from '../shared/calendar.ts';
+import { firstSelectedDate, nextScheduledDate } from '../shared/weekdays.ts';
 import type { RecurrenceRule, Task } from '../shared/tasks.ts';
 import type { TaskRepository } from './repository.ts';
 import { recurrenceInput, taskInput, TaskInputError } from './validation.ts';
@@ -21,14 +22,16 @@ export function createTaskService(repository: TaskRepository, transaction: TaskT
       return task;
     }),
     addRecurrence: (input: unknown): RecurrenceRule => transaction(now => {
-      const { title, plannedDate, frequency } = recurrenceInput(input, localDay(now));
+      const { title, plannedDate, frequency, weekdays } = recurrenceInput(input, localDay(now));
+      const firstDate = weekdays === null ? plannedDate : firstSelectedDate(plannedDate, weekdays);
+      if (firstDate === null) throw new TaskInputError('No selected weekday remains in the supported date range.');
       const rule: RecurrenceRule = {
-        id: nextId(), title, frequency, startDate: plannedDate,
-        nextDate: nextOccurrence(plannedDate, frequency), createdAt: now.toISOString(), stoppedAt: null,
+        id: nextId(), title, frequency, weekdays, startDate: plannedDate,
+        nextDate: nextScheduledDate(firstDate, frequency, weekdays), createdAt: now.toISOString(), stoppedAt: null,
       };
       repository.insertRule(rule);
       repository.insertTask({
-        id: nextId(), title, plannedDate, status: 'pending', createdAt: now.toISOString(),
+        id: nextId(), title, plannedDate: firstDate, status: 'pending', createdAt: now.toISOString(),
         resolvedAt: null, recurrenceId: rule.id, frequency,
       });
       return rule;

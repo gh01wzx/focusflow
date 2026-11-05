@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { createSnapshot, schemaVersion } from './backup.ts';
 import type { Snapshot } from './backup.ts';
 
-export interface Migration {
+interface Migration {
   version: number;
   sql: string;
 }

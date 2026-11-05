@@ -1,18 +1,35 @@
 # FocusFlow development rules
 
-- Follow [the product baseline](docs/PRODUCT_BASELINE.md); do not expand scope silently.
-- Phase 1 local Personal/manual Projects are approved by observed PR #18 merge at 2a538a76d3a533dac3d6e33fb70765f0d5d20b11. Today PR #20 merged at fde0fe128e420e6e175c13f630bf0e5e28e05e3a; the owner authorized continuation. Repeating-task PR #23 merged at 323c94a8762a5b4265d4fb8301a5556a460a886f. Refactor PR #25 merged at ba73d51474db48e2f4377c079f2bbcf8b7e3f5a8. The owner approved Ticket #26: project/milestone/manual-ticket creation, acceptance text, manual status changes and persistence. Action center, dependencies and AI are later Tickets.
-- Product GitHub authorization, coding permissions/approvals/recovery and formal signing/updating still gate Phases 2, 3 and 4. A local-task feature does not verify them.
-- PR #27 was observed merged at 61b57fd700d5e0c7246b6197cbc6a00af9b5d675. The owner selected Ticket #37 on 2026-11-05 and approved adding UI selection of multiple weekdays, such as Mon/Tue/Sat, alongside Personal acceptance checks. Preserve existing weekly schedules during migration. Other backlog Issues are planning only; the owner chooses the next task.
-- The owner authorized public gh01wzx/focusflow and desktop development on 2026-11-03. Do not repeat that authorization request. New account scopes and external actions must stay within the approved workflow.
-- Work on one individually authorized Ticket at a time, using small PRs. No automatic next-Ticket start, merge or deployment. A coding Ticket is Done only after its linked PR is observed merged.
-- Write Tickets as user stories: lead with what the user can do and observable acceptance steps. Keep implementation details in the PR's expandable engineering notes.
-- Use the Issue number as the task ID. Start Issue/PR titles with [ID] and branches with ID- followed by a short English outcome, for example [21] Create tasks that repeat daily or weekly and 21-repeat-daily-or-weekly. GitHub's separate PR number is only a platform reference; link the Issue with Closes #ID. Apply this from task 21 onward.
-- Keep components, state coordination, HTTP, task rules and SQL separate. Follow docs/ARCHITECTURE.md and the automated dependency checks; add abstractions only for current needs.
-- Never commit databases, credentials, personal configuration, execution logs or installer output. Installed user data stays outside source/install directories.
+## Product and authorization
+
+- Follow [the product baseline](docs/PRODUCT_BASELINE.md). Keep Windows-first, single-user, local-first scope.
+- Local Personal and manual Projects are approved. Product GitHub authorization, coding permissions/approvals/recovery and formal signing/updating retain their separate phase gates. A local feature does not verify those gates.
+- The owner authorized public gh01wzx/focusflow and desktop development on 2026-11-03. Do not repeat that authorization request. New account scopes and external actions stay within the approved workflow.
+
+## Work with the owner
+
+- Discuss the work in Chinese. Use simple English in source, comments, UI, docs, Issues, commits and PRs. Preserve user-entered text; escape non-English test fixtures.
+- Work on one owner-selected Issue at a time, using small PRs. The owner chooses the next task and decides merge. Do not automatically start another task, merge, release or deploy.
+- A coding task is complete only after its linked PR is observed merged.
+- Use the Issue number as the task ID: [ID] Plain-English outcome for Issue/PR titles, ID-short-outcome for branches, and Closes #ID in the PR. GitHub's separate PR number is only a platform reference. Apply this from task 21 onward.
+- Keep lasting rules here. Keep task status, approvals and development history in GitHub rather than adding a chronological log to this file.
+
+## Explain and finish the work
+
+- Issues explain why the user needs the change, what they can do, and observable steps to check it. Explain unfamiliar terms instead of relying on abbreviations.
+- PRs lead with what changed, how to try the exact build, and known problems. Put implementation details in expandable engineering notes.
+- Follow the [document responsibilities](docs/DEVELOPMENT.md#where-information-belongs). Keep plans in Issues and change-specific results in the corresponding PR.
+- When replacing an implementation, remove unused code and repair affected references, tests, commands and docs in the same change. Retain required migrations, compatibility behavior and tools with a current consumer.
+- After merge, update the affected Issue/overview state. Avoid copying temporary PR status across documents.
+- Separate executed checks, code observations, owner-reported results and inference. Bind verification and approval to a commit SHA; changes invalidate earlier approval.
+- A retry passing does not diagnose a failure. A temporary workaround is not a permanent fix. Stop repeated native launches after a crash and record a controlled next experiment.
+
+## Code and data
+
+- Keep components, state coordination, HTTP, task rules and SQL separate. Follow [Architecture](docs/ARCHITECTURE.md) and dependency checks; add abstractions only for current needs.
 - Use strict TypeScript for first-party app, browser, integration and test code. Generated JavaScript belongs only in ignored build output.
-- Use English in source, comments, UI, docs, Issues, commits and PRs. Conversation with the owner is Chinese. Preserve user-entered text; escape non-English test fixtures.
-- Separate executed tests, code observations, model inference and unverified claims. Bind review evidence/approval to a commit SHA; changes invalidate approval.
-- For code changes run npm run check:language, npm run typecheck, npm run build and npm test. Optional test:source is not type checking.
-- Tests use disposable directories. No live model or authenticated GitHub write in ordinary tests.
+- For code changes run npm run check:language, npm run typecheck, npm run build and npm test. Optional test:source is not type checking. Use relevant language/link checks for documentation-only changes.
+- Tests use disposable directories. Ordinary tests never use a live model or authenticated GitHub writes. Review instructions must identify the build and data profile.
+- Never commit databases, credentials, personal configuration, execution logs or installer output. Installed user data stays outside source/install directories.
+- Preserve existing weekly schedules and applied database migrations. New schema changes append migrations and retain verified backup/recovery protection.
 - Validate maintained desktop/signing tooling before considering a custom installer/updater. SQLite driver and interface choices remain reviewable engineering decisions.

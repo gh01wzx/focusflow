@@ -2,13 +2,26 @@
 
 Prerequisite: Node 24.12.x or later 24.x. Install exact dependencies with npm ci.
 
-## Tickets and PRs
+## Where information belongs
 
-Use the Issue number as the task ID from task 21 onward. Issue and PR titles share [ID] plus a plain-English user outcome; the branch starts with the same ID. Example: [21] Create tasks that repeat daily or weekly, on branch 21-repeat-daily-or-weekly. GitHub assigns a separate, immutable PR number; it is not another task ID.
+| Content | Main location |
+| --- | --- |
+| Planned work and task status | GitHub Issues, starting at the [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) |
+| Current use and launch instructions | [README](../README.md) |
+| Current code layout and reading path | [Architecture](ARCHITECTURE.md) |
+| Developer commands, data profiles and recovery | This document |
+| Approved product scope | [Product baseline](PRODUCT_BASELINE.md) |
+| Verification coverage and limits | [Validation](VALIDATION.md) |
+| Lasting collaboration rules | [AGENTS.md](../AGENTS.md) |
+| Change-specific results and history | The corresponding PR and Git history |
 
-Describe the user's need and acceptance steps they can try in the app. A PR starts with what changed for the user, how to try it, and verification/limitations. Put database, protocol and implementation details in expandable engineering notes. For maintenance, explain the user impact before the mechanism.
+Update the main location when information changes. Link to it elsewhere instead of copying temporary task status. Keep future features in Issues until a selected task needs an implementation.
 
-Link the Issue with Closes #ID. Passing checks means ready for review; only an observed merge completes the coding Ticket. Replacing a PR or renaming a branch never counts as completion.
+## Tasks and PRs
+
+Use the [task template](../.github/ISSUE_TEMPLATE/task.md) for one user story and the [PR template](../.github/pull_request_template.md) for its proposed change. Explain maintenance work through the owner's problem and an observable result too.
+
+After GitHub creates an Issue, add its actual number to the title; do not guess the next number. Follow [AGENTS.md](../AGENTS.md#work-with-the-owner) for naming and owner decisions. For example, task 21 uses [21] Create tasks that repeat daily or weekly and branch 21-repeat-daily-or-weekly. The PR uses the same task ID and Closes #21; its GitHub PR number is separate.
 
 ## Commands
 
@@ -40,6 +53,8 @@ The build removes only the validated project dist directory before compiling. De
 - FOCUSFLOW_TEST_PROFILE selects a disposable desktop-test profile.
 - Previous spike data and the separate Codex profile are never imported or deleted by source cleanup.
 
+The source desktop launcher and installed app currently share the default product profile. A fresh checkout does not create fresh personal data. [Task #72](https://github.com/gh01wzx/focusflow/issues/72) tracks a separate review setup; it is not available yet. Identify any explicitly selected disposable profile in review instructions and verify that the chosen launcher honors it before use.
+
 Do not point test overrides at real data. Do not commit databases, credentials, local config or logs.
 
 ## Backup and recovery
@@ -58,6 +73,18 @@ This is developer recovery tooling, not an automatic updater or user recovery UI
 
 ## Checks before review
 
-Run language, typecheck, build and test commands. CI repeats cross-platform checks and operates an installed Windows app, including restart and synthetic prior-schema recovery.
+- Remove superseded code and update its callers, tests, commands and docs. Keep migrations, compatibility behavior and tools that are still used; check references before deleting them.
+- For code changes, run npm run check:language, npm run typecheck, npm run build and npm test. For documentation-only changes, run the language check, check Markdown links and read the templates as an owner would. Documentation review does not require a local Electron launch.
+- Give an exact build or launch command and data profile for app changes. State any missing review setup rather than claiming data isolation that has not been implemented. For documentation changes, link the changed documents and explain what to inspect.
+- Record executed checks, failures, unverified behavior and the tested commit in the PR. Label owner-reported results, code observations and inference separately. Keep implementation details in the PR's expandable notes.
+- After the owner merges, confirm the merge and update affected Issues/overviews. Leave temporary PR status out of stable documents.
+
+CI repeats cross-platform checks and operates an installed Windows app, including restart and synthetic prior-schema recovery. Existing workflows also run for documentation pushes; their results still belong to the tested commit.
 
 Tests never use a live model, authenticated GitHub writes or real personal data. Keep evidence tied to the reviewed commit. See [validation](VALIDATION.md) and [Codex commands](CODEX.md).
+
+## When a check fails
+
+Before retrying, record the observed failure, the hypothesis to test, one controlled experiment, its expected result and a stopping condition in the PR or relevant Issue. Record the actual result before choosing another step. A retry passing is evidence of that run, not an explanation of the earlier failure.
+
+After a native crash, stop repeated launches. Preserve user data and directory permissions. Do not delete the personal database, reset project permissions or disable the sandbox as a routine diagnostic step. The temporary Electron-path workaround does not establish a permanent fix. [Task #73](https://github.com/gh01wzx/focusflow/issues/73) holds the startup observations and remaining diagnostic work.

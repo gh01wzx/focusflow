@@ -2,7 +2,9 @@
 
 Review evidence belongs to a commit, not a branch name. Check the current PR head and Checks tab; a new commit invalidates earlier approval.
 
-## Current verification
+## Verification coverage
+
+The maintained checks cover the scenarios below. This list describes coverage; execution results belong to the corresponding PR.
 
 - Language, strict TypeScript, static dependency boundaries, build and compiled behavior tests.
 - Browser clients against the real local API; malformed response rejection; architecture-guard failure cases.
@@ -18,8 +20,6 @@ Review evidence belongs to a commit, not a branch name. Check the current PR hea
 - Installed weekday controls retain choices after failed saves and across restart.
 - Manual ticket validation, parent isolation, SQL constraints and HTTP request/size boundaries.
 
-The retired note-app tests were removed or transferred to product fixtures. A smaller test count does not imply the removed note UI is still maintained. Exact current results/counts are recorded in the PR.
-
 Exact results, counts and tested commit SHAs belong to each PR and its Checks tab. Earlier runs do not verify a later commit. Renderer bundling in this restricted host has encountered an ancestor-directory read denial; a failed local build does not count as a pass. Use hosted checks for full build evidence when that restriction applies. This does not diagnose an ordinary Windows launch. CI screenshots are in windows-today; artifact presence alone is not a pass. Installed recurrence rollover uses prior-period fixtures and the real app clock; disposable store tests separately advance injected clocks across midnight/DST.
 
 ## Retained evidence
@@ -28,6 +28,7 @@ Exact results, counts and tested commit SHAs belong to each PR and its Checks ta
 | --- | --- | --- |
 | Phase 1 entry | PR #18 merged at 2a538a76d3a533dac3d6e33fb70765f0d5d20b11 | Other phases retain their own gates |
 | Initial Today | [Checks](https://github.com/gh01wzx/focusflow/actions/runs/41767405580) and [Windows UI/recovery](https://github.com/gh01wzx/focusflow/actions/runs/41767405578), tested head 051f9d00cf443d5b261cbfc9ea5125f87a5a9edc | Historical pre-cleanup result, not approval of later code |
+| Selected weekdays and Personal checks | [PR #70](https://github.com/gh01wzx/focusflow/pull/70), tested head a058c9d020120f25fd75458eb4ae979eb9fbc78b; links to cross-platform checks and installed UI/recovery | First installed check timed out on close; the second attempt passed without establishing the cause. These runs do not prove startup on the owner's current checkout |
 | Real Codex streaming | Owner-reported head 4540ccc36dd1d2a6e4f868c6b9cda84b15c8eab9: ChatGPT login, 6 deltas, marker matched | Not an independently repeated call or coding run |
 | Real Codex cancellation | Owner-reported head 56f73fec0cdc011ec9eebc56cd741cd8066365c1: interrupt/terminal event and cleanup confirmed | Not proof of coding permissions or all provider failures |
 | Phase 0 manual upgrade | [Windows run](https://github.com/gh01wzx/focusflow/actions/runs/41757461352): note data retained from app 0.0.1/schema 1 to 0.0.2/schema 2 | Not product-data import or a signed automatic update |
@@ -39,7 +40,9 @@ GitHub Issues/PRs and Git history are the development record. Old experiment doc
 - Project action center/dependencies and later MVP phases are unfinished; see the [MVP task index](https://github.com/gh01wzx/focusflow/issues/28).
 - Product schema 1 is a synthetic test baseline, not a shipped older product.
 - Installed checks have seen close/cancellation timeouts. Current smoke requires observed native exit code 0 and bounded stage waits; a retry does not establish a root cause.
-- Last captured initial-Today audit: 15 moderate affected development packages, no high/critical entries. This is not a security-clean claim; advisories may change.
+- The historical initial-Today audit recorded 15 moderate affected development packages and no high/critical entries. It is not a current dependency assessment. Use the dependency-audit artifact from the specific Windows run under review; advisories may change.
+- Startup on the owner's checkout remains unverified after the latest feature merge. [Task #73](https://github.com/gh01wzx/focusflow/issues/73) records the observed native failure and temporary workaround; neither a passing hosted run nor a retry establishes its cause or a permanent fix.
+- Source desktop launches and the installed app share the default data profile. A fresh checkout does not isolate personal data; [task #72](https://github.com/gh01wzx/focusflow/issues/72) tracks the separate review setup.
 - Node 24.12 emits an experimental warning for node:sqlite. Compatibility is checked against pinned Electron; runtime/driver upgrades need new evidence.
 - Installers are unsigned development artifacts. Signing, update trust, interrupted installs, rollback/recovery UI and formal release hardening remain open.
 - Product GitHub authorization, writing-code sandbox/approvals, durable execution recovery and actual expired-auth/exhausted-quota failures remain unverified.

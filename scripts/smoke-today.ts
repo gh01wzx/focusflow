@@ -13,6 +13,8 @@ import { localDay, nextOccurrence } from '../src/shared/calendar.ts';
 import type { TaskView } from '../src/shared/tasks.ts';
 import type { ProjectView } from '../src/shared/projects.ts';
 import { exerciseProjectUI, PROJECT_SMOKE_TITLE } from './project-ui.ts';
+import { exerciseWeekdayUI } from './weekday-ui.ts';
+import { WEEKDAYS } from '../src/shared/weekdays.ts';
 
 const argument = process.argv[2];
 assert.ok(argument, 'Provide the installed FocusFlow executable.');
@@ -140,6 +142,13 @@ try {
       await page.getByLabel('Task title').fill(title);
       await page.getByLabel('Repeat', { exact: true }).selectOption(frequency);
       await page.getByLabel('Planned date').fill(date);
+      if (frequency === 'weekly') {
+        const picker = page.getByRole('group', { name: 'Repeat on', exact: true });
+        for (const day of WEEKDAYS) {
+          await picker.getByRole('checkbox', { name: day.name, exact: true })
+            .setChecked(day.value === new Date(date + 'T12:00:00Z').getUTCDay());
+        }
+      }
       await page.getByRole('button', { name: 'Add task' }).click();
       await page.getByRole('status').filter({ hasText: 'Task added.' }).waitFor();
       await page.getByText(title, { exact: true }).waitFor();
@@ -270,13 +279,18 @@ try {
     assert.equal(await page.getByLabel('Status for ' + PROJECT_SMOKE_TITLE, { exact: true }).inputValue(), 'done');
     const projectsAfterRestart = await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
     assert.deepEqual(projectsAfterRestart, projects);
+    mark('weekly-weekday-selection');
+    const selectedDays = await exerciseWeekdayUI(page, today);
+    mark('weekday-selection-restart'); await closeApp(); page = await launch();
+    const selectedAfterRestart = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
+    assert.deepEqual(selectedAfterRestart, selectedDays);
   }
   mark('final-close'); await closeApp();
   assert.deepEqual(await readFile(join(root, 'phase0.db')), sentinelBytes);
   assert.ok(!resolve(profile).startsWith(dirname(executable)), 'Product data is outside installation output.');
   await writeFile(join(artifacts, 'report.json'), JSON.stringify({ status: 'verified',
     scope: recovery ? 'Schema 3 Personal/repeating data migration and separate snapshot recovery.'
-      : 'Installed Personal and manual project hierarchy, statuses, selection, restart, text escaping and request guards.',
+      : 'Installed Personal and manual projects, weekday selection/save-failure retention, recurrence rollover, restart and request guards.',
     productDataSeparate: true, spikeUnchanged: true, rendererNodeAccess: false }, null, 2));
   console.log('TODAY_SMOKE_VERIFIED');
 } catch (error) {

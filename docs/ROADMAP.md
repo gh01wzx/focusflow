@@ -9,7 +9,8 @@ Only one individually authorized Ticket starts at a time. A PR awaits owner revi
 | Personal recurrence | Daily/weekly periods, missed history and stopping schedules | Issue #21 / PR #23 merged |
 | Maintainability | Separate UI, requests, task rules and database access; enforce boundaries | Task #24 / PR #25 merged |
 | Personal follow-ups | Editing/reopening as small follow-ups | Not started; not required for initial Personal acceptance |
-| Manual hierarchy | Create Project/Milestone/manual Ticket and change status | Task #26 under review |
+| Manual hierarchy | Create Project/Milestone/manual Ticket and change status | Issue #26 / PR #27 merged |
+| Personal weekdays and acceptance | Pick multiple weekly weekdays; verify gaps, history, migration and restart | Owner selected #37; implementation under review |
 | Project follow-ups | Dependencies and action center; Kanban and editing | Not started |
 | Planning/GitHub | Reviewed AI drafts, product authorization, linked Issues and safe reconciliation | Blocked until its integration gates are verified |
 | Coding/review | User-started isolated work, tests/PR, independent review, revisions and merge sync | Standalone Codex groundwork exists; product workflow not implemented |
@@ -18,3 +19,5 @@ Only one individually authorized Ticket starts at a time. A PR awaits owner revi
 The approved next scope is local Personal/manual Projects. GitHub account scope, coding permissions/approval/restart recovery and formal updates remain gates on their respective phases.
 
 The full MVP acceptance remains [the product baseline](PRODUCT_BASELINE.md), including Tracker's real self-improvement loop. No later Ticket or deployment starts automatically.
+
+Browse the remaining stories through the [GitHub MVP index](https://github.com/gh01wzx/focusflow/issues/28). Labels separate feature groups, overviews, user stories and tasks ready for owner selection.

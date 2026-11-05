@@ -2,7 +2,7 @@
 
 A Windows desktop task tracker built with TypeScript, React, Electron and SQLite. Data stays on your computer; no Tracker account is required.
 
-**Status:** Personal and the maintainability refactor are merged. Task #26 adds the manual project hierarchy for review. This is an unsigned development build, not the complete MVP.
+**Status:** Personal and the manual project hierarchy are merged. Task #37 adds weekday selection and Personal acceptance checks for review. This is an unsigned development build, not the complete MVP.
 
 ## Available now
 
@@ -17,7 +17,9 @@ Action center, dependencies, editing/deletion, Kanban, AI planning, coding/revie
 
 ## Repeating tasks
 
-Choose **Repeat** and a first date of today or later. Daily tasks reset at local midnight. Weekly tasks last seven calendar days from their first date, including that date.
+Choose **Repeat** and a start date of today or later. Daily tasks reset at local midnight. For **Weekly**, select one or more weekdays, such as Mon, Tue and Sat. Each selected date is a separate task, starting on the first matching date on or after the start date. Unselected days have no task. Dates follow the computer's current local timezone.
+
+Existing weekly schedules retain their original seven-day periods after upgrading. Their schedule list explicitly identifies this behavior; weekday editing is not included in this task.
 
 Completing/cancelling affects one occurrence. Unfinished periods become **Missed** in History; reopening catches up closed-app periods without overdue accumulation. Temporary tasks keep their original dates and stay pending.
 

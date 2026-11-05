@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -47,4 +47,6 @@ export const MIGRATIONS = [
       created_at TEXT NOT NULL, updated_at TEXT NOT NULL
     );
     CREATE INDEX project_tickets_milestone ON project_tickets(milestone_id);` },
+  { version: 5, sql: `ALTER TABLE recurrence_rules ADD COLUMN weekdays_mask INTEGER
+      CHECK(weekdays_mask IS NULL OR (frequency='weekly' AND typeof(weekdays_mask)='integer' AND weekdays_mask BETWEEN 1 AND 127));` },
 ] as const;

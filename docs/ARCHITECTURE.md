@@ -32,9 +32,9 @@ Electron owns the window and an OS-selected IPv4 loopback service. The renderer 
 
 ## Data and repeating periods
 
-Schema **4** adds projects, milestones and manual tickets. Applied migrations 1-3 retain their SQL behavior; new schema changes append migrations. Product data stays outside source/install directories. Foreign/newer databases are refused; upgrades require verified pre-change snapshots.
+Schema **5** adds optional weekday masks to repeating rules; null retains existing schedules. Migrations 1-4 retain their SQL behavior. Product data stays outside source/install directories. Foreign/newer databases are refused; upgrades require verified pre-change snapshots.
 
-Each rule records its frequency, first date and next unmaterialized date. Occurrences have unique rule/date pairs and independent statuses. Daily periods span one local day; weekly periods span seven calendar days from the first date. Date-only arithmetic avoids DST-hour assumptions.
+Each rule records its frequency, start date and next unmaterialized date. New weekly rules also record selected weekdays; SQL mask conversion stays in the repository, while shared calendar helpers and domain rules use weekday arrays. Occurrences have unique rule/date pairs and independent statuses. Daily and selected-weekday occurrences span one local day. Existing weekly rules without weekday selections retain their seven-day periods. Date-only arithmetic avoids DST-hour assumptions.
 
 The workspace store owns one database connection and composes separate Personal and Projects services. Before a read/action, one transaction expires unfinished periods, records elapsed periods, creates the current occurrence and advances the cursor. Failure rolls everything back. Clock rollback never reopens resolved periods. Stopping retains history/current work and prevents further generation.
 

@@ -57,7 +57,7 @@ Do not point test overrides at real data. Do not commit databases, credentials, 
 
 ## Backup and recovery
 
-Existing product schema changes take a verified snapshot before transactional migration. Schema 4 adds the manual hierarchy while retaining Personal/repeating data. Append migrations; do not rewrite an applied migration. A fresh database needs no pre-upgrade snapshot.
+Existing product schema changes take a verified snapshot before transactional migration. Schema 5 adds weekday selection while retaining Personal/project data and existing weekly periods. Append migrations; do not rewrite an applied migration. A fresh database needs no pre-upgrade snapshot.
 
 To restore a snapshot manually, close all app instances and preserve the original database plus any WAL/SHM sidecars. Keep the snapshot and matching .db.json manifest together, then run:
 

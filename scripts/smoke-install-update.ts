@@ -127,8 +127,10 @@ try {
   await restoreSnapshot(source, restoredPath);
   const restored = await openWorkspaceStore(restoredPath);
   try {
-    assert.deepEqual(restored.tasks.view(), saved.tasks);
-    assert.deepEqual(restored.projects.view(projectId), saved.projects);
+    // Compare the same JSON contract returned by the installed HTTP service.
+    // SQLite intentionally returns null-prototype row objects.
+    assert.deepEqual(JSON.parse(JSON.stringify(restored.tasks.view())) as unknown, saved.tasks);
+    assert.deepEqual(JSON.parse(JSON.stringify(restored.projects.view(projectId))) as unknown, saved.projects);
   } finally { restored.close(); }
   assert.equal(await digest(database), beforeRestore, 'Separate recovery must not alter the current database.');
   mark('reinstall-baseline-same-schema');

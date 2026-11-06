@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { GitHubStatus } from '../../../src/shared/github.ts';
 import { createGitHubClient } from '../../../src/client/github.ts';
 
@@ -11,17 +11,40 @@ export function GitHubConnection({ projectId }: { projectId: string }) {
   const [name, setName] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [refresh, setRefresh] = useState(0);
+  const mounted = useRef(true);
+  const generation = useRef(0);
+  const busyRef = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; ++generation.current; };
+  }, []);
   useEffect(() => {
     let active = true;
-    void client.read(projectId).then(value => { if (active) { setStatus(value); setClientId(value.clientId); setError(''); } },
-      () => { if (active) setError('Could not read GitHub connection. Retry later.'); });
+    const token = ++generation.current;
+    void client.read(projectId).then(value => {
+      if (active && mounted.current && token === generation.current && !busyRef.current) {
+        setStatus(value); setClientId(value.clientId); setError('');
+      }
+    }, () => {
+      if (active && mounted.current && token === generation.current && !busyRef.current) {
+        setError('Could not read GitHub connection. Retry later.');
+      }
+    });
     return () => { active = false; };
   }, [projectId, refresh]);
   async function act(action: string, value?: unknown) {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    const token = ++generation.current;
     setBusy(true); setError('');
-    try { setStatus(await client.act(projectId, action, value)); setConfirmed(false); }
-    catch (failure) { setError(failure instanceof Error ? failure.message : 'Could not change GitHub connection.'); }
-    finally { setBusy(false); }
+    try {
+      const next = await client.act(projectId, action, value);
+      if (mounted.current && token === generation.current) { setStatus(next); setConfirmed(false); }
+    } catch (failure) {
+      if (mounted.current && token === generation.current) {
+        setError(failure instanceof Error ? failure.message : 'Could not change GitHub connection.');
+      }
+    } finally { busyRef.current = false; if (mounted.current) setBusy(false); }
   }
   useEffect(() => {
     if (!status?.userCode || busy) return;

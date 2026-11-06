@@ -104,8 +104,25 @@ try {
     repositories: [{ id: 17, fullName: 'sample/public-work', private: false }],
     userCode: null, nextPollAt: 0, message: 'Simulated GitHub account for UI verification only.' };
   let confirmedRequests = 0;
+  let failCheck = false;
+  let delayRead = false;
+  let readStarted!: () => void;
+  let releaseRead!: () => void;
+  const staleReadStarted = new Promise<void>(resolve => { readStarted = resolve; });
+  const staleReadReleased = new Promise<void>(resolve => { releaseRead = resolve; });
   await review.page.route('**/api/projects/*/github**', async route => {
     const action = new URL(route.request().url()).pathname.split('/').at(-1);
+    if (route.request().method() === 'GET' && delayRead) {
+      const stale = structuredClone(sample);
+      readStarted();
+      await staleReadReleased;
+      await route.fulfill({ json: stale });
+      return;
+    }
+    if (action === 'check' && failCheck) {
+      await route.fulfill({ status: 503, json: { error: 'Simulated connection failure.' } });
+      return;
+    }
     const body = route.request().method() === 'POST' ? route.request().postDataJSON() as Record<string, unknown> : {};
     if (action === 'inspect') { sample.preview = sample.repositories[0]!; sample.message = 'Review repository name and visibility.'; }
     if (action === 'connect') {
@@ -138,8 +155,26 @@ try {
   await review.page.getByText('Repository linked locally. No Issue, branch or pull request was created.', { exact: true }).waitFor();
   assert.equal(confirmedRequests, 1);
   await review.page.screenshot({ path: join(artifacts, 'github-connection-simulated.png'), fullPage: true });
-  await review.page.getByRole('button', { name: 'Disconnect this profile', exact: true }).click();
-  await review.page.getByText('Local access removed; task data unchanged.', { exact: true }).waitFor();
+  failCheck = true;
+  await review.page.getByRole('button', { name: 'Check account and repositories', exact: true }).click();
+  await review.page.getByRole('alert').filter({ hasText: 'Simulated connection failure.' }).waitFor();
+  delayRead = true;
+  await review.page.getByRole('button', { name: 'Retry connection', exact: true }).click();
+  let readTimer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([staleReadStarted, new Promise<never>((_, reject) => {
+      readTimer = setTimeout(() => reject(new Error('Delayed GitHub status request was not reached.')), 10000);
+    })]);
+    await review.page.getByRole('button', { name: 'Disconnect this profile', exact: true }).click();
+    await review.page.getByText('Local access removed; task data unchanged.', { exact: true }).waitFor();
+    const staleResponse = review.page.waitForResponse(response => response.request().method() === 'GET'
+      && new URL(response.url()).pathname.endsWith('/github'));
+    releaseRead();
+    await (await staleResponse).finished();
+  } finally { if (readTimer) clearTimeout(readTimer); releaseRead(); }
+  await review.page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await review.page.getByText('Account: Not connected', { exact: true }).waitFor();
+  assert.equal(await review.page.getByRole('button', { name: 'Check account and repositories', exact: true }).count(), 0);
   await review.page.getByRole('heading', { name: 'Sample project', exact: true }).waitFor();
   await review.page.unrouteAll({ behavior: 'wait' });
   mark('reopen-same-review-data');

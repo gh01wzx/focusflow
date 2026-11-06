@@ -14,7 +14,7 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
   let saved: StoredGitHub | null = null;
   let loaded = false;
   let queue: Promise<unknown> = Promise.resolve();
-  let preview: GitHubRepository | null = null;
+  let preview: (GitHubRepository & { projectId: string }) | null = null;
   let repositories: GitHubRepository[] = [];
   let message = 'Connect GitHub explicitly. Connecting creates no Issues, branches or pull requests.';
   let device: { clientId: string; code: string; userCode: string; expiresAt: number; interval: number; next: number } | null = null;
@@ -25,9 +25,11 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
     await load();
     const connected = !!saved?.token && (saved.expiresAt === null || saved.expiresAt > now());
     return { available: true, connected, account: saved?.account || null, clientId: device?.clientId ?? saved?.clientId ?? '',
-      repository: saved?.repositories[projectId] ?? null, preview, repositories: [...repositories],
+      repository: saved?.repositories[projectId] ?? null,
+      preview: preview?.projectId === projectId ? { id: preview.id, fullName: preview.fullName, private: preview.private } : null,
+      repositories: [...repositories],
       userCode: device?.userCode ?? null, nextPollAt: device?.next ?? 0,
-      message: !connected && saved?.token ? 'GitHub access expired. Authorize again; saved task data stays intact.' : message };
+      message: !connected && saved?.token && !device ? 'GitHub access expired. Authorize again; saved task data stays intact.' : message };
   }
   async function request(url: string, options: RequestInit = {}) {
     let response: Response;
@@ -51,7 +53,9 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
     body: new URLSearchParams(fields).toString(),
   });
   async function api(path: string, token = saved?.token ?? '') {
-    if (!token) throw new GitHubFailure('Authorize GitHub first.');
+    if (!token || (saved && token === saved.token && saved.expiresAt !== null && saved.expiresAt <= now())) {
+      throw new GitHubFailure('GitHub access is missing or expired. Authorize GitHub again.');
+    }
     return request('https://api.github.com' + path, { headers: {
       Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + token, 'X-GitHub-Api-Version': '2022-11-28',
     } });
@@ -81,6 +85,7 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
     start: (projectId: string, clientId: unknown) => run(projectId, async () => {
       if (typeof clientId !== 'string' || !/^[A-Za-z0-9_.-]{5,100}$/.test(clientId)) throw new GitHubFailure('Enter the client ID of your registered GitHub App with device flow enabled.');
       if (device && device.expiresAt > now()) throw new GitHubFailure('Finish or cancel the current authorization first.');
+      preview = null;
       const reply = record(await oauth('device/code', { client_id: clientId }));
       if (typeof reply.device_code !== 'string' || typeof reply.user_code !== 'string' || !/^[A-Z0-9-]{4,20}$/.test(reply.user_code)
         || reply.verification_uri !== 'https://github.com/login/device' || typeof reply.expires_in !== 'number'
@@ -128,15 +133,21 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
       message = 'Showing up to 100 accessible repositories. Enter owner/name to inspect another. Connecting does not publish anything.';
     }),
     inspect: (projectId: string, name: unknown) => run(projectId, async () => {
+      preview = null;
       let fullName: string;
       try { fullName = repositoryName(name); } catch { throw new GitHubFailure('Enter a repository as owner/name.'); }
-      preview = providerRepository(await api('/repos/' + fullName.split('/').map(encodeURIComponent).join('/')));
+      preview = { ...providerRepository(await api('/repos/' + fullName.split('/').map(encodeURIComponent).join('/'))), projectId };
       message = 'Review the repository owner/name and visibility, then confirm the project link.';
     }),
     connect: (projectId: string, confirmed: unknown, id: unknown) => run(projectId, async () => {
-      if (confirmed !== true || !preview || id !== preview.id || !saved) throw new GitHubFailure('Inspect the repository and explicitly confirm this project link first.');
+      if (confirmed !== true || !preview || preview.projectId !== projectId || id !== preview.id || !saved) {
+        throw new GitHubFailure('Inspect the repository and explicitly confirm this project link first.');
+      }
       const checked = providerRepository(await api('/repos/' + preview.fullName.split('/').map(encodeURIComponent).join('/')));
-      if (checked.id !== preview.id) throw new GitHubFailure('Repository identity changed. Inspect it again before linking.');
+      if (checked.id !== preview.id || checked.fullName !== preview.fullName || checked.private !== preview.private) {
+        preview = null;
+        throw new GitHubFailure('Repository name or visibility changed. Inspect it again before confirming.');
+      }
       const value = { ...saved, repositories: { ...saved.repositories, [projectId]: checked } };
       await vault.write(value); saved = value; preview = null;
       message = 'Repository linked locally. No Issue, branch or pull request was created.';

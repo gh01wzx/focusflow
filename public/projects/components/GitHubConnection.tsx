@@ -47,7 +47,10 @@ export function GitHubConnection({ projectId }: { projectId: string }) {
         <button onClick={() => void act('cancel')}>Cancel authorization</button></div>}
       {status.connected && <>
         <button onClick={() => void act('check')}>Check account and repositories</button>
-        <label>Repository owner/name <input value={name} maxLength={140} onChange={event => setName(event.target.value)} list={'github-repositories-' + projectId} /></label>
+        <label>Repository owner/name <input value={name} maxLength={140} onChange={event => {
+          setName(event.target.value); setConfirmed(false);
+          setStatus(current => current ? { ...current, preview: null } : current);
+        }} list={'github-repositories-' + projectId} /></label>
         <datalist id={'github-repositories-' + projectId}>{status.repositories.map(repo => <option key={repo.id} value={repo.fullName}>{repo.private ? 'Private' : 'Public'}</option>)}</datalist>
         <button onClick={() => void act('inspect', { name })}>Inspect repository</button>
         {status.preview && <div className="github-preview">

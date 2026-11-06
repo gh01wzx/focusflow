@@ -25,6 +25,7 @@ function fixture() {
   const memoryVault = memory();
   let clock = 10000;
   let mode = 'success';
+  let repository = { ...repo };
   const calls: { path: string; method: string; body: string }[] = [];
   const transport: typeof fetch = async (url, options) => {
     const path = String(url);
@@ -40,11 +41,12 @@ function fixture() {
       ? { error: 'slow_down' } : mode === 'pending' ? { error: 'authorization_pending' }
       : { access_token: token, refresh_token: 'never_store_refresh_fixture', expires_in: 28800 });
     if (path.endsWith('/user')) return Response.json({ login: 'sample', email: 'not-exposed@example.test' });
-    if (path.includes('/user/repos?')) return Response.json([repo]);
-    return Response.json(repo);
+    if (path.includes('/user/repos?')) return Response.json([repository]);
+    return Response.json(repository);
   };
   const service = createGitHubService(memoryVault.vault, transport, () => clock);
   return { ...memoryVault, service, calls, mode: (value: string) => { mode = value; },
+    repository: (value: typeof repo) => { repository = value; },
     advance: (value = 1000) => { clock += value; } };
 }
 async function authorize(f: ReturnType<typeof fixture>) {
@@ -54,6 +56,39 @@ async function authorize(f: ReturnType<typeof fixture>) {
   f.advance();
   assert.equal((await f.service.poll(projectId)).connected, true);
 }
+
+test('confirmation belongs to one project and rejects repository renames or visibility changes', async () => {
+  const f = fixture(); await authorize(f);
+  const other = '00000000-0000-0000-0000-000000000002';
+  await f.service.inspect(projectId, 'sample/work');
+  assert.equal((await f.service.status(other)).preview, null);
+  assert.equal((await f.service.connect(other, true, 7)).repository, null);
+  f.repository({ ...repo, full_name: 'sample/renamed' });
+  const renamed = await f.service.connect(projectId, true, 7);
+  assert.equal(renamed.repository, null); assert.equal(renamed.preview, null);
+  assert.match(renamed.message, /changed/);
+  f.repository({ ...repo, private: true });
+  await f.service.inspect(projectId, 'sample/work');
+  f.repository({ ...repo, private: false });
+  const publicNow = await f.service.connect(projectId, true, 7);
+  assert.equal(publicNow.repository, null); assert.match(publicNow.message, /visibility/);
+  await f.service.inspect(projectId, 'sample/work');
+  assert.equal((await f.service.connect(projectId, true, 7)).repository?.private, false);
+  await f.service.close();
+});
+
+test('failed inspections clear old previews and expired access sends no provider request', async () => {
+  const f = fixture(); await authorize(f);
+  await f.service.inspect(projectId, 'sample/work');
+  f.mode('network');
+  assert.equal((await f.service.inspect(projectId, 'sample/other')).preview, null);
+  assert.equal((await f.service.connect(projectId, true, 7)).repository, null);
+  f.mode('success'); f.advance(29_000_000);
+  const before = f.calls.length;
+  assert.equal((await f.service.inspect(projectId, 'sample/work')).connected, false);
+  assert.equal(f.calls.length, before);
+  await f.service.close();
+});
 
 test('GitHub App device authorization lists, previews and explicitly links without external writes', async () => {
   const f = fixture();

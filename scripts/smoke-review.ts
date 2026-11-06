@@ -128,6 +128,12 @@ try {
   assert.equal(await review.page.getByRole('button', { name: 'Connect repository', exact: true }).isDisabled(), true);
   assert.equal(confirmedRequests, 0);
   await review.page.getByRole('checkbox', { name: 'I confirm this repository for this project.', exact: true }).check();
+  await review.page.getByLabel('Repository owner/name', { exact: true }).fill('sample/another');
+  assert.equal(await review.page.getByRole('button', { name: 'Connect repository', exact: true }).count(), 0);
+  assert.equal(confirmedRequests, 0);
+  await review.page.getByLabel('Repository owner/name', { exact: true }).fill('sample/public-work');
+  await review.page.getByRole('button', { name: 'Inspect repository', exact: true }).click();
+  await review.page.getByRole('checkbox', { name: 'I confirm this repository for this project.', exact: true }).check();
   await review.page.getByRole('button', { name: 'Connect repository', exact: true }).click();
   await review.page.getByText('Repository linked locally. No Issue, branch or pull request was created.', { exact: true }).waitFor();
   assert.equal(confirmedRequests, 1);

@@ -40,7 +40,7 @@ npm ci
 .\Start-FocusFlow.cmd
 ~~~
 
-Run npm ci again when dependencies change. After setup, double-click Start-FocusFlow.cmd. The source launcher builds the app and keeps its console open. Electron downloads its pinned runtime on first use.
+Run npm ci again when dependencies change. After setup, double-click Start-FocusFlow.cmd. The source launcher builds the app and keeps its console open. Source runs open separate development data, marked **Sample data**. Electron downloads its pinned runtime on first use.
 
 For an unsigned installer, open the passing **Windows desktop checks** run and download **windows-today**. Check the run result before using its artifact. The installer bundles Node/Electron; it does not provide automatic updates.
 
@@ -53,6 +53,29 @@ The Windows product database is at:
 ~~~
 
 It is outside source and installation output. The app does not import the old Phase 0 notes or access the separate Codex login profile. No task data is sent to GitHub or an AI service.
+
+## Try a proposed change
+
+In the checkout for the PR you are reviewing, run:
+
+~~~powershell
+npm ci
+.\Review-FocusFlow.cmd pr-72
+~~~
+
+Use the name given in the PR. The equivalent command is npm run review -- pr-72. The window shows **Sample data - Review pr-72** in its title and a yellow **Sample data** notice above both workspaces.
+
+The first run creates a few example tasks and a sample project. Add, complete or change them freely. Reopen with the same name to keep your changes; a different name starts a separate workspace. Review names use letters, numbers and hyphens.
+
+An installed build also supports review mode:
+
+~~~powershell
+& "$env:LOCALAPPDATA\Programs\FocusFlow\FocusFlow.exe" --review pr-72
+~~~
+
+Use the actual installation path if it differs. Opening the installed app normally still uses your everyday tasks. Source development, named review and installed everyday data are separate; your existing everyday data is not moved or copied. To return to it after using the source launcher, open the installed app normally.
+
+Review/development folders are also separated by database format. A format change starts fresh sample data rather than upgrading another format's review workspace. See [Development](docs/DEVELOPMENT.md#data-paths) for paths and deliberate migration trials. Earlier builds without review mode must use their documented disposable-test setup; do not assume they understand the new review command.
 
 ## Read the project
 

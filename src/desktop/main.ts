@@ -1,15 +1,19 @@
 import { app, BrowserWindow, dialog } from 'electron';
 import { mkdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { startWorkspaceServer } from '../workspace/server.ts';
 import type { LocalServer } from '../http/local-server.ts';
 import { MigrationError, NewerDatabaseError } from '../database/migrate.ts';
+import { SCHEMA_VERSION } from '../database/schema.ts';
+import { selectProfile } from '../runtime/profile.ts';
 
 app.setName('FocusFlow');
 app.setAppUserModelId('dev.focusflow.desktop');
-const profileDirectory = process.env.FOCUSFLOW_TEST_PROFILE
-  ? resolve(process.env.FOCUSFLOW_TEST_PROFILE)
-  : join(process.env.LOCALAPPDATA ?? app.getPath('appData'), 'FocusFlow', 'desktop');
+const profile = selectProfile({ packaged: app.isPackaged, args: process.argv,
+  localDataDirectory: process.env.LOCALAPPDATA ?? app.getPath('appData'),
+  checkoutDirectory: app.getAppPath(), schemaVersion: SCHEMA_VERSION,
+  testProfile: process.env.FOCUSFLOW_TEST_PROFILE });
+const profileDirectory = profile.directory;
 mkdirSync(profileDirectory, { recursive: true });
 app.setPath('userData', profileDirectory);
 
@@ -37,7 +41,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('window-all-closed', () => { if (!closing) app.quit(); });
 
   void app.whenReady().then(async () => {
-    service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data') });
+    service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), sampleLabel: profile.sampleLabel });
     const origin = service.origin;
     window = new BrowserWindow({
       width: 1120,
@@ -46,7 +50,7 @@ if (!app.requestSingleInstanceLock()) {
       minHeight: 640,
       show: false,
       backgroundColor: '#f8f9f6',
-      title: 'FocusFlow',
+      title: profile.sampleLabel ? `FocusFlow - ${profile.sampleLabel} - Sample data` : 'FocusFlow',
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,

@@ -12,6 +12,8 @@
   "scripts": {
     "start": "electron .",
     "prestart": "npm run build",
+    "review": "electron . --review",
+    "prereview": "npm run build",
     "start:web": "node dist/src/main.js --open",
     "prestart:web": "npm run build",
     "package:windows": "npm run build && electron-builder --win --x64 --publish never --config electron-builder.json",

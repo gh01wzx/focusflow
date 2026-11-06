@@ -27,8 +27,9 @@ After GitHub creates an Issue, add its actual number to the title; do not guess 
 
 | Command | Purpose |
 | --- | --- |
-| npm start | Clean/build and open the desktop app |
-| npm run start:web | Open the same task service in a browser |
+| npm start | Clean/build and open separate development sample data |
+| npm run review -- pr-72 | Clean/build and open named review sample data |
+| npm run start:web | Open development sample data in a browser |
 | npm run check:language | Check maintained source/docs for accidental Han-script text |
 | npm run typecheck | Dependency boundaries plus strict Node, browser, desktop and tooling checks |
 | npm run check:boundaries | Static module boundaries, unresolved imports and runtime cycles |
@@ -37,7 +38,7 @@ After GitHub creates an Issue, add its actual number to the title; do not guess 
 | npm run test:source | Optional Node type-stripping execution; not a type check |
 | npm run package:windows | Build an unsigned NSIS installer; publication is disabled |
 
-The launcher is Start-FocusFlow.cmd. Run npm ci again when dependencies change. The installed app bundles its runtime.
+Start-FocusFlow.cmd opens development data. Review-FocusFlow.cmd pr-72 opens a named review. Run npm ci again when dependencies change. The installed app bundles its runtime and accepts --review pr-72 without Node or npm.
 
 ## Source and generated files
 
@@ -47,15 +48,27 @@ The build removes only the validated project dist directory before compiling. De
 
 ## Data paths
 
-- Product profile: %LOCALAPPDATA%\FocusFlow\desktop
-- Product database: data\tracker.db within that profile.
-- FOCUSFLOW_DATA_DIR explicitly overrides browser-development data.
-- FOCUSFLOW_TEST_PROFILE selects a disposable desktop-test profile.
-- Previous spike data and the separate Codex profile are never imported or deleted by source cleanup.
+| Launch | Directory under %LOCALAPPDATA%\FocusFlow |
+| --- | --- |
+| Installed app, no review argument | desktop |
+| Source desktop/browser default | development\CHECKOUT_ID\schema-N |
+| Source or installed --review pr-72 | reviews\pr-72\schema-N |
 
-The source desktop launcher and installed app currently share the default product profile. A fresh checkout does not create fresh personal data. [Task #72](https://github.com/gh01wzx/focusflow/issues/72) tracks a separate review setup; it is not available yet. Identify any explicitly selected disposable profile in review instructions and verify that the chosen launcher honors it before use.
+Each directory contains data\tracker.db. N is the running build's database format; CHECKOUT_ID is a stable hash of the source directory. Reopening the same directory/name and format keeps changes. Named reviews can be reopened from another checkout; use a distinct name for each PR or independent trial. A schema change opens a separate sample workspace. No automatic import, reset or deletion occurs.
+
+Development/review windows show a sample-data notice and title. Examples are added only when creating a database; reopening an existing database, including a deliberate migration copy, does not add examples. First-time examples are written in one transaction. A failed initial seed fails startup without partial examples; it does not delete the new database. Use a new review name for a fresh trial after investigating that failure.
+
+Explicit developer overrides remain available for existing tools: FOCUSFLOW_TEST_PROFILE selects a desktop-test directory, and FOCUSFLOW_DATA_DIR selects browser-service data directly. Neither seeds examples. Clear FOCUSFLOW_TEST_PROFILE before using --review; a conflict is refused. Browser review mode ignores FOCUSFLOW_DATA_DIR and uses the named review. These overrides are not everyday/review launch instructions.
+
+Previous spike data and the separate Codex profile are never imported or deleted by source cleanup. Installed everyday data stays in its original location; source launchers no longer open it by default.
 
 Do not point test overrides at real data. Do not commit databases, credentials, local config or logs.
+
+### Deliberate migration trials
+
+Ordinary review never copies everyday data. Prefer synthetic fixtures for migration checks. If a copy is explicitly needed, close every app using its source, preserve that source and its backups, and copy to a new trial directory before opening the candidate build. Use SQLite's verified snapshot tooling for live/WAL data; copying only tracker.db while it is open is not a consistent backup.
+
+For a verified snapshot, run restore-snapshot.ts below with a new destination at %LOCALAPPDATA%\FocusFlow\reviews\migration-trial\schema-N\data\tracker.db, using the candidate build's format for N. Then open --review migration-trial. Only the explicit copy is upgraded and it gets its own pre-upgrade snapshot. Retain the original snapshot and manifest. Do not put a newer database into an older format's directory; older builds keep using their separate data. Builds predating review mode need their existing disposable-test override rather than an unrecognized --review argument.
 
 ## Backup and recovery
 

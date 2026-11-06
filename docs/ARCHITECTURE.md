@@ -23,6 +23,7 @@ Files ending in .tsx contain React interface code; .ts files contain TypeScript 
 | Responsibility | Start here |
 | --- | --- |
 | Desktop startup, window security and shutdown | [desktop/main.ts](../src/desktop/main.ts) |
+| Source, review and installed data selection | [runtime/profile.ts](../src/runtime/profile.ts) |
 | Workspace switch and feature pages | [WorkspaceApp.tsx](../public/workspace/WorkspaceApp.tsx), [TodayApp.tsx](../public/today/TodayApp.tsx), [ProjectsApp.tsx](../public/projects/ProjectsApp.tsx) |
 | Page state, refresh, busy guards and feedback | [Personal controller](../public/today/useTodayController.ts), [Projects controller](../public/projects/useProjectsController.ts) |
 | Typed browser calls and checked responses | [client](../src/client), [shared contracts/codecs](../src/shared) |
@@ -63,6 +64,8 @@ Schema **5** adds optional weekday masks to repeating rules; null retains existi
 Each rule records its frequency, start date and next unmaterialized date. New weekly rules also record selected weekdays; SQL mask conversion stays in the repository, while shared calendar helpers and domain rules use weekday arrays. Occurrences have unique rule/date pairs and independent statuses. Daily and selected-weekday occurrences span one local day. Existing weekly rules without weekday selections retain their seven-day periods. Date-only arithmetic avoids DST-hour assumptions.
 
 The workspace store owns one database connection and composes separate Personal and Projects services. Before a read/action, one transaction expires unfinished periods, records elapsed periods, creates the current occurrence and advances the cursor. Failure rolls everything back. Clock rollback never reopens resolved periods. Stopping retains history/current work and prevents further generation.
+
+The desktop/browser entry selects its data directory before opening a store. Installed default data retains the product location; source defaults and named reviews use separate schema-specific sample directories. The store calls [sample-data.ts](../src/workspace/sample-data.ts) only for a new sample database. Examples use existing task/project services inside one transaction. The local server adds an escaped notice/title to the HTML for sample workspaces, outside React so it remains visible in both workspaces. Path selection does not depend on renderer input. See [data paths](DEVELOPMENT.md#data-paths).
 
 The controller refreshes on focus/visibility and every 30 seconds while visible. A generation counter prevents older reads replacing newer changes. Missed timestamps record detection time. Device timezone changes follow the newly observed local date. Catch-up/history remain unpaginated.
 

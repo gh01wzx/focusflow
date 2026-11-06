@@ -14,6 +14,21 @@
 body {
   margin: 0;
 }
+.sample-notice {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 12px 24px;
+  border-bottom: 1px solid #dccb95;
+  background: #fff3cf;
+  color: #57471d;
+  line-height: 20px;
+  font-size: 13px;
+}
+.sample-notice + #root .shell,
+.sample-notice + #root .sidebar {
+  min-height: calc(100vh - 45px);
+}
 button,
 input,
 select {

@@ -23,7 +23,7 @@ export async function startWorkspaceServer(options: {
 }): Promise<LocalServer> {
   const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock, !!options.sampleLabel);
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
-  return listenLocal(async (request, response, origin) => {
+  const local = await listenLocal(async (request, response, origin) => {
     try {
       secureRequest(request, response, origin);
       const resource = request.url ?? '';
@@ -72,5 +72,12 @@ export async function startWorkspaceServer(options: {
         error: known ? error.message : 'Could not save local data. Check disk space and try again.',
       });
     }
-  }, async () => { await options.github?.close(); store.close(); });
+  }, store.close);
+  let closing: Promise<void> | undefined;
+  return { origin: local.origin, close() {
+    return closing ??= (async () => {
+      await options.github?.close();
+      await local.close();
+    })();
+  } };
 }

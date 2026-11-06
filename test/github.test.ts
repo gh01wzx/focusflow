@@ -14,6 +14,37 @@ import { repositoryName, parseGitHubStatus } from '../src/shared/github.ts';
 const projectId = '00000000-0000-0000-0000-000000000001';
 const token = 'ghu_fixture_token_only';
 const repo = { id: 7, full_name: 'sample/work', private: false };
+
+test('server shutdown aborts a pending GitHub request before retiring HTTP and task data', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'focusflow-github-close-'));
+  const saved = memory();
+  await saved.vault.write({ clientId: 'Iv1.fixture', token, account: 'sample', expiresAt: null, repositories: {} });
+  let entered!: () => void;
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  let aborted = false;
+  const service = createGitHubService(saved.vault, async (_url, options) => {
+    entered();
+    await new Promise<never>((_resolve, reject) => options?.signal?.addEventListener('abort', () => {
+      aborted = true; reject(new Error('Fixture network aborted'));
+    }, { once: true }));
+    return Response.json({});
+  });
+  const server = await startWorkspaceServer({ dataDirectory: directory, github: service });
+  t.after(async () => { await server.close(); await rm(directory, { recursive: true, force: true }); });
+  const transport: typeof fetch = (path, options) => fetch(server.origin + String(path), {
+    ...options, headers: { ...options?.headers, Origin: server.origin },
+  });
+  const fixtureTransport: typeof fetch = (path, options) => transport(path, {
+    ...options, headers: { ...options?.headers, Connection: 'close' },
+  });
+  const project = await createProjectClient(fixtureTransport).addProject({ title: 'Keep work on close', description: '' });
+  const request = createGitHubClient(fixtureTransport).act(project.selectedProjectId!, 'inspect', { name: 'sample/work' });
+  await started;
+  const before = Date.now();
+  await server.close(); await request;
+  assert.equal(aborted, true);
+  assert.ok(Date.now() - before < 1000, 'Shutdown must not wait for the provider timeout.');
+});
 function memory() {
   let value: StoredGitHub | null = null;
   const vault: GitHubVault = { available: async () => true,

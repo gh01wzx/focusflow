@@ -13,7 +13,7 @@ A Windows desktop task tracker built with TypeScript, React, Electron and SQLite
 - Repeat daily or on selected weekdays, retain missed periods in History and stop future repeats.
 - Switch to Projects, create projects/milestones/manual tickets, write acceptance criteria and change ticket status.
 
-Action center, dependencies, editing/deletion, Kanban, AI planning, coding/review and one-click updates are not implemented.
+Dependencies, editing/deletion, Kanban, AI planning, coding/review and one-click updates are not implemented.
 
 ## Repeating tasks
 
@@ -27,7 +27,9 @@ Expand **Repeating tasks** to stop a schedule. Its current-period task stays ava
 
 ## Manual projects
 
-Choose **Projects**, add a project, then a milestone and its tickets. Each ticket can move between Backlog, Ready, In Progress, Review, Done and Blocked. Descriptions and acceptance criteria support multiple lines.
+Choose **Projects** to see Review tickets, In Progress tickets and one recommended Ready ticket across all projects. Lists use creation time, oldest first, with ticket ID breaking ties. Expand View details for descriptions and acceptance criteria. Start ticket moves only the chosen Ready ticket to In Progress; nothing starts automatically. Mark a ticket Ready only when its prerequisites are finished.
+
+Choose **Browse projects** to add a project, then a milestone and its tickets. Use **Action center** to return. Each ticket can move between Backlog, Ready, In Progress, Review, Done and Blocked. Descriptions and acceptance criteria support multiple lines.
 
 The sidebar selects a project; the milestone selector limits the visible ticket list. Manual tickets have no GitHub/Codex controls. Everything stays in the local database across restarts. Switching workspaces starts their default view; unsaved form drafts are not retained across workspace changes.
 

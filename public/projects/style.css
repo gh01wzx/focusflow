@@ -135,3 +135,10 @@ nav[aria-label="Project list"] .nav-item {
     flex-wrap: wrap;
   }
 }
+
+.action-list { list-style: none; padding: 0; display: grid; gap: 12px; }
+.action-card { background: white; border: 1px solid #dce5d9; border-radius: 12px; padding: 20px; }
+.action-card h3 { margin: 8px 0 14px; }
+.action-card button { margin-top: 16px; }
+.action-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.action-card summary { cursor: pointer; }

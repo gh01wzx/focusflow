@@ -1,11 +1,21 @@
 import type { Project, Milestone, ProjectTicket, ProjectView } from '../shared/projects.ts';
 import type { ProjectRepository } from './repository.ts';
-import { entityInput, parentId, ticketInput, ticketStatus, ProjectNotFoundError } from './validation.ts';
+import { entityInput, parentId, ticketInput, ticketStatus, ProjectNotFoundError, ProjectInputError } from './validation.ts';
 
 export type ProjectTransaction = <T>(operation: (now: Date) => T) => T;
 
 export function createProjectService(repository: ProjectRepository, transaction: ProjectTransaction, nextId: () => string) {
   return {
+    actions: (): ProjectView[] => transaction(() => repository.listProjects().map(project => ({
+      projects: [project], selectedProjectId: project.id,
+      milestones: repository.listMilestones(project.id), tickets: repository.listTickets(project.id),
+    }))),
+    start: (id: string): void => transaction(now => {
+      const ticket = repository.findTicket(id);
+      if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
+      if (ticket.status !== 'ready') throw new ProjectInputError('This ticket is no longer Ready. Refresh before choosing another task.');
+      repository.setStatus(id, 'in_progress', now.toISOString());
+    }),
     view: (id?: string): ProjectView => transaction(() => {
       const projects = repository.listProjects();
       const selected = id === undefined ? projects[0] : repository.findProject(id);

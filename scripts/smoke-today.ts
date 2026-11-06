@@ -275,6 +275,7 @@ try {
     assert.deepEqual(personalAfterProjects, rolled);
     await page.getByRole('navigation', { name: 'Workspaces', exact: true })
       .getByRole('button', { name: 'Projects', exact: true }).click();
+  await page.getByRole('button', { name: 'Browse projects', exact: true }).click();
     await page.getByLabel('Status for ' + PROJECT_SMOKE_TITLE, { exact: true }).waitFor();
     assert.equal(await page.getByLabel('Status for ' + PROJECT_SMOKE_TITLE, { exact: true }).inputValue(), 'done');
     const projectsAfterRestart = await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;

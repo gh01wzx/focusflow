@@ -7,6 +7,7 @@ export const PROJECT_SMOKE_TITLE = 'Plan \u9879\u76ee <img src=x onerror=alert(1
 export async function exerciseProjectUI(page: Page): Promise<ProjectView> {
   await page.getByRole('navigation', { name: 'Workspaces', exact: true })
     .getByRole('button', { name: 'Projects', exact: true }).click();
+  await page.getByRole('button', { name: 'Browse projects', exact: true }).click();
   await page.getByRole('heading', { name: 'Projects.', exact: true }).waitFor();
   await page.getByLabel('Project title', { exact: true }).waitFor();
 
@@ -66,5 +67,30 @@ export async function exerciseProjectUI(page: Page): Promise<ProjectView> {
   assert.equal(await status.inputValue(), 'done');
   assert.equal(await page.getByRole('heading', { name: 'Separate project work', exact: true }).count(), 0);
   assert.equal(await page.getByRole('button', { name: /Codex|GitHub/ }).count(), 0);
+  await page.getByRole('navigation', { name: 'Project list', exact: true })
+    .getByRole('button', { name: 'Another project', exact: true }).click();
+  await page.getByLabel('Status for Separate project work', { exact: true }).selectOption('ready');
+  await page.getByRole('status').filter({ hasText: 'Ticket updated.' }).waitFor();
+  await page.getByRole('button', { name: 'Action center', exact: true }).click();
+  await page.getByRole('heading', { name: 'Action center.', exact: true }).waitFor();
+  const next = page.getByRole('region', { name: 'Next task', exact: true });
+  await next.getByRole('heading', { name: 'Separate project work', exact: true }).waitFor();
+  await next.locator('summary').click();
+  await next.getByText('The plan has three clear steps.', { exact: true }).waitFor();
+  await page.route('**/api/project-tickets/*/start', route => route.fulfill({
+    status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'Could not start this ticket.' }),
+  }));
+  await next.getByRole('button', { name: 'Start ticket', exact: true }).click();
+  await page.getByRole('alert').filter({ hasText: 'Could not start this ticket.' }).waitFor();
+  await next.getByRole('heading', { name: 'Separate project work', exact: true }).waitFor();
+  await page.unroute('**/api/project-tickets/*/start');
+  await next.getByRole('button', { name: 'Start ticket', exact: true }).click();
+  await page.getByRole('status').filter({ hasText: 'Ticket started.' }).waitFor();
+  await page.getByRole('region', { name: 'In progress', exact: true })
+    .getByRole('heading', { name: 'Separate project work', exact: true }).waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Start ticket', exact: true }).count(), 0);
+  await page.getByRole('button', { name: 'Browse projects', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Project list', exact: true })
+    .getByRole('button', { name: 'Learning project', exact: true }).click();
   return await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
 }

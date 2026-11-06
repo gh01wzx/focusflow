@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { ActionCenter } from './ActionCenter.tsx';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
 import { useProjectsController } from './useProjectsController.ts';
@@ -5,7 +7,12 @@ import { EntityComposer } from './components/EntityComposer.tsx';
 import { TicketComposer } from './components/TicketComposer.tsx';
 import { ManualTicket } from './components/ManualTicket.tsx';
 
-export function ProjectsApp({ onWorkspaceChange }: WorkspaceProps) {
+export function ProjectsApp(props: WorkspaceProps) {
+  const [browse, setBrowse] = useState(false);
+  return browse ? <ProjectHierarchy {...props} onBack={() => setBrowse(false)} />
+    : <ActionCenter {...props} onBrowse={() => setBrowse(true)} />;
+}
+function ProjectHierarchy({ onWorkspaceChange, onBack }: WorkspaceProps & { onBack(): void }) {
   const state = useProjectsController();
   const { view, busy, milestoneId, error, message } = state;
   const project = view?.projects.find(item => item.id === view.selectedProjectId);
@@ -22,6 +29,7 @@ export function ProjectsApp({ onWorkspaceChange }: WorkspaceProps) {
       </nav>
     }>
       <main>
+        <button disabled={busy} onClick={onBack}>Action center</button>
         <div className="breadcrumb">Projects {project && <><span>/</span>{project.title}</>}</div>
         <header className="page-header">
           <div>

@@ -95,6 +95,15 @@
   border-bottom: 1px solid #e8ece2;
   padding: 20px 0;
 }
+.prerequisites { margin-top: 18px; border-top: 1px solid #dfe5d9; padding-top: 12px; font-size: 12px; }
+.prerequisite-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.prerequisite-heading h4 { margin: 0; }
+.prerequisite-button, .prerequisite-link { background: none; border: 0; color: #36543c; padding: 6px 0; font: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.blocker-note { color: #74562a; background: #f8efde; border-left: 3px solid #b89150; padding: 12px; }
+.prerequisites fieldset { border: 1px solid #ccd8c2; padding: 14px; margin: 12px 0; }
+.prerequisites fieldset label { display: flex; align-items: baseline; gap: 8px; margin: 10px 0; overflow-wrap: anywhere; }
+.prerequisites small { color: #66755d; }
+.prerequisite-buttons { display: flex; align-items: center; gap: 12px; }
 .ticket-title {
   min-width: 0;
   margin: 0;

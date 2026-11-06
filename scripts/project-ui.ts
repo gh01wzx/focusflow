@@ -65,6 +65,25 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string): 
   await addEntity('project', 'Another project');
   await addEntity('milestone', 'Separate goal');
   await addTicket('Separate project work');
+  await addEntity('milestone', 'Preparation');
+  await addTicket('Prepare input');
+  await page.getByLabel('Milestone', { exact: true }).selectOption({ label: 'Separate goal' });
+  await page.getByRole('button', { name: 'Set prerequisites for Separate project work', exact: true }).click();
+  const prerequisites = page.getByRole('form', { name: 'Prerequisites for Separate project work', exact: true });
+  await prerequisites.getByRole('checkbox', { name: 'Prepare input / Preparation', exact: true }).check();
+  await prerequisites.getByRole('button', { name: 'Save prerequisites', exact: true }).click();
+  await page.getByRole('status').filter({ hasText: 'Prerequisites saved.' }).waitFor();
+  await page.getByText('Waiting for 1 prerequisite. This ticket cannot start yet.', { exact: true }).waitFor();
+  await page.getByLabel('Status for Separate project work', { exact: true }).selectOption('ready');
+  await page.getByRole('status').filter({ hasText: 'Ticket updated.' }).waitFor();
+  await page.getByRole('button', { name: 'Action center', exact: true }).click();
+  await page.getByRole('region', { name: 'Next task', exact: true }).getByText('No eligible Ready task.', { exact: false }).waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Start ticket', exact: true }).count(), 0);
+  await page.getByRole('navigation', { name: 'Project list', exact: true }).getByRole('button', { name: 'Another project', exact: true }).click();
+  await page.getByRole('button', { name: 'Prepare input', exact: true }).click();
+  await page.getByLabel('Status for Prepare input', { exact: true }).selectOption('done');
+  await page.getByRole('status').filter({ hasText: 'Ticket updated.' }).waitFor();
+  await page.getByLabel('Milestone', { exact: true }).selectOption({ label: 'Separate goal' });
   await page.getByRole('navigation', { name: 'Project list', exact: true })
     .getByRole('button', { name: 'Learning project', exact: true }).click();
   await page.getByLabel('Milestone', { exact: true }).selectOption({ label: 'First milestone' });

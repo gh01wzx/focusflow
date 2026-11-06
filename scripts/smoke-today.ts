@@ -269,6 +269,7 @@ try {
     assert.deepEqual(reopened, rolled);
     mark('manual-project-hierarchy');
     const projects = await exerciseProjectUI(page, join(artifacts, 'action-center.png'));
+    const allProjects = await page.evaluate(async () => (await fetch('/api/project-actions')).json()) as ProjectView[];
     await page.screenshot({ path: join(artifacts, 'projects.png'), fullPage: true });
     mark('project-restart'); await closeApp(); page = await launch();
     const personalAfterProjects = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
@@ -281,6 +282,7 @@ try {
     assert.equal(await page.getByLabel('Status for ' + PROJECT_SMOKE_TITLE, { exact: true }).inputValue(), 'done');
     const projectsAfterRestart = await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
     assert.deepEqual(projectsAfterRestart, projects);
+    assert.deepEqual(await page.evaluate(async () => (await fetch('/api/project-actions')).json()), allProjects);
     mark('weekly-weekday-selection');
     const selectedDays = await exerciseWeekdayUI(page, today);
     mark('weekday-selection-restart'); await closeApp(); page = await launch();

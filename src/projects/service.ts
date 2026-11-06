@@ -1,6 +1,7 @@
 import type { Project, Milestone, ProjectTicket, ProjectView } from '../shared/projects.ts';
 import type { ProjectRepository } from './repository.ts';
-import { entityInput, parentId, ticketInput, ticketStatus, ProjectNotFoundError, ProjectInputError } from './validation.ts';
+import { entityInput, parentId, ticketInput, ticketStatus, prerequisiteInput, ProjectNotFoundError, ProjectInputError } from './validation.ts';
+import { canStartTicket, reachesTicket, unfinishedPrerequisites } from '../shared/dependencies.ts';
 
 export type ProjectTransaction = <T>(operation: (now: Date) => T) => T;
 
@@ -9,12 +10,33 @@ export function createProjectService(repository: ProjectRepository, transaction:
     actions: (): ProjectView[] => transaction(() => repository.listProjects().map(project => ({
       projects: [project], selectedProjectId: project.id,
       milestones: repository.listMilestones(project.id), tickets: repository.listTickets(project.id),
+      dependencies: repository.listDependencies(project.id),
     }))),
     start: (id: string): void => transaction(now => {
       const ticket = repository.findTicket(id);
       if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
       if (ticket.status !== 'ready') throw new ProjectInputError('This ticket is no longer Ready. Refresh before choosing another task.');
+      if (!canStartTicket(ticket, repository.listTickets(ticket.projectId), repository.listDependencies(ticket.projectId))) {
+        throw new ProjectInputError('Finish this ticket\'s prerequisites before starting it.');
+      }
       repository.setStatus(id, 'in_progress', now.toISOString());
+    }),
+    setPrerequisites: (id: string, input: unknown): string => transaction(now => {
+      const ids = prerequisiteInput(input);
+      const ticket = repository.findTicket(id);
+      if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
+      const tickets = repository.listTickets(ticket.projectId);
+      const dependencies = repository.listDependencies(ticket.projectId);
+      for (const prerequisite of ids) {
+        if (prerequisite === id) throw new ProjectInputError('A ticket cannot depend on itself.');
+        if (!tickets.some(item => item.id === prerequisite)) throw new ProjectInputError('Choose a prerequisite from the same project.');
+        if (reachesTicket(prerequisite, id, dependencies.filter(link => link.ticketId !== id))) {
+          throw new ProjectInputError('These prerequisites would form a cycle. Remove the circular link.');
+        }
+      }
+      const previous = dependencies.filter(link => link.ticketId === id).map(link => link.prerequisiteId).sort();
+      if (JSON.stringify(ids) !== JSON.stringify(previous)) repository.setDependencies(id, ids, now.toISOString());
+      return ticket.projectId;
     }),
     view: (id?: string): ProjectView => transaction(() => {
       const projects = repository.listProjects();
@@ -24,6 +46,7 @@ export function createProjectService(repository: ProjectRepository, transaction:
         projects, selectedProjectId: selected?.id ?? null,
         milestones: selected ? repository.listMilestones(selected.id) : [],
         tickets: selected ? repository.listTickets(selected.id) : [],
+        dependencies: selected ? repository.listDependencies(selected.id) : [],
       };
     }),
     addProject: (input: unknown): Project => transaction(now => {
@@ -52,6 +75,10 @@ export function createProjectService(repository: ProjectRepository, transaction:
       const status = ticketStatus(input);
       const ticket = repository.findTicket(id);
       if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
+      if (status === 'in_progress' && ticket.status !== 'in_progress'
+        && unfinishedPrerequisites(id, repository.listTickets(ticket.projectId), repository.listDependencies(ticket.projectId)).length) {
+        throw new ProjectInputError('Finish the prerequisites before moving this ticket to In Progress.');
+      }
       repository.setStatus(id, status, now.toISOString());
       return ticket.projectId;
     }),

@@ -42,10 +42,10 @@ export function ActionCenter({ onWorkspaceChange, onProject, onNewProject }: Wor
           ? <ul className="action-list">{actions.active.map(item => card(item))}</ul> : <p className="action-empty">No tickets in progress.</p>}</section>
         <section className="action-column next-column" aria-label="Next task">
           <header className="action-column-heading"><h2>Next task</h2><span className="count">{actions.next ? 1 : 0}</span></header>
-          <p className="action-hint">One Ready task, oldest created first.</p>
+          <p className="action-hint">One Ready task with finished prerequisites, oldest created first.</p>
           {actions.next ? <ul className="action-list">{card(actions.next, true)}</ul>
-            : <p className="action-empty">No Ready task yet. Select a project to create a ticket or mark one Ready. Use New project if you are starting from scratch.</p>}
-          <p className="action-hint action-order">Equal timestamps keep a stable order. Only mark a task Ready when its prerequisites are finished.</p>
+            : <p className="action-empty">No eligible Ready task. Select a project to inspect prerequisites or prepare a Ready ticket.</p>}
+          <p className="action-hint action-order">Equal timestamps keep a stable order. Finishing prerequisites never starts another task automatically.</p>
         </section>
       </div>}
     </main>

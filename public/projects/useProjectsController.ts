@@ -84,6 +84,7 @@ export function useProjectsController(initialProjectId?: string) {
       () => client.addMilestone(selectedProject.current ?? '', draft), 'Milestone added.', true,
     ),
     addTicket: (draft: TicketDraft) => run(() => client.addTicket(draft), 'Ticket added.'),
+    setPrerequisites: (id: string, ids: string[]) => run(() => client.setPrerequisites(id, ids), 'Prerequisites saved.'),
     setStatus: (id: string, status: TicketStatus) => run(() => client.setStatus(id, status), 'Ticket updated.'),
   };
 }

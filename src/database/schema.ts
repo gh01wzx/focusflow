@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -49,4 +49,23 @@ export const MIGRATIONS = [
     CREATE INDEX project_tickets_milestone ON project_tickets(milestone_id);` },
   { version: 5, sql: `ALTER TABLE recurrence_rules ADD COLUMN weekdays_mask INTEGER
       CHECK(weekdays_mask IS NULL OR (frequency='weekly' AND typeof(weekdays_mask)='integer' AND weekdays_mask BETWEEN 1 AND 127));` },
+  { version: 6, sql: `CREATE TABLE ticket_dependencies (
+      ticket_id TEXT NOT NULL REFERENCES project_tickets(id),
+      prerequisite_id TEXT NOT NULL REFERENCES project_tickets(id),
+      PRIMARY KEY(ticket_id,prerequisite_id), CHECK(ticket_id!=prerequisite_id)
+    );
+    CREATE TRIGGER ticket_dependencies_insert BEFORE INSERT ON ticket_dependencies BEGIN
+      SELECT RAISE(ABORT,'Prerequisites must belong to the same project.')
+      WHERE (SELECT m.project_id FROM project_tickets t JOIN milestones m ON m.id=t.milestone_id WHERE t.id=NEW.ticket_id)
+        != (SELECT m.project_id FROM project_tickets t JOIN milestones m ON m.id=t.milestone_id WHERE t.id=NEW.prerequisite_id);
+      SELECT RAISE(ABORT,'Prerequisites cannot form a cycle.') WHERE EXISTS (
+        WITH RECURSIVE reached(id) AS (
+          SELECT NEW.prerequisite_id UNION
+          SELECT d.prerequisite_id FROM ticket_dependencies d JOIN reached r ON d.ticket_id=r.id
+        ) SELECT 1 FROM reached WHERE id=NEW.ticket_id
+      );
+    END;
+    CREATE TRIGGER ticket_dependencies_update BEFORE UPDATE ON ticket_dependencies BEGIN
+      SELECT RAISE(ABORT,'Replace prerequisite links instead of updating them.');
+    END;` },
 ] as const;

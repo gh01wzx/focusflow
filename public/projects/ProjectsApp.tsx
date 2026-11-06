@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActionCenter } from './ActionCenter.tsx';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
@@ -16,10 +16,17 @@ export function ProjectsApp(props: WorkspaceProps) {
 function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: WorkspaceProps & { onBack(): void; initialProjectId: string | undefined }) {
   const state = useProjectsController(initialProjectId);
   const [projectFormRequest, setProjectFormRequest] = useState(initialProjectId === undefined ? 1 : 0);
+  const [targetTicket, setTargetTicket] = useState('');
   const { view, busy, milestoneId, error, message } = state;
   const project = view?.projects.find(item => item.id === view.selectedProjectId);
   const milestone = view?.milestones.find(item => item.id === milestoneId);
   const tickets = view?.tickets.filter(item => item.milestoneId === milestoneId) ?? [];
+  useEffect(() => {
+    if (!targetTicket) return;
+    const element = document.getElementById('ticket-' + targetTicket);
+    element?.focus();
+    element?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [targetTicket, milestoneId]);
   return (
     <WorkspaceShell workspace="projects" busy={busy} onWorkspaceChange={onWorkspaceChange} navigation={
       <ProjectNavigation projects={view?.projects ?? []} selectedId={project?.id} busy={busy}
@@ -62,7 +69,10 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
                     <div className="section-heading"><h2>Tickets<span>{tickets.length}</span></h2></div>
                     {tickets.length > 0 ? (
                       <ul className="task-list">
-                        {tickets.map(ticket => <ManualTicket key={ticket.id} ticket={ticket} busy={busy} onStatus={state.setStatus} />)}
+                        {tickets.map(ticket => <ManualTicket key={ticket.id} ticket={ticket} view={view} busy={busy} onStatus={state.setStatus}
+                          onPrerequisites={state.setPrerequisites} onVisit={item => {
+                            state.selectMilestone(item.milestoneId); setTargetTicket(item.id);
+                          }} />)}
                       </ul>
                     ) : <p className="project-empty">Add a ticket to plan the next step for this milestone.</p>}
                   </>

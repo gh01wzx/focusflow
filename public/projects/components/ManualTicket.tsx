@@ -1,13 +1,17 @@
 import { isTicketStatus, TICKET_STATUSES, TICKET_STATUS_LABELS } from '../../../src/shared/projects.ts';
-import type { ProjectTicket, TicketStatus } from '../../../src/shared/projects.ts';
+import type { ProjectTicket, ProjectView, TicketStatus } from '../../../src/shared/projects.ts';
+import { Prerequisites } from './Prerequisites.tsx';
 
-export function ManualTicket({ ticket, busy, onStatus }: {
+export function ManualTicket({ ticket, view, busy, onStatus, onPrerequisites, onVisit }: {
   ticket: ProjectTicket;
+  view: ProjectView;
   busy: boolean;
   onStatus(id: string, status: TicketStatus): Promise<boolean>;
+  onPrerequisites(id: string, ids: string[]): Promise<boolean>;
+  onVisit(ticket: ProjectTicket): void;
 }) {
   return (
-    <li className="manual-ticket">
+    <li className="manual-ticket" id={'ticket-' + ticket.id} tabIndex={-1}>
       <h3 className="ticket-title">{ticket.title}</h3>
       <div className="ticket-status">
         <label htmlFor={'status-' + ticket.id}>
@@ -27,6 +31,7 @@ export function ManualTicket({ ticket, busy, onStatus }: {
           <p className="project-description">{ticket.acceptanceCriteria}</p>
         </details>
       )}
+      <Prerequisites ticket={ticket} view={view} busy={busy} onSave={onPrerequisites} onVisit={onVisit} />
     </li>
   );
 }

@@ -59,7 +59,7 @@ Electron owns the window and an OS-selected IPv4 loopback service. The renderer 
 
 ## Data and repeating periods
 
-Schema **5** adds optional weekday masks to repeating rules; null retains existing schedules. Migrations 1-4 retain their SQL behavior. Product data stays outside source/install directories. Foreign/newer databases are refused; upgrades require verified pre-change snapshots.
+Schema **6** adds ticket prerequisite links. Schema 5 added optional weekday masks to repeating rules; null retains existing schedules. Applied migrations retain their SQL behavior. Product data stays outside source/install directories. Foreign/newer databases are refused; upgrades require verified pre-change snapshots.
 
 Each rule records its frequency, start date and next unmaterialized date. New weekly rules also record selected weekdays; SQL mask conversion stays in the repository, while shared calendar helpers and domain rules use weekday arrays. Occurrences have unique rule/date pairs and independent statuses. Daily and selected-weekday occurrences span one local day. Existing weekly rules without weekday selections retain their seven-day periods. Date-only arithmetic avoids DST-hour assumptions.
 
@@ -77,7 +77,7 @@ GET /api/projects optionally accepts projectId; it returns the project list and 
 
 The controller displays only the selected milestone's tickets. Write requests allow up to 32 KiB for multiline text; Personal keeps its 4 KiB limit. Runtime codecs check records, parent associations and manual execution mode. No GitHub/Codex controls or calls exist in this workflow.
 
-Dependencies, editing/deletion, Kanban and AI remain later Tickets.
+Editing/deletion, Kanban and AI remain later Tickets.
 
 ## Keep the boundaries
 
@@ -97,4 +97,6 @@ Product GitHub authorization, coding permissions/recovery, independent review an
 
 ## Project action center
 
-Projects opens ActionCenter with useActionsController. GET /api/project-actions reads all project views in one transaction; shared/actions.ts selects Review, In Progress and at most one Ready task by creation time then ID. The client checks every project view before use. POST /api/project-tickets/:id/start checks Ready status inside its write transaction. Refresh responses cannot overwrite later mutations. Shared ProjectNavigation links the action center and individual projects directly; the hierarchy controller loads the selected project on entry. No dependency model or AI ranking is implied.
+Projects opens ActionCenter with useActionsController. GET /api/project-actions reads all project views in one transaction; shared/actions.ts selects Review, In Progress and at most one eligible Ready task by creation time then ID. The client checks every project view and dependency graph before use. POST /api/project-tickets/:id/start checks Ready status and prerequisites inside its write transaction, using the same shared eligibility rule. Refresh responses cannot overwrite later mutations. Shared ProjectNavigation links the action center and individual projects directly; the hierarchy controller loads the selected project on entry. No AI ranking is implied.
+
+POST /api/project-tickets/:id/prerequisites replaces that ticket's prerequisite set atomically. Service validation rejects self-links, missing/foreign parents, duplicate links and cycles. Schema 6 adds foreign keys, uniqueness, self-link checks and insert triggers for same-project/cycle protection; direct SQL updates to links are refused. SQL stays in the repository. Prerequisite changes retain the ticket's chosen status.

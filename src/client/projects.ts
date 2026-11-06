@@ -21,6 +21,7 @@ export function createProjectClient(transport: typeof fetch = fetch) {
     addProject: (draft: EntityDraft) => request('/api/projects', draft),
     addMilestone: (projectId: string, draft: EntityDraft) => request('/api/milestones', { ...draft, projectId }),
     addTicket: (draft: TicketDraft) => request('/api/project-tickets', draft),
+    setPrerequisites: (id: string, prerequisiteIds: string[]) => request(`/api/project-tickets/${encodeURIComponent(id)}/prerequisites`, { prerequisiteIds }),
     setStatus: (id: string, status: TicketStatus) => request(`/api/project-tickets/${encodeURIComponent(id)}/status`, { status }),
   };
 }

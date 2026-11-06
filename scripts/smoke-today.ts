@@ -12,7 +12,8 @@ import { restoreSnapshot } from '../src/database/backup.ts';
 import { localDay, nextOccurrence } from '../src/shared/calendar.ts';
 import type { TaskView } from '../src/shared/tasks.ts';
 import type { ProjectView } from '../src/shared/projects.ts';
-import { exerciseProjectUI, PROJECT_SMOKE_TITLE } from './project-ui.ts';
+import { exerciseProjectUI } from './project-ui.ts';
+import { EDITED_PROJECT, EDITED_TICKET } from './project-edit-ui.ts';
 import { exerciseWeekdayUI } from './weekday-ui.ts';
 import { WEEKDAYS } from '../src/shared/weekdays.ts';
 
@@ -268,7 +269,7 @@ try {
     const reopened = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
     assert.deepEqual(reopened, rolled);
     mark('manual-project-hierarchy');
-    const projects = await exerciseProjectUI(page, join(artifacts, 'action-center.png'));
+    const projects = await exerciseProjectUI(page, join(artifacts, 'action-center.png'), join(artifacts, 'project-edit.png'));
     await page.screenshot({ path: join(artifacts, 'projects.png'), fullPage: true });
     mark('project-restart'); await closeApp(); page = await launch();
     const personalAfterProjects = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
@@ -276,9 +277,9 @@ try {
     await page.getByRole('navigation', { name: 'Workspaces', exact: true })
       .getByRole('button', { name: 'Projects', exact: true }).click();
     await page.getByRole('navigation', { name: 'Project list', exact: true })
-      .getByRole('button', { name: 'Learning project', exact: true }).click();
-    await page.getByLabel('Status for ' + PROJECT_SMOKE_TITLE, { exact: true }).waitFor();
-    assert.equal(await page.getByLabel('Status for ' + PROJECT_SMOKE_TITLE, { exact: true }).inputValue(), 'done');
+      .getByRole('button', { name: EDITED_PROJECT, exact: true }).click();
+    await page.getByLabel('Status for ' + EDITED_TICKET, { exact: true }).waitFor();
+    assert.equal(await page.getByLabel('Status for ' + EDITED_TICKET, { exact: true }).inputValue(), 'done');
     const projectsAfterRestart = await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
     assert.deepEqual(projectsAfterRestart, projects);
     mark('weekly-weekday-selection');

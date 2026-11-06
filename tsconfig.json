@@ -7,5 +7,5 @@
     "outDir": "dist"
   },
   "include": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"],
-  "exclude": ["src/desktop/**", "scripts/build-renderer.ts", "scripts/smoke-today.ts", "scripts/smoke-review.ts", "scripts/project-ui.ts", "scripts/weekday-ui.ts"]
+  "exclude": ["src/desktop/**", "scripts/build-renderer.ts", "scripts/smoke-today.ts", "scripts/smoke-review.ts", "scripts/project-ui.ts", "scripts/project-edit-ui.ts", "scripts/weekday-ui.ts"]
 }

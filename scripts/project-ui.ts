@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import type { Page } from 'playwright-core';
 import type { ProjectView } from '../src/shared/projects.ts';
+import { exerciseProjectEdits } from './project-edit-ui.ts';
 
 export const PROJECT_SMOKE_TITLE = 'Plan \u9879\u76ee <img src=x onerror=alert(1)>';
 
-export async function exerciseProjectUI(page: Page, actionScreenshot?: string): Promise<ProjectView> {
+export async function exerciseProjectUI(page: Page, actionScreenshot?: string, editScreenshot?: string): Promise<ProjectView> {
   await page.getByRole('navigation', { name: 'Workspaces', exact: true })
     .getByRole('button', { name: 'Projects', exact: true }).click();
   await page.getByRole('button', { name: 'New project', exact: true }).click();
@@ -116,5 +117,6 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string): 
   await page.getByRole('navigation', { name: 'Project list', exact: true })
     .getByRole('button', { name: 'Learning project', exact: true }).click();
   await page.getByRole('heading', { name: 'Learning project', exact: true }).waitFor();
+  await exerciseProjectEdits(page, PROJECT_SMOKE_TITLE, editScreenshot);
   return await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
 }

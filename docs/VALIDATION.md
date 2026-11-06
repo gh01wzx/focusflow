@@ -53,3 +53,5 @@ GitHub Issues/PRs and Git history are the development record. Old experiment doc
 No personal database, credentials or raw execution logs belong in the repository.
 
 Action-center checks cover cross-project ordering, one Ready recommendation, stale/non-Ready start rejection, persistence, malformed responses, installed detail expansion and failed-start recovery.
+
+Project-edit checks cover text changes at every level, all six statuses, identity/parent retention, unchanged-text timestamps, invalid input, real HTTP boundaries, failed writes and restart persistence. Installed UI checks cover cancel, failed-save drafts, background refresh during editing, direct navigation and escaped non-English text.

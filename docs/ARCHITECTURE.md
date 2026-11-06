@@ -75,9 +75,13 @@ Projects and milestones have titles/descriptions. Tickets add acceptance criteri
 
 GET /api/projects optionally accepts projectId; it returns the project list and only the selected project's milestones/tickets. POST /api/projects, /api/milestones and /api/project-tickets create each level. POST /api/project-tickets/:id/status changes a manual status.
 
+POST /api/projects/:id/details, /api/milestones/:id/details and /api/project-tickets/:id/details edit text through the same checked client, service transaction and SQL repository. Text validation is shared with creation. Updates preserve IDs, parent links, creation times and statuses; ticket text changes advance updatedAt only when the text changes. No schema change is needed.
+
+The controller allows one details editor at a time. It blocks view navigation during editing, retains the editor after failed saves and ignores older refresh responses after a save. DetailsEditor owns its draft, so a background read cannot replace entered text. Cancel only closes the editor.
+
 The controller displays only the selected milestone's tickets. Write requests allow up to 32 KiB for multiline text; Personal keeps its 4 KiB limit. Runtime codecs check records, parent associations and manual execution mode. No GitHub/Codex controls or calls exist in this workflow.
 
-Dependencies, editing/deletion, Kanban and AI remain later Tickets.
+Dependencies, deletion, Kanban and AI remain later Tickets.
 
 ## Keep the boundaries
 

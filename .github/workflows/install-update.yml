@@ -4,6 +4,9 @@ on:
     paths:
       - '.github/workflows/install-update.yml'
       - 'scripts/smoke-install-update.ts'
+      - 'scripts/installer-process.ts'
+      - 'test/installer-process.test.ts'
+      - 'electron-builder.json'
       - 'docs/RELEASE_ROUTE.md'
   workflow_dispatch:
 permissions:

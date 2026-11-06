@@ -44,7 +44,7 @@ Open the **Windows installer replacement experiment** Actions workflow for this 
 5. Close the owned process, replace its binaries with the candidate installer and assert that the installer leaves database bytes unchanged.
 6. Launch the candidate and compare exact task/repeat/project records, including identities/statuses. Restore the snapshot to a separate target and verify its contents while leaving the current database unchanged.
 7. Reinstall the baseline and verify the same records again. This last step tests same-schema binary rollback only.
-8. Record stages, installer SHA-256 values, versions, schema, screenshots and the exact commit in an artifact. On launch/close failure, stop and record the stage; do not automatically retry.
+8. Record stages, installer SHA-256 values, versions, schema, screenshots and the exact commit in an artifact. Installer waits observe the owned parent exit with no captured output pipes. Each install records its PID, elapsed time, exit result and whether the installed files exist, even when the experiment fails. On launch/close failure, stop and record the stage; do not automatically retry.
 
 The harness is scripts/smoke-install-update.ts; the job is .github/workflows/install-update.yml. Results belong in the PR, not a permanent success claim here. The experiment uses the same code/schema for both versions; existing product-recovery checks separately exercise prior-schema migration and backup restoration.
 

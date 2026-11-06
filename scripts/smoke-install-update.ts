@@ -1,8 +1,8 @@
 import { _electron as electron } from 'playwright-core';
 import type { ElectronApplication, Page } from 'playwright-core';
 import assert from 'node:assert/strict';
-import { execFile, spawn } from 'node:child_process';
-import { promisify } from 'node:util';
+import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -13,6 +13,7 @@ import { SCHEMA_VERSION } from '../src/database/schema.ts';
 import { localDay } from '../src/shared/calendar.ts';
 import type { TaskView } from '../src/shared/tasks.ts';
 import type { ProjectView } from '../src/shared/projects.ts';
+import { runInstallerProcess } from './installer-process.ts';
 
 assert.equal(process.platform, 'win32', 'Run only on the disposable Windows Actions runner.');
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Installer registration and shortcuts require a disposable Actions runner.');
@@ -32,7 +33,7 @@ environment.LOCALAPPDATA = join(root, 'local');
 environment.APPDATA = join(root, 'roaming');
 environment.FOCUSFLOW_TEST_PROFILE = profile;
 await mkdir(environment.APPDATA, { recursive: true });
-const execute = promisify(execFile);
+const installerRuns: unknown[] = [];
 const digest = async (path: string) => createHash('sha256').update(await readFile(path)).digest('hex');
 let application: ElectronApplication | undefined;
 let stage = 'prepare';
@@ -41,7 +42,15 @@ const database = join(profile, 'data', 'tracker.db');
 
 async function install(installer: string) {
   assert.equal(application, undefined, 'Close the owned app before replacing its binaries.');
-  await execute(installer, ['/S', '/D=' + installation], { timeout: 120000, windowsHide: true, env: environment });
+  const result = await runInstallerProcess(installer, ['/S', '/D=' + installation], environment);
+  installerRuns.push({ installer: basename(installer), ...result,
+    executablePresent: existsSync(join(installation, 'FocusFlow.exe')),
+    packagePresent: existsSync(join(installation, 'resources', 'app.asar')) });
+  await writeFile(join(artifacts, 'installer-processes.json'), JSON.stringify(installerRuns, null, 2));
+  assert.equal(result.spawnFailed, false, 'Installer process could not start.');
+  assert.equal(result.timedOut, false, 'Installer parent timed out; stop without retrying.');
+  assert.equal(result.exited, true, 'Could not confirm that the owned installer parent stopped.');
+  assert.equal(result.code, 0, 'Installer parent must report a successful exit.');
 }
 async function launch(version: string) {
   application = await electron.launch({ executablePath: join(installation, 'FocusFlow.exe'), env: environment, timeout: 30000 });

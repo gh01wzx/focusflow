@@ -53,3 +53,7 @@ GitHub Issues/PRs and Git history are the development record. Old experiment doc
 No personal database, credentials or raw execution logs belong in the repository.
 
 Action-center checks cover cross-project ordering, one Ready recommendation, stale/non-Ready start rejection, persistence, malformed responses, installed detail expansion and failed-start recovery.
+
+## Installer/update route
+
+The [release-route experiment](RELEASE_ROUTE.md) covers offline full-installer replacement, same-schema data preservation and separate snapshot recovery in a disposable Windows environment. A passing experiment does not prove signing, download verification, a real update feed, SmartScreen trust, cross-schema rollback or an in-app one-click update. Exact results and failures belong in the corresponding PR. Formal distribution remains gated on owner choice and a genuine trusted update trial.

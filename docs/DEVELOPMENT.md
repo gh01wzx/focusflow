@@ -101,3 +101,7 @@ Tests never use a live model, authenticated GitHub writes or real personal data.
 Before retrying, record the observed failure, the hypothesis to test, one controlled experiment, its expected result and a stopping condition in the PR or relevant Issue. Record the actual result before choosing another step. A retry passing is evidence of that run, not an explanation of the earlier failure.
 
 After a native crash, stop repeated launches. Preserve user data and directory permissions. Do not delete the personal database, reset project permissions or disable the sandbox as a routine diagnostic step. The temporary Electron-path workaround does not establish a permanent fix. [Task #73](https://github.com/gh01wzx/focusflow/issues/73) holds the startup observations and remaining diagnostic work.
+
+## Disposable installer replacement experiment
+
+The [Windows release route](RELEASE_ROUTE.md) describes a dedicated ephemeral Windows Actions job. It builds two unsigned versions from the same code, replaces binaries, compares sample records and restores a snapshot separately. Run it on an ephemeral runner because installers change per-user registration. It stops on native launch/close failure. It does not publish or implement one-click updates.

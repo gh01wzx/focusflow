@@ -83,6 +83,12 @@ async function launch() {
   page.setDefaultTimeout(10_000);
   await page.getByRole('heading', { name: 'Today.', exact: true }).waitFor();
   await page.getByLabel('Task title').waitFor();
+  const build = await page.evaluate(async () => (await fetch('/api/build')).json()) as { version: string; commit: string; schema: number; dirty: boolean };
+  assert.match(build.version, /^0\.1\.0/);
+  assert.match(build.commit, /^[a-f0-9]{40}$/);
+  assert.equal(build.schema, SCHEMA_VERSION);
+  assert.equal(build.dirty, false);
+  await page.getByText('Build information', { exact: true }).waitFor();
   await page.waitForFunction(() => !(document.getElementById('task-title') as HTMLInputElement).disabled);
   assert.deepEqual(await page.evaluate(() => ({ requireType: typeof (globalThis as Record<string, unknown>).require,
     processType: typeof (globalThis as Record<string, unknown>).process })), { requireType: 'undefined', processType: 'undefined' });

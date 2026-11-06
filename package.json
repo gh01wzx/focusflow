@@ -10,10 +10,8 @@
     "node": ">=24.12.0 <25"
   },
   "scripts": {
-    "start": "electron .",
-    "prestart": "npm run build",
-    "review": "electron . --review",
-    "prereview": "npm run build",
+    "start": "node scripts/launch-desktop.ts",
+    "review": "node scripts/launch-desktop.ts --review",
     "start:web": "node dist/src/main.js --open",
     "prestart:web": "npm run build",
     "package:windows": "npm run build && electron-builder --win --x64 --publish never --config electron-builder.json",
@@ -27,7 +25,8 @@
     "codex:login": "node scripts/codex-verify.ts login",
     "codex:status": "node scripts/codex-verify.ts status",
     "codex:probe": "node scripts/codex-verify.ts live",
-    "codex:cancel": "node scripts/codex-verify.ts cancel"
+    "codex:cancel": "node scripts/codex-verify.ts cancel",
+    "diagnose": "node scripts/launch-desktop.ts --diagnose-only"
   },
   "devDependencies": {
     "@types/node": "24.10.0",

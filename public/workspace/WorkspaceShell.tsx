@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { BuildInfo } from './BuildInfo.tsx';
 
 export type Workspace = 'personal' | 'projects';
 export interface WorkspaceProps {
@@ -32,6 +33,7 @@ export function WorkspaceShell({ workspace, busy, navigation, children, onWorksp
         </div>
         {navigation}
         <div className="sidebar-note"><span className="local-dot" />Saved on this computer</div>
+        <BuildInfo />
       </aside>
       {children}
     </div>

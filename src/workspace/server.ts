@@ -8,6 +8,7 @@ import { HttpError, readJson, secureRequest, sendJson } from '../http/request.ts
 import { openWorkspaceStore } from './store.ts';
 import { matchTaskRoute, dispatchTaskRoute } from '../tasks/routes.ts';
 import { TaskInputError } from '../tasks/validation.ts';
+import { readBuildInfo } from '../runtime/build.ts';
 
 const assets = new Map([
   ['/', ['today/index.html', 'text/html; charset=utf-8']],
@@ -18,6 +19,7 @@ const assets = new Map([
 
 export async function startWorkspaceServer(options: {
   dataDirectory: string; clock?: () => Date; sampleLabel?: string | null;
+  onLifecycle?: (stage: 'draining-requests' | 'connections-closed' | 'store-closed') => void;
 }): Promise<LocalServer> {
   const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock, !!options.sampleLabel);
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
@@ -25,6 +27,7 @@ export async function startWorkspaceServer(options: {
     try {
       secureRequest(request, response, origin);
       const resource = request.url ?? '';
+      if (request.method === 'GET' && resource === '/api/build') { sendJson(response, 200, readBuildInfo()); return; }
       const asset = assets.get(resource);
       if (request.method === 'GET' && asset) {
         const [name, type] = asset;
@@ -63,5 +66,5 @@ export async function startWorkspaceServer(options: {
         error: known ? error.message : 'Could not save local data. Check disk space and try again.',
       });
     }
-  }, store.close);
+  }, store.close, options.onLifecycle);
 }

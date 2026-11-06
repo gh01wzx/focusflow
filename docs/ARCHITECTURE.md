@@ -98,3 +98,7 @@ Product GitHub authorization, coding permissions/recovery, independent review an
 ## Project action center
 
 Projects opens ActionCenter with useActionsController. GET /api/project-actions reads all project views in one transaction; shared/actions.ts selects Review, In Progress and at most one Ready task by creation time then ID. The client checks every project view before use. POST /api/project-tickets/:id/start checks Ready status inside its write transaction. Refresh responses cannot overwrite later mutations. Shared ProjectNavigation links the action center and individual projects directly; the hierarchy controller loads the selected project on entry. No dependency model or AI ranking is implied.
+
+## Startup diagnostics
+
+src/runtime owns checked build metadata, safe stage/error summaries and the one-attempt source launcher. The installed --diagnose path exits after Electron readiness without selecting a task profile. Desktop startup catches profile, database and window failures separately. The HTTP server drains active handlers before retiring sockets and disposing the store; close is idempotent. No workspace ACL change is performed.

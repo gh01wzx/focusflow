@@ -101,3 +101,11 @@ Tests never use a live model, authenticated GitHub writes or real personal data.
 Before retrying, record the observed failure, the hypothesis to test, one controlled experiment, its expected result and a stopping condition in the PR or relevant Issue. Record the actual result before choosing another step. A retry passing is evidence of that run, not an explanation of the earlier failure.
 
 After a native crash, stop repeated launches. Preserve user data and directory permissions. Do not delete the personal database, reset project permissions or disable the sandbox as a routine diagnostic step. The temporary Electron-path workaround does not establish a permanent fix. [Task #73](https://github.com/gh01wzx/focusflow/issues/73) holds the startup observations and remaining diagnostic work.
+
+## Startup and shutdown diagnostics
+
+npm run diagnose makes one bounded runtime-only check without opening task data. Diagnose-FocusFlow.cmd also ships beside the installed executable, reports its version/hash and runs --diagnose once with a 20-second limit. A failure stops the sequence. It does not download a runtime, reset permissions, delete task data or retry a crash. A pre-JavaScript native crash cannot show the app's error dialog; use the bundled helper for its exit result.
+
+Builds embed version, Git commit, dirty-worktree flag and schema in ignored dist/src/build-info.json. The desktop, /api/build and sidebar show the same checked fields. Source launchers build first, resolve the existing runtime without an automatic download and publish only allowlisted stage markers. Raw native output is not treated as a support log.
+
+Shutdown stops new HTTP requests, drains real handlers, retires remaining renderer sockets and closes the store. Lifecycle markers identify these steps. A controlled test demonstrates closure of a socket that never sent an HTTP request; it does not establish that this caused historical Electron timeouts.

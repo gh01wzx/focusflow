@@ -42,7 +42,11 @@ npm ci
 .\Start-FocusFlow.cmd
 ~~~
 
-Run npm ci again when dependencies change. After setup, double-click Start-FocusFlow.cmd. The source launcher builds the app and keeps its console open. Source runs open separate development data, marked **Sample data**. Electron downloads its pinned runtime on first use.
+Run npm ci again when dependencies change. After setup, double-click Start-FocusFlow.cmd. The source launcher builds the app and reports startup stages, the build and one runtime result. Source runs open separate development data, marked **Sample data**. If the runtime is missing, run node node_modules/electron/install.js once as instructed; the diagnostic check does not download it automatically.
+
+If FocusFlow will not open, run **Diagnose-FocusFlow.cmd** once. From source, npm run diagnose performs the same runtime-only check without opening task data. The installed helper checks its adjacent executable and reports its version, SHA256 and exit code. A native failure stops the sequence. Do not repeatedly launch, delete task data or reset workspace permissions based on an exit code alone.
+
+Expand **Build information** in the sidebar for the app version, commit and data format. Startup errors distinguish an incompatible database, migration failure and window-loading failure. Keep the reported build and last stage when requesting help. A runtime-only success does not prove the window or your task database is healthy.
 
 For an unsigned installer, open the passing **Windows desktop checks** run and download **windows-today**. Check the run result before using its artifact. The installer bundles Node/Electron; it does not provide automatic updates.
 

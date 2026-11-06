@@ -53,3 +53,5 @@ GitHub Issues/PRs and Git history are the development record. Old experiment doc
 No personal database, credentials or raw execution logs belong in the repository.
 
 Action-center checks cover cross-project ordering, one Ready recommendation, stale/non-Ready start rejection, persistence, malformed responses, installed detail expansion and failed-start recovery.
+
+Startup checks cover safe error classification, build metadata validation, a single bounded launch using disposable Node fixtures, unparsed idle sockets and draining handlers before disposal. Installed checks assert the baked commit/schema and exercise the bundled runtime-only helper. They do not prove a Windows ACL/DSH cause or the cause of earlier close timeouts.

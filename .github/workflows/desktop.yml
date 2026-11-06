@@ -47,6 +47,13 @@ jobs:
           $installation = Join-Path $env:RUNNER_TEMP 'focusflow-today-installed'
           node dist/scripts/smoke-review.js (Join-Path $installation 'FocusFlow.exe')
           exit $LASTEXITCODE
+      - name: Verify installed runtime-only diagnostics
+        timeout-minutes: 1
+        shell: pwsh
+        run: |
+          $installation = Join-Path $env:RUNNER_TEMP 'focusflow-today-installed'
+          & (Join-Path $installation 'Diagnose-FocusFlow.cmd') --no-pause
+          exit $LASTEXITCODE
       - uses: actions/upload-artifact@v4
         if: always()
         with:

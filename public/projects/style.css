@@ -164,3 +164,7 @@ nav[aria-label="Project list"] .nav-item {
   .actions-main { padding: 20px; }
   .action-board { gap: 12px; }
 }
+
+.build-info { margin: 12px 14px 0; font-size: 11px; color: #53694c; overflow-wrap: anywhere; }
+.build-info summary { cursor: pointer; }
+.build-info p { margin: 6px 0; }

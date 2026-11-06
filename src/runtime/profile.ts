@@ -6,6 +6,13 @@ export interface LaunchProfile {
   sampleLabel: string | null;
 }
 
+export function validateReviewName(name: string) {
+  if (!/^[a-z0-9][a-z0-9-]{0,47}$/i.test(name)) {
+    throw new Error('Use a review name of up to 48 letters, numbers or hyphens, such as pr-72.');
+  }
+  return name.toLowerCase();
+}
+
 export function selectProfile(options: {
   packaged: boolean;
   args: readonly string[];
@@ -18,10 +25,7 @@ export function selectProfile(options: {
   const reviewIndex = options.args.indexOf('--review');
   if (reviewIndex !== -1) {
     if (options.testProfile) throw new Error('Clear FOCUSFLOW_TEST_PROFILE before opening review data.');
-    const name = options.args[reviewIndex + 1] ?? 'local';
-    if (!/^[a-z0-9][a-z0-9-]{0,47}$/i.test(name)) {
-      throw new Error('Use a review name of up to 48 letters, numbers or hyphens, such as pr-72.');
-    }
+    const name = validateReviewName(options.args[reviewIndex + 1] ?? 'local');
     return {
       directory: join(root, 'reviews', name.toLowerCase(), `schema-${options.schemaVersion}`),
       sampleLabel: `Review ${name.toLowerCase()}`,

@@ -1,11 +1,24 @@
 {
   "appId": "dev.focusflow.desktop",
   "productName": "FocusFlow",
-  "directories": { "output": "release" },
-  "files": ["dist/src/**/*", "dist/public/**/*", "package.json"],
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/src/**/*",
+    "dist/public/**/*",
+    "package.json"
+  ],
   "artifactName": "FocusFlow-${version}-${arch}.${ext}",
   "win": {
-    "target": [{ "target": "nsis", "arch": ["x64"] }],
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
     "executableName": "FocusFlow"
   },
   "nsis": {
@@ -17,5 +30,11 @@
     "runAfterFinish": false,
     "deleteAppDataOnUninstall": false
   },
-  "publish": null
+  "publish": null,
+  "extraFiles": [
+    {
+      "from": "Diagnose-FocusFlow.cmd",
+      "to": "Diagnose-FocusFlow.cmd"
+    }
+  ]
 }

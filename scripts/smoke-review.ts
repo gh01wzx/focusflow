@@ -98,7 +98,7 @@ try {
     const decrypted = await safeStorage.decryptStringAsync(encrypted);
     return decrypted.result === plain && !encrypted.includes(Buffer.from(plain));
   }), true, 'Real Windows OS-protected credential storage must round-trip.');
-  const sample = { available: true, connected: true, account: 'simulated-account', clientId: 'Iv1.fixture',
+  const sample = { available: true, connected: true, account: 'simulated-account' as string | null, clientId: 'Iv1.fixture',
     repository: null as { id: number; fullName: string; private: boolean } | null,
     preview: null as { id: number; fullName: string; private: boolean } | null,
     repositories: [{ id: 17, fullName: 'sample/public-work', private: false }],
@@ -130,7 +130,7 @@ try {
       confirmedRequests++; sample.repository = sample.preview; sample.preview = null;
       sample.message = 'Repository linked locally. No Issue, branch or pull request was created.';
     }
-    if (action === 'disconnect') { sample.connected = false; sample.repository = null; sample.message = 'Local access removed; task data unchanged.'; }
+    if (action === 'disconnect') { sample.connected = false; sample.account = null; sample.repository = null; sample.message = 'Local access removed; task data unchanged.'; }
     await route.fulfill({ json: sample });
   });
   // Remount so the initial status uses the clearly simulated fixture.

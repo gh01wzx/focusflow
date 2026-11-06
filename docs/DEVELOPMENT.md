@@ -65,7 +65,7 @@ Previous spike data and the separate Codex profile are never imported or deleted
 
 ## AI account setup and validation
 
-The AI connection preview uses official Codex app-server over owned stdio, pinned to 0.166.0, with its own codex-product profile and keyring credential mode. The existing codex-phase0 probe remains separate and keeps its established commands. Runtime installation needs Node 24/npm; the desktop bundles neither a model nor this external runtime.
+The AI connection preview uses official Codex app-server over owned stdio, pinned to 0.166.0, with a shared codex-product runtime, a codex-profile directory in the selected app profile, and keyring credential mode. The existing codex-phase0 probe remains separate and keeps its established commands. Runtime installation needs Node 24/npm; the desktop bundles neither a model nor this external runtime.
 
 The route follows [official app-server authentication](https://developers.openai.com/codex/app-server/) and [credential-storage guidance](https://developers.openai.com/codex/auth/). Account checks read sanitized account/plan fields. Sign-in is explicit and stays in an owned process until completion, cancellation or timeout. The read-only model check uses the existing tool-denying probe in a disposable directory and requires a fresh server-side ChatGPT account check plus explicit allowance confirmation. No automatic API-key fallback exists.
 

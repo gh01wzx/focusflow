@@ -18,6 +18,7 @@ function failureMessage(error: unknown) {
   if (code === 'USAGE_LIMIT') return 'The Codex allowance is exhausted. Check your ChatGPT plan and try after its limit resets.';
   if (code === 'RATE_LIMITED') return 'Codex is rate limited. Wait before trying again.';
   if (code === 'CONNECTION_FAILED') return 'Codex could not connect. Check your network and try again.';
+  if (code === 'CANCELLED') return 'The AI check was stopped. A request already sent may still use allowance.';
   return 'The Codex runtime could not complete this check. Check the pinned installation and OS credential-store access, then retry.';
 }
 function accountStatus(value: unknown): AiStatus {
@@ -36,6 +37,7 @@ export function createAiService(runtime: AiRuntime, probe = readOnlyProbe) {
   let login: { client: CodexClient; id: string; finish(): void } | null = null;
   let task: Promise<AiStatus> | null = null;
   let active: Promise<AiStatus> | null = null;
+  let probing = false;
   const abort = new AbortController();
   const status = () => ({ ...state });
   function execute(operation: (client: CodexClient, cwd: string) => Promise<AiStatus>): Promise<AiStatus> {
@@ -45,7 +47,15 @@ export function createAiService(runtime: AiRuntime, probe = readOnlyProbe) {
       try {
         if (!await runtime.installed()) {
           state = { ...initial, mode: 'missing', message: 'Install the pinned official Codex runtime using npm run ai:install, then Check account.' };
-        } else state = await runtime.run(operation);
+        } else if (!abort.signal.aborted) state = await runtime.run(async (client, cwd) => {
+          // Account/login requests need cancellation too, before a probe exists.
+          const cancelRequest = () => { if (!probing) client.close(); };
+          abort.signal.addEventListener('abort', cancelRequest, { once: true });
+          try {
+            if (abort.signal.aborted) throw new ProbeFailure('CANCELLED');
+            return await operation(client, cwd);
+          } finally { abort.signal.removeEventListener('abort', cancelRequest); }
+        });
       } catch (error) { state = { ...initial, mode: 'error', message: failureMessage(error) }; }
       finally { pending = false; }
       return status();
@@ -112,7 +122,11 @@ export function createAiService(runtime: AiRuntime, probe = readOnlyProbe) {
         await client.initialize();
         const account = accountStatus(await client.request('account/read', { refreshToken: false }));
         if (account.mode !== 'chatgpt') return account;
-        await probe(client, cwd, { signal: abort.signal });
+        probing = true;
+        try {
+          await probe(client, cwd, { signal: abort.signal });
+          if (abort.signal.aborted) throw new ProbeFailure('CANCELLED');
+        } finally { probing = false; }
         return { ...account, verified: true, message: 'One read-only model response was verified. This does not verify code-writing permissions.' };
       });
     },

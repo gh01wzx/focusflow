@@ -1,14 +1,83 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PassThrough } from 'node:stream';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CodexClient, CodexFailure } from '../src/codex/client.ts';
 import { ProbeFailure } from '../src/codex/read-only-probe.ts';
 import { createAiService } from '../src/ai/service.ts';
+import { createAiRuntime } from '../src/ai/runtime.ts';
 import type { AiRuntime } from '../src/ai/service.ts';
-import { parseAiStatus, isAiSignInUrl } from '../src/shared/ai.ts';
+import { CODEX_VERSION, parseAiStatus, isAiSignInUrl } from '../src/shared/ai.ts';
+
+test('closing interrupts an account request before the normal protocol timeout', async () => {
+  let entered!: () => void;
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  const runtime: AiRuntime = {
+    installed: async () => true,
+    async run(operation) {
+      const input = new PassThrough(); const output = new PassThrough();
+      const client = new CodexClient(input, output, 5000);
+      output.on('data', () => { entered(); });
+      try { return await operation(client, tmpdir()); }
+      finally { client.close(); input.destroy(); output.destroy(); }
+    },
+  };
+  const service = createAiService(runtime);
+  const check = service.check(); await started;
+  const before = Date.now(); await service.close(); await check;
+  assert.ok(Date.now() - before < 1000);
+  assert.equal(service.status().verified, false);
+});
+
+test('shutdown during runtime discovery does not start another owned process', async () => {
+  let release!: (value: boolean) => void;
+  const installed = new Promise<boolean>(resolve => { release = resolve; });
+  let runs = 0;
+  const service = createAiService({ installed: () => installed, run: async () => { runs++; throw new Error('Must not start'); } });
+  const checking = service.check();
+  const closing = service.close(); release(true);
+  await closing; await checking;
+  assert.equal(runs, 0);
+});
+
+test('a probe completing during shutdown cannot report verified success', async () => {
+  let entered!: () => void;
+  const running = new Promise<void>(resolve => { entered = resolve; });
+  const service = createAiService(fakeRuntime().runtime, async (_client, _cwd, options) => {
+    entered();
+    await new Promise<void>(resolve => options?.signal?.addEventListener('abort', () => resolve(), { once: true }));
+    return { status: 'verified', check: 'read-only-model-turn', deltaEvents: 1, markerMatched: true };
+  });
+  const result = service.verify(true); await running;
+  await service.close();
+  assert.equal((await result).verified, false);
+});
+
+test('separate app profiles pass separate credential homes to the shared pinned runtime', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'focusflow-ai-profile-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const cli = join(directory, 'FocusFlow', 'codex-product', 'runtime', 'node_modules', '@openai', 'codex');
+  await mkdir(join(cli, 'bin'), { recursive: true });
+  await writeFile(join(cli, 'package.json'), JSON.stringify({ version: CODEX_VERSION, type: 'module' }));
+  await writeFile(join(cli, 'bin', 'codex.js'), [
+    "process.stdin.setEncoding('utf8'); let buffer = '';",
+    "process.stdin.on('data', chunk => { buffer += chunk; let i;",
+    "while ((i = buffer.indexOf('\\n')) >= 0) { const message = JSON.parse(buffer.slice(0, i)); buffer = buffer.slice(i + 1);",
+    "if (message.id !== undefined) process.stdout.write(JSON.stringify({ id: message.id, result: message.method === 'fixture/home' ? { home: process.env.CODEX_HOME } : {} }) + '\\n'); }});",
+  ].join('\n'));
+  for (const name of ['everyday', 'review']) {
+    const selected = join(directory, name);
+    const runtime = createAiRuntime(directory, false, selected);
+    assert.equal(await runtime.installed(), true);
+    await runtime.run(async client => {
+      await client.initialize();
+      assert.deepEqual(await client.request('fixture/home', {}), { home: join(selected, 'codex-profile') });
+      return { mode: 'unchecked', runtimeVersion: CODEX_VERSION, account: null, plan: null, signInUrl: null, verified: false, message: 'Fixture only' };
+    });
+  }
+});
 import { startWorkspaceServer } from '../src/workspace/server.ts';
 import { createAiClient } from '../src/client/ai.ts';
 

@@ -4,9 +4,9 @@ import { CODEX_VERSION } from '../shared/ai.ts';
 import { withCodexProcess } from '../codex/process.ts';
 import type { AiRuntime } from './service.ts';
 
-export function createAiRuntime(localDataDirectory: string, electron = false): AiRuntime {
+export function createAiRuntime(localDataDirectory: string, electron = false, selectedProfileDirectory?: string): AiRuntime {
   const root = join(localDataDirectory, 'FocusFlow', 'codex-product');
-  const profile = join(root, 'profile');
+  const profile = selectedProfileDirectory ? join(selectedProfileDirectory, 'codex-profile') : join(root, 'profile');
   const runtime = join(root, 'runtime');
   const cli = join(runtime, 'node_modules', '@openai', 'codex', 'bin', 'codex.js');
   return {

@@ -35,7 +35,7 @@ The sidebar selects a project; the milestone selector limits the visible ticket 
 
 ## AI connection preview
 
-Open **AI connection** in the sidebar to check the separate FocusFlow Codex account. Install the pinned official runtime explicitly with npm run ai:install from a source checkout, then choose **Sign in with ChatGPT** and follow the browser link. The runtime/profile stays under %LOCALAPPDATA%\FocusFlow\codex-product, outside task data and source. Credentials use the OS credential store; no plaintext fallback is configured and existing Codex App sessions are not copied.
+Open **AI connection** in the sidebar to check the separate FocusFlow Codex account. Install the pinned official runtime explicitly with npm run ai:install from a source checkout, then choose **Sign in with ChatGPT** and follow the browser link. The shared runtime stays under %LOCALAPPDATA%\FocusFlow\codex-product\runtime. Each app profile supplies its own codex-profile directory for sign-in settings. Live Windows credential-store separation still needs verification. Credentials use the OS credential store; no plaintext fallback is configured and existing Codex App sessions are not copied.
 
 **Check account** does not request a model response. **Run read-only AI check** requires the allowance checkbox and a ChatGPT-authenticated account. It consumes Codex allowance; API-key and other auth modes are refused. Planning and code-writing remain later work. The new product login/keyring/live path still needs an owner-triggered Windows trial; ordinary tests use simulated accounts/results and never call a live model.
 

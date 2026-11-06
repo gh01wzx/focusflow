@@ -101,6 +101,8 @@ try {
   await ai.getByRole('button', { name: 'Run read-only AI check', exact: true }).click();
   await ai.getByRole('status').filter({ hasText: 'Simulated UI response.' }).waitFor();
   assert.equal(simulatedRequests, 1);
+  assert.equal(await ai.getByRole('checkbox', { name: 'I understand that this read-only check uses Codex allowance.', exact: true }).isChecked(), false);
+  assert.equal(await ai.getByRole('button', { name: 'Run read-only AI check', exact: true }).isDisabled(), true);
   await review.page.screenshot({ path: join(artifacts, 'ai-connection-simulated.png'), fullPage: true });
   await ai.getByRole('button', { name: 'Close', exact: true }).click();
   await review.page.unroute('**/api/ai/check');

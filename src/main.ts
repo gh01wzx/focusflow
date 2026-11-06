@@ -15,7 +15,8 @@ const customData = !process.argv.includes('--review') && process.env.FOCUSFLOW_D
 const dataDirectory = customData
   ? resolve(customData)
   : join(profile.directory, 'data');
-const ai = createAiService(createAiRuntime(process.env.LOCALAPPDATA ?? join(homedir(), '.local', 'share')));
+const ai = createAiService(createAiRuntime(process.env.LOCALAPPDATA ?? join(homedir(), '.local', 'share'),
+  false, customData ? dataDirectory : profile.directory));
 const app = await startWorkspaceServer({ dataDirectory, sampleLabel: customData ? null : profile.sampleLabel, ai });
 console.log(`FocusFlow: ${app.origin}`);
 console.log(`Local data: ${dataDirectory}`);

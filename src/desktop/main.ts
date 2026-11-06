@@ -44,7 +44,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('window-all-closed', () => { if (!closing) app.quit(); });
 
   void app.whenReady().then(async () => {
-    const ai = createAiService(createAiRuntime(process.env.LOCALAPPDATA ?? app.getPath('appData'), true));
+    const ai = createAiService(createAiRuntime(process.env.LOCALAPPDATA ?? app.getPath('appData'), true, profileDirectory));
     service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), sampleLabel: profile.sampleLabel, ai });
     const origin = service.origin;
     window = new BrowserWindow({

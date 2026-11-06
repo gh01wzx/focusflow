@@ -11,24 +11,38 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
   const [busy, setBusy] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const mounted = useRef(true);
+  const generation = useRef(0);
+  const busyRef = useRef(false);
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; };
+    return () => { mounted.current = false; ++generation.current; };
   }, []);
   useEffect(() => {
     if (status?.mode !== 'signing-in') return;
-    const timer = setInterval(() => { void client.status().then(next => { if (mounted.current) setStatus(next); }).catch(() => {}); }, 1500);
-    return () => clearInterval(timer);
+    let active = true;
+    let polling = false;
+    const timer = setInterval(() => {
+      if (polling || busyRef.current) return;
+      polling = true;
+      const token = generation.current;
+      void client.status().then(next => {
+        if (active && mounted.current && token === generation.current && !busyRef.current) setStatus(next);
+      }).catch(() => {}).finally(() => { polling = false; });
+    }, 1500);
+    return () => { active = false; clearInterval(timer); };
   }, [status?.mode]);
   async function run(operation: () => Promise<AiStatus>) {
-    setBusy(true); setError('');
-    try { const next = await operation(); if (mounted.current) setStatus(next); }
+    if (busyRef.current) return;
+    busyRef.current = true;
+    const token = ++generation.current;
+    setBusy(true); setError(''); setConfirmed(false);
+    try { const next = await operation(); if (mounted.current && token === generation.current) setStatus(next); }
     catch { if (mounted.current) setError('Could not contact the local AI service. Close and reopen FocusFlow, then retry.'); }
-    finally { if (mounted.current) setBusy(false); }
+    finally { busyRef.current = false; if (mounted.current) setBusy(false); }
   }
   return <>
     <button className="nav-item ai-entry" disabled={disabled} onClick={() => {
-      dialog.current?.showModal(); void run(client.status);
+      setConfirmed(false); dialog.current?.showModal(); void run(client.status);
     }}>AI connection</button>
     <dialog className="ai-dialog" ref={dialog} aria-labelledby="ai-title">
       <h2 id="ai-title">AI connection</h2>

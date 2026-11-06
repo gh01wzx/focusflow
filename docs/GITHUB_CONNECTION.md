@@ -27,7 +27,7 @@ Registering an App and live account authorization are owner actions, not automat
 
 ## Storage and failures
 
-The Windows desktop uses Electron's asynchronous safeStorage API (Windows DPAPI). Only encrypted bytes are written to `github/connection.bin` within the selected profile, outside `data/tracker.db`. No token is returned to the renderer. Unavailable OS protection refuses connection rather than writing plaintext. Protection is against other Windows users; it does not protect against another process already running as the same user.
+The Windows desktop uses Electron's asynchronous safeStorage API (Windows DPAPI). Only encrypted bytes are written to `github/connection.bin` within the selected profile, outside `data/tracker.db`. No token is returned to the renderer. Unavailable OS protection refuses connection rather than writing plaintext. If saved credentials cannot be opened while OS protection is available, local disconnect remains available to reset only the GitHub connection. Protection is against other Windows users; it does not protect against another process already running as the same user.
 
 Device codes are memory-only. Only the access token is retained; refresh tokens are discarded. Expired or revoked access needs explicit authorization again. Local disconnect removes all GitHub credentials and project links for this profile without deleting tasks. GitHub App settings handle remote revocation separately.
 

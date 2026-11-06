@@ -71,7 +71,7 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
       } catch (error) {
         message = error instanceof GitHubFailure ? error.message : 'GitHub credential storage or response could not be used. Check the Windows credential store, then reconnect.';
       }
-      return state(projectId).catch(() => ({ ...unavailableGitHub, message: 'Stored GitHub credentials could not be opened. Disconnect locally and authorize again; task data is unchanged.' }));
+      return state(projectId).catch(() => ({ ...unavailableGitHub, available: true, message: 'Stored GitHub credentials could not be opened. Disconnect locally and authorize again; task data is unchanged.' }));
     });
     queue = pending.catch(() => {});
     return pending;

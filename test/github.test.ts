@@ -187,3 +187,26 @@ test('real HTTP GitHub routes require an existing project, same origin and check
   assert.equal((await projects.read(id)).projects[0]?.title, 'Keep manual tasks');
   await assert.rejects(createGitHubClient(async () => Response.json({ connected: 'bad' })).read(id), /Could not read/);
 });
+
+
+test('unreadable saved credentials still expose local disconnect and allow fresh authorization', async () => {
+  let unreadable = true;
+  const vault: GitHubVault = {
+    available: async () => true,
+    read: async () => { if (unreadable) throw new Error('private unreadable fixture'); return null; },
+    write: async () => {},
+    clear: async () => { unreadable = false; },
+  };
+  const service = createGitHubService(vault, async () => Response.json({
+    device_code: 'private_device_fixture', user_code: 'ABCD-EFGH',
+    verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 1,
+  }));
+  const failed = await service.status(projectId);
+  assert.equal(failed.available, true, 'Keep the disconnect controls available when OS encryption works.');
+  assert.equal(failed.connected, false);
+  assert.match(failed.message, /Disconnect locally/);
+  assert.equal(JSON.stringify(failed).includes('private unreadable'), false);
+  assert.equal((await service.disconnect(projectId)).available, true);
+  assert.equal((await service.start(projectId, 'Iv1.fixture')).userCode, 'ABCD-EFGH');
+  await service.close();
+});

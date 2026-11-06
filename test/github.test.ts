@@ -151,8 +151,8 @@ test('credential vault writes only encrypted bytes and refuses plaintext fallbac
   let available = true;
   // Fixture codec checks the vault contract; installed smoke checks actual Windows safeStorage.
   const vault = createGitHubVault(directory, { available: async () => available,
-    encrypt: async value => Buffer.from(value).map(byte => byte ^ 0xa5),
-    decrypt: async value => Buffer.from(value).map(byte => byte ^ 0xa5).toString() });
+    encrypt: async value => Buffer.from(Uint8Array.from(Buffer.from(value), byte => byte ^ 0xa5)),
+    decrypt: async value => Buffer.from(Uint8Array.from(value, byte => byte ^ 0xa5)).toString() });
   assert.equal(await vault.read(), null);
   const value: StoredGitHub = { clientId: 'Iv1.fixture', token, account: 'sample', expiresAt: null,
     repositories: { [projectId]: { id: 7, fullName: 'sample/work', private: true } } };

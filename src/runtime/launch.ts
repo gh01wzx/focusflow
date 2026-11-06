@@ -47,7 +47,7 @@ export async function runDesktopOnce(executable: string, args: string[], options
       if (!STARTUP_STAGES.some(known => known === stage)) continue;
       options.stage(stage as StartupStage);
       if (stage === 'existing-window' || stage === (options.diagnoseOnly ? 'runtime-ready' : 'window-ready')) {
-        ready = true; if (timer) clearTimeout(timer);
+        ready = true; if (timer && !options.diagnoseOnly) clearTimeout(timer);
       }
     }
   });

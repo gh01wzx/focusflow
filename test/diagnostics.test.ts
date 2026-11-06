@@ -10,6 +10,44 @@ import { MigrationError, NewerDatabaseError } from '../src/database/migrate.ts';
 
 const build = { version: '0.1.0-alpha.3', commit: 'a'.repeat(40), schema: 5, dirty: false };
 
+test('runtime-only readiness still requires the owned process to exit before its deadline', async () => {
+  const watchdog = setTimeout(() => process.emit('SIGINT'), 4000);
+  try {
+    const result = await runDesktopOnce(process.execPath, ['-e',
+      "console.log('FOCUSFLOW_STAGE:runtime-ready'); setInterval(() => {}, 1000)"], {
+      cwd: process.cwd(), diagnoseOnly: true, timeoutMs: 1500, stage: () => {},
+    });
+    assert.equal(result.ready, true);
+    assert.equal(result.ok, false);
+    assert.match(result.message, /timed out/);
+  } finally { clearTimeout(watchdog); }
+});
+
+test('closing cancels an incomplete request body before disposing its handler', async () => {
+  let enter!: () => void;
+  const entered = new Promise<void>(resolve => { enter = resolve; });
+  let ended = false;
+  let disposed = false;
+  const server = await listenLocal(async (request, response) => {
+    enter();
+    try { for await (const _chunk of request) { /* Await the complete body. */ } response.end('complete'); }
+    finally { ended = true; }
+  }, () => { assert.equal(ended, true); disposed = true; });
+  const url = new URL(server.origin);
+  const socket = createConnection({ host: url.hostname, port: Number(url.port) });
+  socket.on('error', () => {});
+  await once(socket, 'connect');
+  socket.write('POST / HTTP/1.1\r\nHost: ' + url.host + '\r\nContent-Length: 100\r\n\r\n{');
+  await entered;
+  const watchdog = setTimeout(() => socket.destroy(), 1500);
+  const started = Date.now();
+  try {
+    await server.close();
+    assert.ok(Date.now() - started < 1000, 'An incomplete body must not wait for the fixture watchdog.');
+    assert.equal(disposed, true);
+  } finally { clearTimeout(watchdog); socket.destroy(); await server.close(); }
+});
+
 test('startup diagnostics distinguish data, window and native failures without exposing raw errors', () => {
   assert.match(startupFailure('opening-data', new NewerDatabaseError(), build), /newer app/);
   assert.match(startupFailure('opening-data', new MigrationError(new Error('private data'), undefined), build), /rolled back/);

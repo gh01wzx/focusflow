@@ -9,11 +9,13 @@ export async function listenLocal(handler: LocalHandler, dispose: () => void, ob
   let origin = '';
   let closing = false;
   const active = new Set<Promise<void>>();
+  const requests = new Set<IncomingMessage>();
   const server = createServer((request, response) => {
     if (closing) { response.writeHead(503); response.end(); return; }
+    requests.add(request);
     const operation = handler(request, response, origin).catch(() => { response.destroy(); });
     active.add(operation);
-    void operation.finally(() => active.delete(operation));
+    void operation.finally(() => { active.delete(operation); requests.delete(request); });
   });
   try {
     await new Promise<void>((resolve, reject) => {
@@ -33,6 +35,8 @@ export async function listenLocal(handler: LocalHandler, dispose: () => void, ob
       closing = true;
       report('draining-requests');
       const closed = new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+      // An incomplete body cannot finish draining; no data operation has begun.
+      for (const request of requests) if (!request.complete) request.destroy();
       server.closeIdleConnections();
       close = (async () => {
         await Promise.allSettled([...active]);

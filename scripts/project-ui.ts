@@ -71,6 +71,23 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string): 
   await page.getByRole('button', { name: 'Set prerequisites for Separate project work', exact: true }).click();
   const prerequisites = page.getByRole('form', { name: 'Prerequisites for Separate project work', exact: true });
   await prerequisites.getByRole('checkbox', { name: 'Prepare input / Preparation', exact: true }).check();
+  assert.equal(await page.getByLabel('Milestone', { exact: true }).isDisabled(), true);
+  assert.equal(await page.getByRole('button', { name: 'Action center', exact: true }).isDisabled(), true);
+  assert.equal(await page.getByRole('navigation', { name: 'Workspaces', exact: true })
+    .getByRole('button', { name: 'Personal', exact: true }).isDisabled(), true);
+  await prerequisites.getByRole('button', { name: 'Cancel', exact: true }).click();
+  assert.equal(await page.getByLabel('Milestone', { exact: true }).isEnabled(), true);
+  await page.getByRole('button', { name: 'Set prerequisites for Separate project work', exact: true }).click();
+  assert.equal(await prerequisites.getByRole('checkbox', { name: 'Prepare input / Preparation', exact: true }).isChecked(), false);
+  await prerequisites.getByRole('checkbox', { name: 'Prepare input / Preparation', exact: true }).check();
+  await page.route('**/api/project-tickets/*/prerequisites', route => route.fulfill({
+    status: 500, json: { error: 'Could not save prerequisite choices.' },
+  }));
+  await prerequisites.getByRole('button', { name: 'Save prerequisites', exact: true }).click();
+  await page.getByRole('alert').filter({ hasText: 'Could not save prerequisite choices.' }).waitFor();
+  assert.equal(await prerequisites.getByRole('checkbox', { name: 'Prepare input / Preparation', exact: true }).isChecked(), true);
+  assert.equal(await page.getByLabel('Milestone', { exact: true }).isDisabled(), true);
+  await page.unroute('**/api/project-tickets/*/prerequisites');
   await prerequisites.getByRole('button', { name: 'Save prerequisites', exact: true }).click();
   await page.getByRole('status').filter({ hasText: 'Prerequisites saved.' }).waitFor();
   await page.getByText('Waiting for 1 prerequisite. This ticket cannot start yet.', { exact: true }).waitFor();

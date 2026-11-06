@@ -17,7 +17,9 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
   const state = useProjectsController(initialProjectId);
   const [projectFormRequest, setProjectFormRequest] = useState(initialProjectId === undefined ? 1 : 0);
   const [targetTicket, setTargetTicket] = useState('');
+  const [editingPrerequisites, setEditingPrerequisites] = useState(false);
   const { view, busy, milestoneId, error, message } = state;
+  const locked = busy || editingPrerequisites;
   const project = view?.projects.find(item => item.id === view.selectedProjectId);
   const milestone = view?.milestones.find(item => item.id === milestoneId);
   const tickets = view?.tickets.filter(item => item.milestoneId === milestoneId) ?? [];
@@ -28,8 +30,8 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
     element?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [targetTicket, milestoneId]);
   return (
-    <WorkspaceShell workspace="projects" busy={busy} onWorkspaceChange={onWorkspaceChange} navigation={
-      <ProjectNavigation projects={view?.projects ?? []} selectedId={project?.id} busy={busy}
+    <WorkspaceShell workspace="projects" busy={locked} onWorkspaceChange={onWorkspaceChange} navigation={
+      <ProjectNavigation projects={view?.projects ?? []} selectedId={project?.id} busy={locked}
         onOverview={onBack} onProject={id => { void state.selectProject(id); }}
         onNewProject={() => setProjectFormRequest(value => value + 1)} />
     }>
@@ -45,31 +47,33 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
         {error && <div className="error" role="alert">{error}
           <button disabled={busy} onClick={() => void state.refresh()}>Retry</button></div>}
         <p className="feedback" role="status" aria-live="polite">{message || (!view && !error ? 'Loading projects.' : '')}</p>
+        {editingPrerequisites && <p className="editing-note">Save or cancel your prerequisite choices before switching views.</p>}
         {view && (
           <>
-            <EntityComposer kind="project" busy={busy} initiallyOpen={view.projects.length === 0}
+            <EntityComposer kind="project" busy={locked} initiallyOpen={view.projects.length === 0}
               openRequest={projectFormRequest} onAdd={state.addProject} />
             {project ? (
               <section className="project-detail" aria-label="Selected project" aria-busy={busy}>
                 <h2 className="project-heading">{project.title}</h2>
                 {project.description && <p className="project-description">{project.description}</p>}
-                <EntityComposer key={project.id} kind="milestone" busy={busy}
+                <EntityComposer key={project.id} kind="milestone" busy={locked}
                   initiallyOpen={view.milestones.length === 0} onAdd={state.addMilestone} />
                 {milestone ? (
                   <>
                     <div className="milestone-picker">
                       <label htmlFor="selected-milestone">Milestone</label>
-                      <select id="selected-milestone" value={milestoneId} disabled={busy}
+                      <select id="selected-milestone" value={milestoneId} disabled={locked}
                         onChange={event => state.selectMilestone(event.target.value)}>
                         {view.milestones.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
                       </select>
                     </div>
                     {milestone.description && <p className="project-description">{milestone.description}</p>}
-                    <TicketComposer key={milestone.id} milestoneId={milestone.id} busy={busy} onAdd={state.addTicket} />
+                    <TicketComposer key={milestone.id} milestoneId={milestone.id} busy={locked} onAdd={state.addTicket} />
                     <div className="section-heading"><h2>Tickets<span>{tickets.length}</span></h2></div>
                     {tickets.length > 0 ? (
                       <ul className="task-list">
-                        {tickets.map(ticket => <ManualTicket key={ticket.id} ticket={ticket} view={view} busy={busy} onStatus={state.setStatus}
+                        {tickets.map(ticket => <ManualTicket key={ticket.id} ticket={ticket} view={view} busy={busy}
+                          editingLocked={editingPrerequisites} onEditingChange={setEditingPrerequisites} onStatus={state.setStatus}
                           onPrerequisites={state.setPrerequisites} onVisit={item => {
                             state.selectMilestone(item.milestoneId); setTargetTicket(item.id);
                           }} />)}

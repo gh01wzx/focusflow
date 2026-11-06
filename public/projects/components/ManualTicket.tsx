@@ -2,10 +2,12 @@ import { isTicketStatus, TICKET_STATUSES, TICKET_STATUS_LABELS } from '../../../
 import type { ProjectTicket, ProjectView, TicketStatus } from '../../../src/shared/projects.ts';
 import { Prerequisites } from './Prerequisites.tsx';
 
-export function ManualTicket({ ticket, view, busy, onStatus, onPrerequisites, onVisit }: {
+export function ManualTicket({ ticket, view, busy, editingLocked, onEditingChange, onStatus, onPrerequisites, onVisit }: {
   ticket: ProjectTicket;
   view: ProjectView;
   busy: boolean;
+  editingLocked: boolean;
+  onEditingChange(editing: boolean): void;
   onStatus(id: string, status: TicketStatus): Promise<boolean>;
   onPrerequisites(id: string, ids: string[]): Promise<boolean>;
   onVisit(ticket: ProjectTicket): void;
@@ -17,7 +19,7 @@ export function ManualTicket({ ticket, view, busy, onStatus, onPrerequisites, on
         <label htmlFor={'status-' + ticket.id}>
           Status<span className="sr-only"> for {ticket.title}</span>
         </label>
-        <select id={'status-' + ticket.id} value={ticket.status} disabled={busy}
+        <select id={'status-' + ticket.id} value={ticket.status} disabled={busy || editingLocked}
           onChange={event => {
             if (isTicketStatus(event.target.value)) void onStatus(ticket.id, event.target.value);
           }}>
@@ -31,7 +33,8 @@ export function ManualTicket({ ticket, view, busy, onStatus, onPrerequisites, on
           <p className="project-description">{ticket.acceptanceCriteria}</p>
         </details>
       )}
-      <Prerequisites ticket={ticket} view={view} busy={busy} onSave={onPrerequisites} onVisit={onVisit} />
+      <Prerequisites ticket={ticket} view={view} busy={busy} editingLocked={editingLocked}
+        onEditingChange={onEditingChange} onSave={onPrerequisites} onVisit={onVisit} />
     </li>
   );
 }

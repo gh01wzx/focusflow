@@ -2,8 +2,9 @@ import { useState } from 'react';
 import type { ProjectTicket, ProjectView } from '../../../src/shared/projects.ts';
 import { unfinishedPrerequisites } from '../../../src/shared/dependencies.ts';
 
-export function Prerequisites({ ticket, view, busy, onSave, onVisit }: {
+export function Prerequisites({ ticket, view, busy, editingLocked, onEditingChange, onSave, onVisit }: {
   ticket: ProjectTicket; view: ProjectView; busy: boolean;
+  editingLocked: boolean; onEditingChange(editing: boolean): void;
   onSave(id: string, ids: string[]): Promise<boolean>;
   onVisit(ticket: ProjectTicket): void;
 }) {
@@ -15,18 +16,20 @@ export function Prerequisites({ ticket, view, busy, onSave, onVisit }: {
   return <div className="prerequisites">
     <div className="prerequisite-heading">
       <h4>Prerequisites</h4>
-      <button className="prerequisite-button" disabled={busy || editing} onClick={() => {
-        setSelected(current); setEditing(true);
+      <button className="prerequisite-button" disabled={busy || editingLocked || editing} onClick={() => {
+        setSelected(current); setEditing(true); onEditingChange(true);
       }} aria-label={'Set prerequisites for ' + ticket.title}>Set prerequisites</button>
     </div>
     {blockers.length > 0 && <p className="blocker-note">Waiting for {blockers.length} prerequisite{blockers.length === 1 ? '' : 's'}. This ticket cannot start yet.</p>}
     {!editing && (related.length ? <ul>{related.map(item => <li key={item.id}>
-      <button className="prerequisite-link" disabled={busy} onClick={() => onVisit(item)}>{item.title}</button>
+      <button className="prerequisite-link" disabled={busy || editingLocked} onClick={() => onVisit(item)}>{item.title}</button>
       <span> {item.status === 'done' ? 'Done' : 'Not done'}</span>
     </li>)}</ul> : <p>No prerequisites.</p>)}
     {editing && <form aria-label={'Prerequisites for ' + ticket.title} onSubmit={event => {
       event.preventDefault();
-      void onSave(ticket.id, selected).then(saved => { if (saved) setEditing(false); });
+      void onSave(ticket.id, selected).then(saved => {
+        if (saved) { setEditing(false); onEditingChange(false); }
+      });
     }}>
       <fieldset disabled={busy}>
         <legend>Finish these tickets first</legend>
@@ -39,7 +42,7 @@ export function Prerequisites({ ticket, view, busy, onSave, onVisit }: {
       </fieldset>
       <div className="prerequisite-buttons">
         <button className="primary" disabled={busy}>Save prerequisites</button>
-        <button type="button" disabled={busy} onClick={() => setEditing(false)}>Cancel</button>
+        <button type="button" disabled={busy} onClick={() => { setEditing(false); onEditingChange(false); }}>Cancel</button>
       </div>
     </form>}
   </div>;

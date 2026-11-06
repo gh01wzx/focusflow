@@ -85,7 +85,8 @@ try {
   const saved = await review.page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
   await review.page.getByRole('navigation', { name: 'Workspaces', exact: true })
     .getByRole('button', { name: 'Projects', exact: true }).click();
-  await review.page.getByRole('button', { name: 'Browse projects', exact: true }).click();
+  await review.page.getByRole('navigation', { name: 'Project list', exact: true })
+    .getByRole('button', { name: 'Sample project', exact: true }).click();
   await review.page.getByRole('heading', { name: 'Sample project', exact: true }).waitFor();
   await review.page.getByRole('note').filter({ hasText: 'Review pr-72' }).waitFor();
   await review.page.screenshot({ path: join(artifacts, 'sample-projects.png'), fullPage: true });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { EntityDraft } from '../../../src/shared/projects.ts';
 
@@ -6,10 +6,18 @@ interface EntityComposerProps {
   kind: 'project' | 'milestone';
   busy: boolean;
   initiallyOpen: boolean;
+  openRequest?: number;
   onAdd(draft: EntityDraft): Promise<boolean>;
 }
 
-export function EntityComposer({ kind, busy, initiallyOpen, onAdd }: EntityComposerProps) {
+export function EntityComposer({ kind, busy, initiallyOpen, openRequest = 0, onAdd }: EntityComposerProps) {
+  const details = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (openRequest && details.current) {
+      details.current.open = true;
+      details.current.querySelector('input')?.focus();
+    }
+  }, [openRequest]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const name = kind === 'project' ? 'Project' : 'Milestone';
@@ -18,7 +26,7 @@ export function EntityComposer({ kind, busy, initiallyOpen, onAdd }: EntityCompo
     if (await onAdd({ title, description })) { setTitle(''); setDescription(''); }
   }
   return (
-    <details className="project-composer" open={initiallyOpen || undefined}>
+    <details ref={details} className="project-composer" open={initiallyOpen || undefined}>
       <summary>New {kind}</summary>
       <form onSubmit={event => void submit(event)}>
         <label htmlFor={kind + '-title'}>{name} title</label>

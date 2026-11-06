@@ -4,10 +4,10 @@ import type { ProjectView } from '../src/shared/projects.ts';
 
 export const PROJECT_SMOKE_TITLE = 'Plan \u9879\u76ee <img src=x onerror=alert(1)>';
 
-export async function exerciseProjectUI(page: Page): Promise<ProjectView> {
+export async function exerciseProjectUI(page: Page, actionScreenshot?: string): Promise<ProjectView> {
   await page.getByRole('navigation', { name: 'Workspaces', exact: true })
     .getByRole('button', { name: 'Projects', exact: true }).click();
-  await page.getByRole('button', { name: 'Browse projects', exact: true }).click();
+  await page.getByRole('button', { name: 'New project', exact: true }).click();
   await page.getByRole('heading', { name: 'Projects.', exact: true }).waitFor();
   await page.getByLabel('Project title', { exact: true }).waitFor();
 
@@ -56,6 +56,11 @@ export async function exerciseProjectUI(page: Page): Promise<ProjectView> {
   assert.equal(await page.locator('img').count(), 0);
   await addEntity('milestone', 'Second milestone');
   await addTicket('Second milestone work');
+  await page.getByLabel('Status for Second milestone work', { exact: true }).selectOption('in_progress');
+  await page.getByRole('status').filter({ hasText: 'Ticket updated.' }).waitFor();
+  await addTicket('Check project plan');
+  await page.getByLabel('Status for Check project plan', { exact: true }).selectOption('review');
+  await page.getByRole('status').filter({ hasText: 'Ticket updated.' }).waitFor();
   assert.equal(await page.getByRole('heading', { name: PROJECT_SMOKE_TITLE, exact: true }).count(), 0);
   await addEntity('project', 'Another project');
   await addEntity('milestone', 'Separate goal');
@@ -75,6 +80,19 @@ export async function exerciseProjectUI(page: Page): Promise<ProjectView> {
   await page.getByRole('heading', { name: 'Action center.', exact: true }).waitFor();
   const next = page.getByRole('region', { name: 'Next task', exact: true });
   await next.getByRole('heading', { name: 'Separate project work', exact: true }).waitFor();
+  await page.getByRole('region', { name: 'Review', exact: true })
+    .getByRole('heading', { name: 'Check project plan', exact: true }).waitFor();
+  await page.getByRole('region', { name: 'In progress', exact: true })
+    .getByRole('heading', { name: 'Second milestone work', exact: true }).waitFor();
+  const columns = await page.locator('.action-column').evaluateAll(elements => elements.map(element => {
+    const rect = element.getBoundingClientRect();
+    return { x: rect.x, y: rect.y, right: rect.right, border: parseFloat(getComputedStyle(element).borderLeftWidth) };
+  }));
+  assert.equal(columns.length, 3);
+  assert.ok(columns.every(column => column.y === columns[0]!.y && column.border >= 1));
+  assert.ok(columns[0]!.right < columns[1]!.x && columns[1]!.right < columns[2]!.x, 'Statuses must be separate horizontal columns.');
+  assert.equal(await page.getByRole('button', { name: 'Browse projects', exact: true }).count(), 0);
+  if (actionScreenshot) await page.screenshot({ path: actionScreenshot, fullPage: true });
   await next.locator('summary').click();
   await next.getByText('The plan has three clear steps.', { exact: true }).waitFor();
   await page.route('**/api/project-tickets/*/start', route => route.fulfill({
@@ -89,8 +107,14 @@ export async function exerciseProjectUI(page: Page): Promise<ProjectView> {
   await page.getByRole('region', { name: 'In progress', exact: true })
     .getByRole('heading', { name: 'Separate project work', exact: true }).waitFor();
   assert.equal(await page.getByRole('button', { name: 'Start ticket', exact: true }).count(), 0);
-  await page.getByRole('button', { name: 'Browse projects', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Project list', exact: true })
+    .getByRole('button', { name: 'Another project', exact: true }).click();
+  await page.getByLabel('Status for Separate project work', { exact: true }).waitFor();
+  assert.equal(await page.getByLabel('Status for Separate project work', { exact: true }).inputValue(), 'in_progress');
+  await page.getByRole('navigation', { name: 'Project views', exact: true })
+    .getByRole('button', { name: 'Action center', exact: true }).click();
   await page.getByRole('navigation', { name: 'Project list', exact: true })
     .getByRole('button', { name: 'Learning project', exact: true }).click();
+  await page.getByRole('heading', { name: 'Learning project', exact: true }).waitFor();
   return await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
 }

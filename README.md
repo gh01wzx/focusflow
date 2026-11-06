@@ -27,9 +27,9 @@ Expand **Repeating tasks** to stop a schedule. Its current-period task stays ava
 
 ## Manual projects
 
-Choose **Projects** to see Review tickets, In Progress tickets and one recommended Ready ticket across all projects. Lists use creation time, oldest first, with ticket ID breaking ties. Expand View details for descriptions and acceptance criteria. Start ticket moves only the chosen Ready ticket to In Progress; nothing starts automatically. Mark a ticket Ready only when its prerequisites are finished.
+Choose **Projects** to see three horizontal columns: Review, In Progress and one recommended Ready ticket across all projects. Each column has its own border, background and count. Smaller windows can scroll the columns horizontally. Lists use creation time, oldest first, with ticket ID breaking ties. Expand View details for descriptions and acceptance criteria. Start ticket moves only the chosen Ready ticket to In Progress; nothing starts automatically. Mark a ticket Ready only when its prerequisites are finished.
 
-Choose **Browse projects** to add a project, then a milestone and its tickets. Use **Action center** to return. Each ticket can move between Backlog, Ready, In Progress, Review, Done and Blocked. Descriptions and acceptance criteria support multiple lines.
+Select a project directly in the sidebar to open its milestones and tickets. Choose **New project** to create one. **Action center** stays in the sidebar to return to the overview. Each ticket can move between Backlog, Ready, In Progress, Review, Done and Blocked. Descriptions and acceptance criteria support multiple lines.
 
 The sidebar selects a project; the milestone selector limits the visible ticket list. Manual tickets have no GitHub/Codex controls. Everything stays in the local database across restarts. Switching workspaces starts their default view; unsaved form drafts are not retained across workspace changes.
 

@@ -1,25 +1,30 @@
+import { useState } from 'react';
+import { ActionCenter } from './ActionCenter.tsx';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
 import { useProjectsController } from './useProjectsController.ts';
 import { EntityComposer } from './components/EntityComposer.tsx';
 import { TicketComposer } from './components/TicketComposer.tsx';
 import { ManualTicket } from './components/ManualTicket.tsx';
+import { ProjectNavigation } from './components/ProjectNavigation.tsx';
 
-export function ProjectsApp({ onWorkspaceChange }: WorkspaceProps) {
-  const state = useProjectsController();
+export function ProjectsApp(props: WorkspaceProps) {
+  const [destination, setDestination] = useState<{ projectId?: string } | null>(null);
+  return destination ? <ProjectHierarchy {...props} initialProjectId={destination.projectId} onBack={() => setDestination(null)} />
+    : <ActionCenter {...props} onProject={projectId => setDestination({ projectId })} onNewProject={() => setDestination({})} />;
+}
+function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: WorkspaceProps & { onBack(): void; initialProjectId: string | undefined }) {
+  const state = useProjectsController(initialProjectId);
+  const [projectFormRequest, setProjectFormRequest] = useState(initialProjectId === undefined ? 1 : 0);
   const { view, busy, milestoneId, error, message } = state;
   const project = view?.projects.find(item => item.id === view.selectedProjectId);
   const milestone = view?.milestones.find(item => item.id === milestoneId);
   const tickets = view?.tickets.filter(item => item.milestoneId === milestoneId) ?? [];
   return (
     <WorkspaceShell workspace="projects" busy={busy} onWorkspaceChange={onWorkspaceChange} navigation={
-      <nav aria-label="Project list">
-        {view?.projects.map(item => (
-          <button key={item.id} className={`nav-item ${item.id === project?.id ? 'active' : ''}`}
-            aria-current={item.id === project?.id ? 'page' : undefined} disabled={busy}
-            onClick={() => void state.selectProject(item.id)}>{item.title}</button>
-        ))}
-      </nav>
+      <ProjectNavigation projects={view?.projects ?? []} selectedId={project?.id} busy={busy}
+        onOverview={onBack} onProject={id => { void state.selectProject(id); }}
+        onNewProject={() => setProjectFormRequest(value => value + 1)} />
     }>
       <main>
         <div className="breadcrumb">Projects {project && <><span>/</span>{project.title}</>}</div>
@@ -35,7 +40,8 @@ export function ProjectsApp({ onWorkspaceChange }: WorkspaceProps) {
         <p className="feedback" role="status" aria-live="polite">{message || (!view && !error ? 'Loading projects.' : '')}</p>
         {view && (
           <>
-            <EntityComposer kind="project" busy={busy} initiallyOpen={view.projects.length === 0} onAdd={state.addProject} />
+            <EntityComposer kind="project" busy={busy} initiallyOpen={view.projects.length === 0}
+              openRequest={projectFormRequest} onAdd={state.addProject} />
             {project ? (
               <section className="project-detail" aria-label="Selected project" aria-busy={busy}>
                 <h2 className="project-heading">{project.title}</h2>

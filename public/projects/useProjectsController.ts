@@ -4,13 +4,13 @@ import type { EntityDraft, ProjectView, TicketDraft, TicketStatus } from '../../
 
 const client = createProjectClient();
 
-export function useProjectsController() {
+export function useProjectsController(initialProjectId?: string) {
   const [view, setView] = useState<ProjectView | null>(null);
   const [milestoneId, setMilestoneId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const selectedProject = useRef<string | undefined>(undefined);
+  const selectedProject = useRef<string | undefined>(initialProjectId);
   const busyRef = useRef(false);
   const generation = useRef(0);
   const mounted = useRef(true);

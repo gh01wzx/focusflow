@@ -77,7 +77,7 @@ GET /api/projects optionally accepts projectId; it returns the project list and 
 
 The controller displays only the selected milestone's tickets. Write requests allow up to 32 KiB for multiline text; Personal keeps its 4 KiB limit. Runtime codecs check records, parent associations and manual execution mode. No GitHub/Codex controls or calls exist in this workflow.
 
-Action center, dependencies, editing/deletion, Kanban and AI remain later Tickets.
+Dependencies, editing/deletion, Kanban and AI remain later Tickets.
 
 ## Keep the boundaries
 
@@ -94,3 +94,7 @@ npm run typecheck also checks static import boundaries, unresolved local imports
 [src/codex](../src/codex) remains standalone groundwork invoked only by explicit developer commands. Today has no AI execution path.
 
 Product GitHub authorization, coding permissions/recovery, independent review and signed updates remain future work. See the [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) and [validation](VALIDATION.md).
+
+## Project action center
+
+Projects opens ActionCenter with useActionsController. GET /api/project-actions reads all project views in one transaction; shared/actions.ts selects Review, In Progress and at most one Ready task by creation time then ID. The client checks every project view before use. POST /api/project-tickets/:id/start checks Ready status inside its write transaction. Refresh responses cannot overwrite later mutations. Shared ProjectNavigation links the action center and individual projects directly; the hierarchy controller loads the selected project on entry. No dependency model or AI ranking is implied.

@@ -40,7 +40,7 @@ GitHub Issues/PRs and Git history are the development record. Old experiment doc
 
 ## Known limits
 
-- Project action center/dependencies and later MVP phases are unfinished; see the [MVP task index](https://github.com/gh01wzx/focusflow/issues/28).
+- Project dependencies and later MVP phases are unfinished; see the [MVP task index](https://github.com/gh01wzx/focusflow/issues/28).
 - Product schema 1 is a synthetic test baseline, not a shipped older product.
 - Installed checks have seen close/cancellation timeouts. Current smoke requires observed native exit code 0 and bounded stage waits; a retry does not establish a root cause.
 - The historical initial-Today audit recorded 15 moderate affected development packages and no high/critical entries. It is not a current dependency assessment. Use the dependency-audit artifact from the specific Windows run under review; advisories may change.
@@ -51,3 +51,5 @@ GitHub Issues/PRs and Git history are the development record. Old experiment doc
 - Product GitHub authorization, writing-code sandbox/approvals, durable execution recovery and actual expired-auth/exhausted-quota failures remain unverified.
 
 No personal database, credentials or raw execution logs belong in the repository.
+
+Action-center checks cover cross-project ordering, one Ready recommendation, stale/non-Ready start rejection, persistence, malformed responses, installed detail expansion and failed-start recovery.

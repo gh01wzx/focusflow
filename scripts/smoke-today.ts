@@ -268,13 +268,15 @@ try {
     const reopened = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
     assert.deepEqual(reopened, rolled);
     mark('manual-project-hierarchy');
-    const projects = await exerciseProjectUI(page);
+    const projects = await exerciseProjectUI(page, join(artifacts, 'action-center.png'));
     await page.screenshot({ path: join(artifacts, 'projects.png'), fullPage: true });
     mark('project-restart'); await closeApp(); page = await launch();
     const personalAfterProjects = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
     assert.deepEqual(personalAfterProjects, rolled);
     await page.getByRole('navigation', { name: 'Workspaces', exact: true })
       .getByRole('button', { name: 'Projects', exact: true }).click();
+    await page.getByRole('navigation', { name: 'Project list', exact: true })
+      .getByRole('button', { name: 'Learning project', exact: true }).click();
     await page.getByLabel('Status for ' + PROJECT_SMOKE_TITLE, { exact: true }).waitFor();
     assert.equal(await page.getByLabel('Status for ' + PROJECT_SMOKE_TITLE, { exact: true }).inputValue(), 'done');
     const projectsAfterRestart = await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;

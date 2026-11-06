@@ -101,3 +101,7 @@ Tests never use a live model, authenticated GitHub writes or real personal data.
 Before retrying, record the observed failure, the hypothesis to test, one controlled experiment, its expected result and a stopping condition in the PR or relevant Issue. Record the actual result before choosing another step. A retry passing is evidence of that run, not an explanation of the earlier failure.
 
 After a native crash, stop repeated launches. Preserve user data and directory permissions. Do not delete the personal database, reset project permissions or disable the sandbox as a routine diagnostic step. The temporary Electron-path workaround does not establish a permanent fix. [Task #73](https://github.com/gh01wzx/focusflow/issues/73) holds the startup observations and remaining diagnostic work.
+
+## GitHub product connection
+
+See [GitHub connection](GITHUB_CONNECTION.md) for the authorization comparison, owner setup and disposable review steps. Review profile credentials are separate from everyday credentials. Connecting alone performs no repository writes.

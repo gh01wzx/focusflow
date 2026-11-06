@@ -98,3 +98,7 @@ Product GitHub authorization, coding permissions/recovery, independent review an
 ## Project action center
 
 Projects opens ActionCenter with useActionsController. GET /api/project-actions reads all project views in one transaction; shared/actions.ts selects Review, In Progress and at most one Ready task by creation time then ID. The client checks every project view before use. POST /api/project-tickets/:id/start checks Ready status inside its write transaction. Refresh responses cannot overwrite later mutations. Shared ProjectNavigation links the action center and individual projects directly; the hierarchy controller loads the selected project on entry. No dependency model or AI ranking is implied.
+
+## GitHub connection
+
+`shared/github.ts` validates display data; `client/github.ts` handles checked local requests; `github/service.ts` owns the device grant and read-only provider calls; `github/vault.ts` stores encrypted profile credentials. Electron injects async safeStorage. Tokens never enter project SQL or renderer responses. Project links remain separate from manual task state.

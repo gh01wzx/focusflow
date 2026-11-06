@@ -164,3 +164,10 @@ nav[aria-label="Project list"] .nav-item {
   .actions-main { padding: 20px; }
   .action-board { gap: 12px; }
 }
+
+.github-connection { margin: 1rem 0; padding: 1rem; border: 1px solid var(--border, #d7dcd6); border-radius: 10px; }
+.github-connection summary { cursor: pointer; font-weight: 600; }
+.github-connection fieldset { display: grid; gap: .75rem; border: 0; padding: 0; }
+.github-connection label { display: grid; gap: .3rem; }
+.github-connection input:not([type=checkbox]) { width: 100%; padding: .6rem; }
+.github-preview { padding: .75rem; background: #f2f5f0; }

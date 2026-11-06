@@ -90,6 +90,52 @@ try {
   await review.page.getByRole('heading', { name: 'Sample project', exact: true }).waitFor();
   await review.page.getByRole('note').filter({ hasText: 'Review pr-72' }).waitFor();
   await review.page.screenshot({ path: join(artifacts, 'sample-projects.png'), fullPage: true });
+  mark('github-os-storage-and-simulated-confirmation');
+  assert.equal(await review.application.evaluate(async ({ safeStorage }) => {
+    if (!await safeStorage.isAsyncEncryptionAvailable()) return false;
+    const plain = 'disposable safeStorage fixture';
+    const encrypted = await safeStorage.encryptStringAsync(plain);
+    const decrypted = await safeStorage.decryptStringAsync(encrypted);
+    return decrypted.result === plain && !encrypted.includes(Buffer.from(plain));
+  }), true, 'Real Windows OS-protected credential storage must round-trip.');
+  const sample = { available: true, connected: true, account: 'simulated-account', clientId: 'Iv1.fixture',
+    repository: null as { id: number; fullName: string; private: boolean } | null,
+    preview: null as { id: number; fullName: string; private: boolean } | null,
+    repositories: [{ id: 17, fullName: 'sample/public-work', private: false }],
+    userCode: null, nextPollAt: 0, message: 'Simulated GitHub account for UI verification only.' };
+  let confirmedRequests = 0;
+  await review.page.route('**/api/projects/*/github**', async route => {
+    const action = new URL(route.request().url()).pathname.split('/').at(-1);
+    const body = route.request().method() === 'POST' ? route.request().postDataJSON() as Record<string, unknown> : {};
+    if (action === 'inspect') { sample.preview = sample.repositories[0]!; sample.message = 'Review repository name and visibility.'; }
+    if (action === 'connect') {
+      assert.equal(body.confirmed, true); assert.equal(body.repositoryId, 17);
+      confirmedRequests++; sample.repository = sample.preview; sample.preview = null;
+      sample.message = 'Repository linked locally. No Issue, branch or pull request was created.';
+    }
+    if (action === 'disconnect') { sample.connected = false; sample.repository = null; sample.message = 'Local access removed; task data unchanged.'; }
+    await route.fulfill({ json: sample });
+  });
+  // Remount so the initial status uses the clearly simulated fixture.
+  await review.page.getByRole('button', { name: 'Action center', exact: true }).click();
+  await review.page.getByRole('navigation', { name: 'Project list', exact: true })
+    .getByRole('button', { name: 'Sample project', exact: true }).click();
+  await review.page.getByText('GitHub connection', { exact: true }).click();
+  await review.page.getByText('Simulated GitHub account for UI verification only.', { exact: true }).waitFor();
+  await review.page.getByLabel('Repository owner/name', { exact: true }).fill('sample/public-work');
+  await review.page.getByRole('button', { name: 'Inspect repository', exact: true }).click();
+  await review.page.getByText('Public repository', { exact: false }).waitFor();
+  assert.equal(await review.page.getByRole('button', { name: 'Connect repository', exact: true }).isDisabled(), true);
+  assert.equal(confirmedRequests, 0);
+  await review.page.getByRole('checkbox', { name: 'I confirm this repository for this project.', exact: true }).check();
+  await review.page.getByRole('button', { name: 'Connect repository', exact: true }).click();
+  await review.page.getByText('Repository linked locally. No Issue, branch or pull request was created.', { exact: true }).waitFor();
+  assert.equal(confirmedRequests, 1);
+  await review.page.screenshot({ path: join(artifacts, 'github-connection-simulated.png'), fullPage: true });
+  await review.page.getByRole('button', { name: 'Disconnect this profile', exact: true }).click();
+  await review.page.getByText('Local access removed; task data unchanged.', { exact: true }).waitFor();
+  await review.page.getByRole('heading', { name: 'Sample project', exact: true }).waitFor();
+  await review.page.unrouteAll({ behavior: 'wait' });
   mark('reopen-same-review-data');
   await close(review.application);
   review = await launch(['--review', 'pr-72']);

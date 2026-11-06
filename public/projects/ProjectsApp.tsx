@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { GitHubConnection } from './components/GitHubConnection.tsx';
 import { ActionCenter } from './ActionCenter.tsx';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
@@ -46,6 +47,7 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
               <section className="project-detail" aria-label="Selected project" aria-busy={busy}>
                 <h2 className="project-heading">{project.title}</h2>
                 {project.description && <p className="project-description">{project.description}</p>}
+                <GitHubConnection key={project.id} projectId={project.id} />
                 <EntityComposer key={project.id} kind="milestone" busy={busy}
                   initiallyOpen={view.milestones.length === 0} onAdd={state.addMilestone} />
                 {milestone ? (

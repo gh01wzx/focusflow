@@ -53,3 +53,7 @@ GitHub Issues/PRs and Git history are the development record. Old experiment doc
 No personal database, credentials or raw execution logs belong in the repository.
 
 Action-center checks cover cross-project ordering, one Ready recommendation, stale/non-Ready start rejection, persistence, malformed responses, installed detail expansion and failed-start recovery.
+
+## GitHub connection
+
+Simulated provider tests cover explicit device grants, polling intervals, cancellation, repository identity/visibility confirmation, revoked access and disconnect serialization. Disposable vault tests use a fixture codec; installed Windows smoke separately checks real async safeStorage and simulated UI. A real GitHub App and owner account trial remain unverified; see [setup and limits](GITHUB_CONNECTION.md).

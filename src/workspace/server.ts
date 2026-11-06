@@ -1,3 +1,5 @@
+import type { GitHubService } from '../github/service.ts';
+import { matchGitHubRoute, dispatchGitHubRoute } from '../github/routes.ts';
 import { matchProjectRoute, dispatchProjectRoute } from '../projects/routes.ts';
 import { ProjectInputError, ProjectNotFoundError } from '../projects/validation.ts';
 import { readFile } from 'node:fs/promises';
@@ -17,7 +19,7 @@ const assets = new Map([
 ]);
 
 export async function startWorkspaceServer(options: {
-  dataDirectory: string; clock?: () => Date; sampleLabel?: string | null;
+  dataDirectory: string; clock?: () => Date; sampleLabel?: string | null; github?: GitHubService;
 }): Promise<LocalServer> {
   const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock, !!options.sampleLabel);
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
@@ -39,6 +41,13 @@ export async function startWorkspaceServer(options: {
         }
         response.writeHead(200, { 'Content-Type': type! });
         response.end(content);
+        return;
+      }
+      const githubRoute = matchGitHubRoute(request.method, resource);
+      if (githubRoute) {
+        store.projects.view(githubRoute.projectId);
+        const input = request.method === 'GET' ? undefined : await readJson(request, origin);
+        sendJson(response, 200, await dispatchGitHubRoute(githubRoute, input, options.github));
         return;
       }
       const route = matchTaskRoute(request.method, resource);
@@ -63,5 +72,5 @@ export async function startWorkspaceServer(options: {
         error: known ? error.message : 'Could not save local data. Check disk space and try again.',
       });
     }
-  }, store.close);
+  }, async () => { await options.github?.close(); store.close(); });
 }

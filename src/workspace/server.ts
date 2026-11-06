@@ -8,6 +8,9 @@ import { HttpError, readJson, secureRequest, sendJson } from '../http/request.ts
 import { openWorkspaceStore } from './store.ts';
 import { matchTaskRoute, dispatchTaskRoute } from '../tasks/routes.ts';
 import { TaskInputError } from '../tasks/validation.ts';
+import { matchAiRoute, dispatchAiRoute } from '../ai/routes.ts';
+import { createAiService } from '../ai/service.ts';
+import type { AiService } from '../ai/service.ts';
 
 const assets = new Map([
   ['/', ['today/index.html', 'text/html; charset=utf-8']],
@@ -17,11 +20,12 @@ const assets = new Map([
 ]);
 
 export async function startWorkspaceServer(options: {
-  dataDirectory: string; clock?: () => Date; sampleLabel?: string | null;
+  dataDirectory: string; clock?: () => Date; sampleLabel?: string | null; ai?: AiService;
 }): Promise<LocalServer> {
   const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock, !!options.sampleLabel);
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
-  return listenLocal(async (request, response, origin) => {
+  const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });
+  const local = await listenLocal(async (request, response, origin) => {
     try {
       secureRequest(request, response, origin);
       const resource = request.url ?? '';
@@ -42,6 +46,12 @@ export async function startWorkspaceServer(options: {
         return;
       }
       const route = matchTaskRoute(request.method, resource);
+      const aiRoute = matchAiRoute(request.method, resource);
+      if (aiRoute) {
+        const input = request.method === 'GET' ? undefined : await readJson(request, origin, 4096);
+        sendJson(response, 200, await dispatchAiRoute(aiRoute, input, ai));
+        return;
+      }
       const projectRoute = matchProjectRoute(request.method, resource);
       if (!route && !projectRoute) {
         sendJson(response, 404, { error: 'Not found' });
@@ -64,4 +74,5 @@ export async function startWorkspaceServer(options: {
       });
     }
   }, store.close);
+  return { origin: local.origin, async close() { await ai.close(); await local.close(); } };
 }

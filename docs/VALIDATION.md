@@ -52,4 +52,6 @@ GitHub Issues/PRs and Git history are the development record. Old experiment doc
 
 No personal database, credentials or raw execution logs belong in the repository.
 
+The AI connection preview has simulated service/HTTP checks for explicit usage consent, account-mode refusal, sanitized failures, early sign-in completion, cancellation and invalid sign-in links. Installed UI checks demonstrate missing runtime and simulated account/consent behavior; they do not call a model. Product-profile sign-in, Windows keyring behavior and a real opted-in response require owner-triggered evidence before the AI integration gate is accepted.
+
 Action-center checks cover cross-project ordering, one Ready recommendation, stale/non-Ready start rejection, persistence, malformed responses, installed detail expansion and failed-start recovery.

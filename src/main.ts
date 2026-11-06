@@ -5,6 +5,8 @@ import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { SCHEMA_VERSION } from './database/schema.ts';
 import { selectProfile } from './runtime/profile.ts';
+import { createAiService } from './ai/service.ts';
+import { createAiRuntime } from './ai/runtime.ts';
 
 const profile = selectProfile({ packaged: false, args: process.argv,
   localDataDirectory: process.env.LOCALAPPDATA ?? join(homedir(), '.local', 'share'),
@@ -13,7 +15,8 @@ const customData = !process.argv.includes('--review') && process.env.FOCUSFLOW_D
 const dataDirectory = customData
   ? resolve(customData)
   : join(profile.directory, 'data');
-const app = await startWorkspaceServer({ dataDirectory, sampleLabel: customData ? null : profile.sampleLabel });
+const ai = createAiService(createAiRuntime(process.env.LOCALAPPDATA ?? join(homedir(), '.local', 'share')));
+const app = await startWorkspaceServer({ dataDirectory, sampleLabel: customData ? null : profile.sampleLabel, ai });
 console.log(`FocusFlow: ${app.origin}`);
 console.log(`Local data: ${dataDirectory}`);
 console.log('Keep this window open. Ctrl+C stops the server.');

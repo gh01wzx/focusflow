@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog, shell } from 'electron';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { startWorkspaceServer } from '../workspace/server.ts';
@@ -6,6 +6,9 @@ import type { LocalServer } from '../http/local-server.ts';
 import { MigrationError, NewerDatabaseError } from '../database/migrate.ts';
 import { SCHEMA_VERSION } from '../database/schema.ts';
 import { selectProfile } from '../runtime/profile.ts';
+import { createAiService } from '../ai/service.ts';
+import { createAiRuntime } from '../ai/runtime.ts';
+import { AI_SETUP_URL, isAiSignInUrl } from '../shared/ai.ts';
 
 app.setName('FocusFlow');
 app.setAppUserModelId('dev.focusflow.desktop');
@@ -41,7 +44,8 @@ if (!app.requestSingleInstanceLock()) {
   app.on('window-all-closed', () => { if (!closing) app.quit(); });
 
   void app.whenReady().then(async () => {
-    service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), sampleLabel: profile.sampleLabel });
+    const ai = createAiService(createAiRuntime(process.env.LOCALAPPDATA ?? app.getPath('appData'), true));
+    service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), sampleLabel: profile.sampleLabel, ai });
     const origin = service.origin;
     window = new BrowserWindow({
       width: 1120,
@@ -59,7 +63,12 @@ if (!app.requestSingleInstanceLock()) {
       },
     });
     window.removeMenu();
-    window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    window.webContents.setWindowOpenHandler(({ url }) => {
+      if (url === AI_SETUP_URL || isAiSignInUrl(url)) {
+        void shell.openExternal(url).catch(() => console.error('Could not open the AI sign-in/setup browser.'));
+      }
+      return { action: 'deny' };
+    });
     window.webContents.on('will-navigate', (event, url) => {
       if (url !== origin + '/') event.preventDefault();
     });

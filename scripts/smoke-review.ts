@@ -76,6 +76,35 @@ try {
   let review = await launch(['--review', 'pr-72']);
   await review.page.getByRole('note').filter({ hasText: 'Sample data' }).waitFor();
   assert.match(await review.page.title(), /Review pr-72 - Sample data/);
+  mark('ai-missing-runtime-and-simulated-consent-ui');
+  await review.page.getByRole('button', { name: 'AI connection', exact: true }).click();
+  const ai = review.page.getByRole('dialog', { name: 'AI connection', exact: true });
+  assert.equal(await ai.getByRole('button', { name: 'Run read-only AI check', exact: true }).isDisabled(), true);
+  await ai.getByRole('button', { name: 'Check account', exact: true }).click();
+  await ai.getByRole('status').filter({ hasText: 'Install the pinned official Codex runtime' }).waitFor();
+  const simulated = { mode: 'chatgpt', runtimeVersion: '0.166.0', account: 'ui@example.invalid', plan: 'plus',
+    message: 'Simulated UI account. No live model was used.', signInUrl: null, verified: false };
+  await review.page.route('**/api/ai/check', route => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify(simulated),
+  }));
+  await ai.getByRole('button', { name: 'Check account', exact: true }).click();
+  await ai.getByText('ui@example.invalid', { exact: true }).waitFor();
+  assert.equal(await ai.getByRole('button', { name: 'Run read-only AI check', exact: true }).isDisabled(), true);
+  await ai.getByRole('checkbox', { name: 'I understand that this read-only check uses Codex allowance.', exact: true }).check();
+  let simulatedRequests = 0;
+  await review.page.route('**/api/ai/verify', route => {
+    assert.deepEqual(route.request().postDataJSON(), { confirmAllowance: true });
+    simulatedRequests++;
+    return route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ...simulated, verified: true, message: 'Simulated UI response. No live model was used.' }) });
+  });
+  await ai.getByRole('button', { name: 'Run read-only AI check', exact: true }).click();
+  await ai.getByRole('status').filter({ hasText: 'Simulated UI response.' }).waitFor();
+  assert.equal(simulatedRequests, 1);
+  await review.page.screenshot({ path: join(artifacts, 'ai-connection-simulated.png'), fullPage: true });
+  await ai.getByRole('button', { name: 'Close', exact: true }).click();
+  await review.page.unroute('**/api/ai/check');
+  await review.page.unroute('**/api/ai/verify');
   assert.equal(await review.page.getByText('Everyday task stays here', { exact: true }).count(), 0);
   await review.page.getByRole('checkbox', { name: 'Complete Try completing this sample task', exact: true }).click();
   await review.page.getByRole('status').filter({ hasText: 'Task completed.' }).waitFor();

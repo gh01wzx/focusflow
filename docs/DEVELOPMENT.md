@@ -37,6 +37,7 @@ After GitHub creates an Issue, add its actual number to the title; do not guess 
 | npm test | Run compiled tests |
 | npm run test:source | Optional Node type-stripping execution; not a type check |
 | npm run package:windows | Build an unsigned NSIS installer; publication is disabled |
+| npm run ai:install | Explicitly install pinned Codex into the separate product runtime; no login or model turn |
 
 Start-FocusFlow.cmd opens development data. Review-FocusFlow.cmd pr-72 opens a named review. Run npm ci again when dependencies change. The installed app bundles its runtime and accepts --review pr-72 without Node or npm.
 
@@ -61,6 +62,14 @@ Development/review windows show a sample-data notice and title. Examples are add
 Explicit developer overrides remain available for existing tools: FOCUSFLOW_TEST_PROFILE selects a desktop-test directory, and FOCUSFLOW_DATA_DIR selects browser-service data directly. Neither seeds examples. Clear FOCUSFLOW_TEST_PROFILE before using --review; a conflict is refused. Browser review mode ignores FOCUSFLOW_DATA_DIR and uses the named review. These overrides are not everyday/review launch instructions.
 
 Previous spike data and the separate Codex profile are never imported or deleted by source cleanup. Installed everyday data stays in its original location; source launchers no longer open it by default.
+
+## AI account setup and validation
+
+The AI connection preview uses official Codex app-server over owned stdio, pinned to 0.166.0, with its own codex-product profile and keyring credential mode. The existing codex-phase0 probe remains separate and keeps its established commands. Runtime installation needs Node 24/npm; the desktop bundles neither a model nor this external runtime.
+
+The route follows [official app-server authentication](https://developers.openai.com/codex/app-server/) and [credential-storage guidance](https://developers.openai.com/codex/auth/). Account checks read sanitized account/plan fields. Sign-in is explicit and stays in an owned process until completion, cancellation or timeout. The read-only model check uses the existing tool-denying probe in a disposable directory and requires a fresh server-side ChatGPT account check plus explicit allowance confirmation. No automatic API-key fallback exists.
+
+Automated account, quota and login results are simulated. Before accepting the product integration gate, the owner must install the pinned runtime, explicitly sign in on Windows, confirm OS credential-store use, run one opted-in read-only check and record the exact app commit and result in its PR. Do not treat earlier Phase 0 results as verification of this new profile or UI. No new model run or authorization occurs on app launch.
 
 Do not point test overrides at real data. Do not commit databases, credentials, local config or logs.
 

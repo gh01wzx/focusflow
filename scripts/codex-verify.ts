@@ -7,9 +7,11 @@ import { once } from 'node:events';
 import { CodexFailure, record } from '../src/codex/client.ts';
 import { readOnlyProbe, cancelReadOnlyProbe, ProbeFailure } from '../src/codex/read-only-probe.ts';
 import { withCodexProcess, CodexProcessFailure } from '../src/codex/process.ts';
+import { CODEX_VERSION } from '../src/shared/ai.ts';
 
-const VERSION = '0.166.0';
+const VERSION = CODEX_VERSION;
 const mode = process.argv[2];
+const product = process.argv.includes('--product');
 if (!['install', 'login', 'status', 'live', 'cancel'].includes(mode ?? '') ||
     ((mode === 'live' || mode === 'cancel') && process.argv[3] !== '--live')) {
   console.error('Usage: npm run codex:install | codex:login | codex:status | codex:probe -- --live | codex:cancel -- --live');
@@ -18,7 +20,7 @@ if (!['install', 'login', 'status', 'live', 'cancel'].includes(mode ?? '') ||
 
 const root = join(process.platform === 'win32'
   ? (process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local'))
-  : join(homedir(), '.local', 'share'), 'FocusFlow', 'codex-phase0');
+  : join(homedir(), '.local', 'share'), 'FocusFlow', product ? 'codex-product' : 'codex-phase0');
 const profile = join(root, 'profile');
 const runtime = join(root, 'runtime');
 const cli = join(runtime, 'node_modules', '@openai', 'codex', 'bin', 'codex.js');
@@ -29,7 +31,7 @@ for (const key of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'USERP
 }
 // Dedicated CLI-owned authentication files; never read or copy the desktop App's credentials.
 environment.CODEX_HOME = profile;
-const config = ['-c', 'cli_auth_credentials_store="file"'];
+const config = ['-c', product ? 'cli_auth_credentials_store="keyring"' : 'cli_auth_credentials_store="file"'];
 await mkdir(profile, { recursive: true, mode: 0o700 });
 
 async function interactive(script: string, args: string[], cwd: string): Promise<void> {
@@ -45,7 +47,7 @@ async function verify(): Promise<void> {
     // Separate runtime avoids making the desktop installer depend on the development CLI.
     await interactive(npm, ['install', '--prefix', runtime, '--no-save', '--package-lock=false',
       '--ignore-scripts', '--no-audit', '--no-fund', `@openai/codex@${VERSION}`], root);
-    console.log(`Official Codex CLI ${VERSION} installed for the Phase 0 probe.`);
+    console.log(`Official Codex CLI ${VERSION} installed for ${product ? 'FocusFlow AI' : 'the Phase 0 probe'}.`);
     return;
   }
   let installed: unknown;

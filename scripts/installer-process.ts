@@ -1,6 +1,16 @@
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 
+export function installerEnvironment(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const environment: NodeJS.ProcessEnv = {};
+  for (const key of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH',
+    'LOCALAPPDATA', 'APPDATA', 'COMSPEC', 'USERNAME', 'USERDOMAIN', 'PSModulePath', 'ProgramData', 'ALLUSERSPROFILE',
+    'ProgramFiles', 'ProgramFiles(x86)', 'CommonProgramFiles', 'CommonProgramFiles(x86)', 'PATHEXT']) {
+    if (source[key]) environment[key] = source[key];
+  }
+  return environment;
+}
+
 export function runInstallerProcess(executable: string, args: string[], environment: NodeJS.ProcessEnv, timeoutMs = 120000) {
   const started = Date.now();
   // Inherited pipes can remain open after the installer parent has exited.

@@ -13,7 +13,7 @@ import { SCHEMA_VERSION } from '../src/database/schema.ts';
 import { localDay } from '../src/shared/calendar.ts';
 import type { TaskView } from '../src/shared/tasks.ts';
 import type { ProjectView } from '../src/shared/projects.ts';
-import { runInstallerProcess } from './installer-process.ts';
+import { installerEnvironment, runInstallerProcess } from './installer-process.ts';
 
 assert.equal(process.platform, 'win32', 'Run only on the disposable Windows Actions runner.');
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Installer registration and shortcuts require a disposable Actions runner.');
@@ -30,6 +30,9 @@ const environment: Record<string, string> = {};
 for (const key of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH', 'COMSPEC']) {
   if (process.env[key]) environment[key] = process.env[key]!;
 }
+// NSIS invokes Windows shell/PowerShell helpers against the real hosted profile.
+// Only app processes use synthetic profile paths; credentials stay excluded.
+const setupEnvironment = installerEnvironment(process.env);
 environment.LOCALAPPDATA = join(root, 'local');
 environment.APPDATA = join(root, 'roaming');
 environment.FOCUSFLOW_TEST_PROFILE = profile;
@@ -43,7 +46,7 @@ const database = join(profile, 'data', 'tracker.db');
 
 async function install(installer: string) {
   assert.equal(application, undefined, 'Close the owned app before replacing its binaries.');
-  const result = await runInstallerProcess(installer, ['/S', '/D=' + installation], environment);
+  const result = await runInstallerProcess(installer, ['/S', '/D=' + installation], setupEnvironment);
   installerRuns.push({ installer: basename(installer), ...result,
     executablePresent: existsSync(join(installation, 'FocusFlow.exe')),
     packagePresent: existsSync(join(installation, 'resources', 'app.asar')) });

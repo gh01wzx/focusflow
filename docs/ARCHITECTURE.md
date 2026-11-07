@@ -81,7 +81,7 @@ The controller allows one details editor at a time. It blocks view navigation du
 
 The controller displays only the selected milestone's tickets. Write requests allow up to 32 KiB for multiline text; Personal keeps its 4 KiB limit. Runtime codecs check records, parent associations and manual execution mode. Manual ticket actions do not call GitHub or Codex; the optional project connection is separate.
 
-Deletion, Kanban and AI remain later Tickets.
+Deletion and AI draft approval remain later Tickets. The optional status board shares the same ticket controls.
 
 ## Keep the boundaries
 
@@ -110,6 +110,16 @@ Ticket cards open a native ProjectDialog for details, status buttons and ticket 
 POST /api/project-tickets/:id/prerequisites replaces that ticket's prerequisite set atomically. Service validation rejects self-links, missing/foreign parents, duplicate links and cycles. Schema 6 adds foreign keys, uniqueness, self-link checks and insert triggers for same-project/cycle protection; direct SQL updates to links are refused. SQL stays in the repository. Prerequisite changes retain the ticket's chosen status.
 
 Prerequisite choices use native toggle buttons with aria-pressed and explicit Selected labels. Keyboard Enter/Space toggles a card. Save stays disabled until the selection changes; Cancel discards the draft. No checkbox controls or additional request/state layer are used.
+
+## AI plan drafts
+
+`shared/plans.ts` validates bounded suggestions, unique keys, execution-mode proposals and an acyclic within-plan prerequisite graph. `client/plans.ts` handles checked local requests. `usePlanController` coordinates explicit consent, generation, status polling and cancellation; `PlanDraftPanel` renders suggestions as text. Opening or polling a draft never calls a model.
+
+`plans/service.ts` owns one cancellable generation, fixed progress/error messages and atomic replacement only after successful validation and process cleanup. Cancellation or failure retains the previous draft. `plans/repository.ts` stores a validated JSON document in schema 7's separate plan_drafts table. Schema 6 records are unchanged and require the existing verified backup before migration. Drafts are included in local snapshots. No draft operation calls project creation/status methods or GitHub writes.
+
+`plans/generator.ts` sends only the goal entered for that request. It uses `ai/service.ts` to share the single active runtime, refresh the account check and refuse non-ChatGPT authentication. `codex/read-only-probe.ts` also supports bounded text responses using the same ephemeral read-only turn, denied approvals/tools, interruption and timeout handling as the connectivity probe. Runtime setup uses an empty disposable directory and the profile's configured OS credential store. No project files are attached. Model text and provider errors are never progress messages or execution logs; only a validated draft is saved.
+
+HTTP generation requires same-origin JSON and explicit allowance consent. The workspace aborts and awaits planning before closing AI processes and SQLite. Reopening reads local storage only. Editing, approving, publishing and executing suggestions have separate later gates; simulated protocol/API/UI checks do not verify live model quality or Windows keyring behavior.
 
 ## GitHub connection
 

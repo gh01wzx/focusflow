@@ -10,6 +10,8 @@ The maintained checks cover the scenarios below. This list describes coverage; e
 - Browser clients against the real local API; malformed response rejection; architecture-guard failure cases.
 - Real SQLite/HTTP/calendar checks with disposable directories.
 - Migration rollback, backup failure, WAL snapshot consistency, checksum/target protection and product identity/newer-schema refusal.
+- AI drafts: explicit allowance consent, fresh ChatGPT account checks, bounded text-only protocol, rejected tools/invalid graphs, progress, cancellation/late replies, preserved previous drafts, no formal task writes, local restart and verified snapshot recovery. Replies are simulated; no live model or GitHub writes run in tests.
+- Schema 6 to 7 preserves Personal tasks, weekly selections and project prerequisites; backup failure blocks the upgrade and the pre-change snapshot restores schema 6.
 - Windows installed UI: add/complete/cancel, overdue/future/history, text escaping, second instance, graceful exit and restart.
 - Synthetic prior product schema migration and separate snapshot recovery.
 - Daily/weekly rollover, closed-app catch-up, completion/cancellation, stop, restart, clock rollback, Auckland DST and failed reconciliation rollback.

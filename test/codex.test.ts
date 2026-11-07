@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PassThrough } from 'node:stream';
 import { CodexClient, CodexFailure, modelFailureCode } from '../src/codex/client.ts';
-import { readOnlyProbe, cancelReadOnlyProbe, PROBE_MARKER } from '../src/codex/read-only-probe.ts';
+import { readOnlyProbe, readOnlyResponse, cancelReadOnlyProbe, PROBE_MARKER } from '../src/codex/read-only-probe.ts';
 
 function fixture(timeout = 1000, maxLine = 1024 * 1024) {
   const input = new PassThrough();
@@ -130,6 +130,38 @@ test('one read-only ephemeral turn handles completion arriving before the start 
   assert.equal(params.ephemeral, true); assert.deepEqual(progress, ['started', 'delta']);
   assert.equal(f.sent.filter(x => x.method === 'turn/start').length, 1);
   assert.equal(f.client.listenerCount('notification'), 0);
+});
+
+test('planning responses keep ephemeral read-only policy and return only bounded completed text', async t => {
+  const text = JSON.stringify({ milestones: [{ title: 'x'.repeat(5000) }] });
+  const f = await session(f => {
+    event(f, 'item/completed', { item: { type: 'agentMessage', text } });
+    event(f, 'turn/completed', { turn: { id: 'turn-1', status: 'completed' } });
+  });
+  t.after(() => f.client.close());
+  assert.equal(await readOnlyResponse(f.client, 'empty-directory', 'A goal'), text);
+  const thread = f.sent.find(x => x.method === 'thread/start')?.params as Record<string, unknown>;
+  assert.equal(thread.ephemeral, true); assert.equal(thread.sandbox, 'read-only'); assert.equal(thread.approvalPolicy, 'never');
+  const turn = f.sent.find(x => x.method === 'turn/start')?.params as Record<string, unknown>;
+  assert.deepEqual(turn.input, [{ type: 'text', text: 'A goal' }]);
+  assert.equal(f.client.listenerCount('notification'), 0);
+});
+
+test('planning output limits, forbidden tools and cancellation cannot return a partial response', async t => {
+  for (const kind of ['limit', 'tool', 'cancel']) {
+    const abort = new AbortController();
+    const f = await session(f => {
+      if (kind === 'limit') event(f, 'item/completed', { item: { type: 'agentMessage', text: 'x'.repeat(64_001) } });
+      if (kind === 'tool') event(f, 'item/started', { item: { type: 'fileChange' } });
+      if (kind === 'cancel') abort.abort();
+    });
+    t.after(() => f.client.close());
+    await assert.rejects(readOnlyResponse(f.client, 'empty-directory', 'A goal', { signal: abort.signal }), {
+      code: kind === 'limit' ? 'OUTPUT_LIMIT' : kind === 'tool' ? 'UNEXPECTED_TOOL' : 'CANCELLED',
+    });
+    assert.equal(f.sent.filter(x => x.method === 'turn/interrupt').length, 1);
+    assert.equal(f.client.listenerCount('notification'), 0);
+  }
 });
 
 test('model failure, interrupted completion and marker mismatch cannot report success', async t => {

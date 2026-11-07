@@ -13,7 +13,7 @@ A Windows desktop task tracker built with TypeScript, React, Electron and SQLite
 - Repeat daily or on selected weekdays, retain missed periods in History and stop future repeats.
 - Switch to Projects, create projects/milestones/manual tickets, write acceptance criteria and change ticket status.
 
-Deletion, Kanban, AI planning, coding/review and one-click updates are not implemented.
+Deletion, AI draft approval, coding/review and one-click updates are not implemented.
 
 ## Repeating tasks
 
@@ -41,7 +41,15 @@ Use **Set prerequisites** in a ticket's details to choose work that must finish 
 
 Open **AI connection** in the sidebar to check the separate FocusFlow Codex account. Install the pinned official runtime explicitly with npm run ai:install from a source checkout, then choose **Sign in with ChatGPT** and follow the browser link. The shared runtime stays under %LOCALAPPDATA%\FocusFlow\codex-product\runtime. Each app profile supplies its own codex-profile directory for sign-in settings. Live Windows credential-store separation still needs verification. Credentials use the OS credential store; no plaintext fallback is configured and existing Codex App sessions are not copied.
 
-**Check account** does not request a model response. **Run read-only AI check** requires the allowance checkbox and a ChatGPT-authenticated account. It consumes Codex allowance; API-key and other auth modes are refused. Planning and code-writing remain later work. The new product login/keyring/live path still needs an owner-triggered Windows trial; ordinary tests use simulated accounts/results and never call a live model.
+**Check account** does not request a model response. **Run read-only AI check** requires the allowance checkbox and a ChatGPT-authenticated account. It consumes Codex allowance; API-key and other auth modes are refused. Code-writing remains later work. The product login/keyring/live path still needs an owner-triggered Windows trial; ordinary tests use simulated accounts/results and never call a live model.
+
+## AI plan drafts
+
+Open a project and choose **AI plan draft**. Enter a goal, confirm that generation uses Codex allowance, then choose **Generate draft**. Only the entered goal is included in the planning prompt. It is sent to OpenAI through the pinned Codex runtime; project files, existing tasks and GitHub credentials are not attached. Each request checks for a ChatGPT account again. API-key billing is refused.
+
+Progress and **Cancel generation** remain visible while waiting. Closing the dialog requests cancellation too. A request already sent may use allowance. There is no automatic retry after failure, cancellation or reopening. Provider-internal retry progress may appear during an existing request.
+
+A valid result is saved only in this data profile, separately from project milestones and tickets. Reopen the dialog to read it without another model call. Expand suggestions to see descriptions, acceptance criteria, proposed Manual/Coding modes and prerequisite titles. Failed or cancelled replacements keep the previous draft and all existing tasks. Generating creates no approved tasks, GitHub Issues, pull requests or coding runs. Editing and approving drafts belongs to a later change. Live response quality and Windows credential-store behavior still require an owner-triggered trial; automated checks use simulated replies.
 
 ## Run on Windows
 
@@ -64,7 +72,7 @@ The Windows product database is at:
 %LOCALAPPDATA%\FocusFlow\desktop\data\tracker.db
 ~~~
 
-It is outside source and installation output. The app does not import the old Phase 0 notes or access the separate Codex login profile. No task data is sent to GitHub or an AI service.
+It is outside source and installation output. The app does not import the old Phase 0 notes or access the separate Codex login profile. Local task data is not automatically sent to GitHub or an AI service. An explicitly requested AI draft sends the goal you enter to OpenAI; saved drafts stay in the local database and its backups.
 
 ## Try a proposed change
 

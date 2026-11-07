@@ -1,6 +1,10 @@
 import { matchAiRoute, dispatchAiRoute } from '../ai/routes.ts';
 import { createAiService } from '../ai/service.ts';
 import type { AiService } from '../ai/service.ts';
+import { createPlanGenerator } from '../plans/generator.ts';
+import { createPlanService, PlanInputError } from '../plans/service.ts';
+import type { PlanGenerator } from '../plans/service.ts';
+import { matchPlanRoute, dispatchPlanRoute } from '../plans/routes.ts';
 import type { GitHubService } from '../github/service.ts';
 import { matchGitHubRoute, dispatchGitHubRoute } from '../github/routes.ts';
 import { matchProjectRoute, dispatchProjectRoute } from '../projects/routes.ts';
@@ -22,11 +26,12 @@ const assets = new Map([
 ]);
 
 export async function startWorkspaceServer(options: {
-  dataDirectory: string; clock?: () => Date; sampleLabel?: string | null; github?: GitHubService; ai?: AiService;
+  dataDirectory: string; clock?: () => Date; sampleLabel?: string | null; github?: GitHubService; ai?: AiService; planGenerator?: PlanGenerator;
 }): Promise<LocalServer> {
   const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock, !!options.sampleLabel);
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
   const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });
+  const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai));
   const local = await listenLocal(async (request, response, origin) => {
     try {
       secureRequest(request, response, origin);
@@ -45,6 +50,13 @@ export async function startWorkspaceServer(options: {
         }
         response.writeHead(200, { 'Content-Type': type! });
         response.end(content);
+        return;
+      }
+      const planRoute = matchPlanRoute(request.method, resource);
+      if (planRoute) {
+        store.projects.view(planRoute.projectId);
+        const input = request.method === 'GET' ? undefined : await readJson(request, origin, 16384);
+        sendJson(response, 200, dispatchPlanRoute(planRoute, input, plans));
         return;
       }
       const aiRoute = matchAiRoute(request.method, resource);
@@ -75,9 +87,9 @@ export async function startWorkspaceServer(options: {
         response.end();
         return;
       }
-      const known = error instanceof HttpError || error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof ProjectNotFoundError;
+      const known = error instanceof HttpError || error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof ProjectNotFoundError || error instanceof PlanInputError;
       const status = error instanceof HttpError ? error.status : error instanceof ProjectNotFoundError ? 404
-        : error instanceof TaskInputError || error instanceof ProjectInputError ? 400 : 500;
+        : error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof PlanInputError ? 400 : 500;
       sendJson(response, status, {
         error: known ? error.message : 'Could not save local data. Check disk space and try again.',
       });
@@ -86,6 +98,7 @@ export async function startWorkspaceServer(options: {
   let closing: Promise<void> | undefined;
   return { origin: local.origin, close() {
     return closing ??= (async () => {
+      await plans.close();
       await ai.close();
       await options.github?.close();
       await local.close();

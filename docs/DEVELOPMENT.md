@@ -81,6 +81,8 @@ For a verified snapshot, run restore-snapshot.ts below with a new destination at
 
 ## Backup and recovery
 
+Schema 7 adds private AI plan drafts as a separate table. Upgrading installed data from schema 6 requires the normal verified pre-change snapshot. Named review/development profiles use fresh schema-7 sample directories and do not copy schema-6 profiles. Keep the same review name to reopen a saved draft; reopening never calls a model. Draft goals and generated text are user data and belong only in local databases/backups, never source, screenshots or CI uploads.
+
 Existing product schema changes take a verified snapshot before transactional migration. Schema 5 adds weekday selection while retaining Personal/project data and existing weekly periods. Append migrations; do not rewrite an applied migration. A fresh database needs no pre-upgrade snapshot.
 
 To restore a snapshot manually, close all app instances and preserve the original database plus any WAL/SHM sidecars. Keep the snapshot and matching .db.json manifest together, then run:

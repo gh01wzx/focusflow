@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -68,4 +68,8 @@ export const MIGRATIONS = [
     CREATE TRIGGER ticket_dependencies_update BEFORE UPDATE ON ticket_dependencies BEGIN
       SELECT RAISE(ABORT,'Replace prerequisite links instead of updating them.');
     END;` },
+  { version: 7, sql: `CREATE TABLE plan_drafts (
+      project_id TEXT PRIMARY KEY REFERENCES projects(id),
+      draft_json TEXT NOT NULL CHECK(json_valid(draft_json))
+    );` },
 ] as const;

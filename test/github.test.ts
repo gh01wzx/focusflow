@@ -8,6 +8,7 @@ import { createGitHubVault } from '../src/github/vault.ts';
 import type { GitHubVault, StoredGitHub } from '../src/github/vault.ts';
 import { createGitHubClient } from '../src/client/github.ts';
 import { startWorkspaceServer } from '../src/workspace/server.ts';
+import { openWorkspaceStore } from '../src/workspace/store.ts';
 import { createProjectClient } from '../src/client/projects.ts';
 import { repositoryName, parseGitHubStatus } from '../src/shared/github.ts';
 
@@ -15,7 +16,7 @@ const projectId = '00000000-0000-0000-0000-000000000001';
 const token = 'ghu_fixture_token_only';
 const repo = { id: 7, full_name: 'sample/work', private: false };
 
-test('server shutdown aborts a pending GitHub request before retiring HTTP and task data', async t => {
+test('server shutdown interrupts HTTP, aborts owned GitHub work and retains accepted project data', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'focusflow-github-close-'));
   const saved = memory();
   await saved.vault.write({ clientId: 'Iv1.fixture', token, account: 'sample', expiresAt: null, repositories: {} });
@@ -39,11 +40,15 @@ test('server shutdown aborts a pending GitHub request before retiring HTTP and t
   });
   const project = await createProjectClient(fixtureTransport).addProject({ title: 'Keep work on close', description: '' });
   const request = createGitHubClient(fixtureTransport).act(project.selectedProjectId!, 'inspect', { name: 'sample/work' });
+  const interrupted = assert.rejects(request, TypeError);
   await started;
   const before = Date.now();
-  await server.close(); await request;
+  await server.close(); await interrupted;
   assert.equal(aborted, true);
   assert.ok(Date.now() - before < 1000, 'Shutdown must not wait for the provider timeout.');
+  const reopened = await openWorkspaceStore(join(directory, 'tracker.db'));
+  try { assert.equal(reopened.projects.view().projects[0]?.title, 'Keep work on close'); }
+  finally { reopened.close(); }
 });
 function memory() {
   let value: StoredGitHub | null = null;

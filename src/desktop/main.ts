@@ -26,6 +26,9 @@ app.setPath('userData', profileDirectory);
 let window: BrowserWindow | null = null;
 let service: LocalServer | undefined;
 let closing = false;
+const traceShutdown = (stage: string) => {
+  if (process.env.FOCUSFLOW_SHUTDOWN_TRACE === '1') console.log('FOCUSFLOW_SHUTDOWN:' + stage);
+};
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -40,9 +43,11 @@ if (!app.requestSingleInstanceLock()) {
     if (closing || !service) return;
     event.preventDefault();
     closing = true;
+    traceShutdown('desktop:begin');
     // Release renderer connections before awaiting the local HTTP service.
     window?.destroy();
-    void service.close().then(() => app.quit(), () => app.exit(1));
+    void service.close().then(() => { traceShutdown('desktop:complete'); app.quit(); },
+      () => { traceShutdown('desktop:failed'); app.exit(1); });
   });
   app.on('window-all-closed', () => { if (!closing) app.quit(); });
 
@@ -53,7 +58,8 @@ if (!app.requestSingleInstanceLock()) {
       encrypt: value => safeStorage.encryptStringAsync(value),
       decrypt: async value => (await safeStorage.decryptStringAsync(value)).result,
     }));
-    service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), sampleLabel: profile.sampleLabel, github, ai });
+    service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), sampleLabel: profile.sampleLabel,
+      github, ai, onShutdown: traceShutdown });
     const origin = service.origin;
     window = new BrowserWindow({
       width: 1120,

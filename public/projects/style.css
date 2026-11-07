@@ -208,22 +208,25 @@ nav[aria-label="Project list"] .nav-item {
 .github-disconnect { display: grid; justify-items: start; gap: 10px; border-top: 1px solid #dfe5d9; padding-top: 16px; }
 .github-connection .github-disconnect-button { border-color: #d5bcb0; color: #8d4e38; background: #fff8f4; }
 
-.project-main { min-width: 0; }
+.project-main { min-width: 0; max-width: none; padding-inline: clamp(20px, 3vw, 48px); }
 .project-layout-buttons { display: flex; gap: 8px; margin: 20px 0 12px; }
 .project-layout-buttons button { padding: 10px 16px; border: 1px solid #bacbb0; border-radius: 7px; background: #fff; color: #35543c; }
 .project-layout-buttons button[aria-pressed="true"] { background: #35543c; color: #fff; }
 .board-hint { color: #65745e; font-size: 12px; line-height: 1.6; }
-.project-status-board { display: grid; grid-template-columns: repeat(4, minmax(250px, 1fr)); gap: 14px; overflow-x: auto; padding: 6px 2px 18px; }
+.project-status-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; overflow-x: auto; padding: 6px 2px 18px; }
 .project-status-board:focus-visible { outline: 3px solid #92b79b; outline-offset: 3px; }
 .status-column { min-width: 0; padding: 16px 12px; border: 1px solid #bdcbb4; border-top-width: 4px; border-radius: 10px; background: #f0f4eb; }
 .status-column[data-status="in_progress"] { border-color: #90a9c1; background: #eef3f8; }
 .status-column[data-status="review"] { border-color: #c8ad74; background: #f8f1e4; }
 .status-column[data-status="done"] { border-color: #8eb69b; background: #eaf3ed; }
-.status-column h3 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 18px; font-size: 14px; }
+.status-column h3 { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 18px; font-size: 14px; }
 .status-column ul { list-style: none; margin: 0; padding: 0; }
 .status-column .ticket-card { padding: 14px; }
 .status-column .ticket-card-heading { flex-wrap: wrap; gap: 8px; }
 .ticket-milestone { color: #65745e; font-size: 11px; overflow-wrap: anywhere; }
+.board-navigation { display: flex; gap: 8px; margin-bottom: 8px; }
+.board-navigation button { border: 1px solid #bacbb0; border-radius: 7px; padding: 10px 14px; background: #fff; color: #35543c; }
+@media (max-width: 1000px) { .project-status-board { grid-template-columns: repeat(4, minmax(200px, 1fr)); } }
 
 .ticket-blockers { padding: 12px 14px; border: 1px solid #d9bd87; border-radius: 8px; background: #fff5df; color: #6d4c1d; font-size: 12px; margin: 6px 0 12px; }
 .blocker-badge { display: inline-block; padding: 3px 8px; border: 1px solid #b58b49; border-radius: 999px; font-size: 11px; }

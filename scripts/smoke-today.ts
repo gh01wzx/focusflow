@@ -32,6 +32,7 @@ for (const key of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'USERP
   if (value) environment[key] = value;
 }
 environment.FOCUSFLOW_TEST_PROFILE = profile;
+environment.FOCUSFLOW_SHUTDOWN_TRACE = '1';
 let application: ElectronApplication | undefined;
 let stage = 'prepare';
 const mark = (name: string) => { stage = name; console.log(`SMOKE_STAGE: ${name}`); };
@@ -71,7 +72,8 @@ async function launch() {
     lifecycleOutput = lines.pop() ?? '';
     if (lifecycleOutput.length > 1024) lifecycleOutput = '';
     for (const line of lines) {
-      if (/^FOCUSFLOW_LIFECYCLE:(before-quit|window-all-closed|will-quit|quit)$/.test(line)) console.log(line);
+      if (/^FOCUSFLOW_LIFECYCLE:(before-quit|window-all-closed|will-quit|quit)$/.test(line)
+        || /^FOCUSFLOW_SHUTDOWN:[a-z:-]+$/.test(line)) console.log(line);
     }
   });
   await application.evaluate(({ app }) => {

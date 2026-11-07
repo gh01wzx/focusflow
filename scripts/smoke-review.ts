@@ -4,6 +4,7 @@ import { _electron as electron } from 'playwright-core';
 import type { ElectronApplication } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { connect } from 'node:net';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -25,6 +26,7 @@ for (const key of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'USERP
 }
 environment.LOCALAPPDATA = join(root, 'local');
 environment.APPDATA = join(root, 'roaming');
+environment.FOCUSFLOW_SHUTDOWN_TRACE = '1';
 await mkdir(environment.APPDATA, { recursive: true });
 const profile = (args: string[]) => selectProfile({ packaged: true, args,
   localDataDirectory: environment.LOCALAPPDATA!, checkoutDirectory: root, schemaVersion: SCHEMA_VERSION });
@@ -36,6 +38,13 @@ const mark = (value: string) => { stage = value; console.log(`REVIEW_STAGE: ${va
 async function launch(args: string[]) {
   const application = await electron.launch({ executablePath: executable, args, env: environment, timeout: 30_000 });
   owned.add(application);
+  let shutdownOutput = '';
+  application.process().stdout?.on('data', (chunk: Buffer) => {
+    shutdownOutput += chunk.toString('utf8');
+    const lines = shutdownOutput.split(/\r?\n/); shutdownOutput = lines.pop() ?? '';
+    if (shutdownOutput.length > 1024) shutdownOutput = '';
+    for (const line of lines) if (/^FOCUSFLOW_SHUTDOWN:[a-z:-]+$/.test(line)) console.log(line);
+  });
   const page = await application.firstWindow({ timeout: 15_000 });
   page.setDefaultTimeout(10_000);
   await page.getByRole('heading', { name: 'Today.', exact: true }).waitFor();
@@ -112,8 +121,26 @@ try {
     return decrypted.result === plain && !encrypted.includes(Buffer.from(plain));
   }), true, 'Real Windows OS-protected credential storage must round-trip.');
   await exerciseGitHubUI(review.page, 'Sample project', join(artifacts, 'github-connection-simulated.png'));
+  mark('close-with-incomplete-local-request');
+  const origin = new URL(review.page.url()).origin;
+  const partial = connect(Number(new URL(origin).port), '127.0.0.1');
+  partial.on('error', () => {});
+  let connectTimer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([new Promise<void>((resolveConnect, rejectConnect) => {
+      partial.once('connect', resolveConnect); partial.once('error', rejectConnect);
+    }), new Promise<never>((_, reject) => { connectTimer = setTimeout(() => reject(new Error('Incomplete-request fixture could not connect.')), 2000); })]);
+    if (connectTimer) clearTimeout(connectTimer);
+    const disconnected = new Promise<void>(resolveClose => { partial.once('close', () => resolveClose()); });
+    partial.write(`POST /api/tasks HTTP/1.1\r\nHost: ${new URL(origin).host}\r\nOrigin: ${origin}\r\nContent-Type: application/json\r\nContent-Length: 128\r\n\r\n{"title":`);
+    await new Promise(resolveWait => setTimeout(resolveWait, 50));
+    await review.page.evaluate(async () => { const response = await fetch('/api/tasks'); await response.arrayBuffer(); });
+    await close(review.application);
+    await Promise.race([disconnected, new Promise<never>((_, reject) => {
+      connectTimer = setTimeout(() => reject(new Error('The owned incomplete-request socket did not close.')), 2000);
+    })]);
+  } finally { if (connectTimer) clearTimeout(connectTimer); partial.destroy(); }
   mark('reopen-same-review-data');
-  await close(review.application);
   review = await launch(['--review', 'pr-72']);
   await review.page.getByText('Review change persists', { exact: true }).waitFor();
   const reopened = await review.page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;

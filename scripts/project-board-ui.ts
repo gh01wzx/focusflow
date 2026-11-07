@@ -10,6 +10,38 @@ export async function exerciseProjectBoard(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Status board', exact: true }).click();
   const board = page.getByRole('region', { name: 'Project status board', exact: true });
   await board.waitFor();
+  const originalViewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+  try {
+    for (const width of [1280, 1120]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      const fits = await board.evaluate(element => {
+        const columns = [...element.querySelectorAll('.status-column')].map(column => column.getBoundingClientRect());
+        const bounds = element.getBoundingClientRect();
+        return element.scrollWidth <= element.clientWidth + 2 && columns.every(column => column.left >= bounds.left - 1 && column.right <= bounds.right + 1);
+      });
+      assert.equal(fits, true, 'All four columns, including Done, must fit a normal window.');
+      assert.equal(await page.getByRole('group', { name: 'Board columns', exact: true }).count(), 0);
+    }
+    await page.setViewportSize({ width: 800, height: 640 });
+    const navigation = page.getByRole('group', { name: 'Board columns', exact: true });
+    await navigation.waitFor();
+    const next = navigation.getByRole('button', { name: 'Next columns', exact: true });
+    for (let count = 0; count < 5 && await next.isEnabled(); count++) {
+      await next.click();
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
+    }
+    assert.equal(await board.evaluate(element => {
+      const done = element.querySelector('[data-status="done"]')!.getBoundingClientRect();
+      const bounds = element.getBoundingClientRect(); return done.right <= bounds.right + 1 && done.left >= bounds.left - 1;
+    }), true, 'Narrow windows must expose all of Done through top controls.');
+    const previous = navigation.getByRole('button', { name: 'Previous columns', exact: true });
+    for (let count = 0; count < 5 && await previous.isEnabled(); count++) {
+      await previous.click();
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
+    }
+    assert.equal(await board.evaluate(element => element.scrollLeft <= 2), true);
+  } finally { await page.setViewportSize(originalViewport); }
   const columns = await board.locator('.status-column').evaluateAll(elements => elements.map(element => {
     const rect = element.getBoundingClientRect();
     return { x: rect.x, y: rect.y, right: rect.right, border: parseFloat(getComputedStyle(element).borderLeftWidth) };

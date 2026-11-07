@@ -6,6 +6,16 @@
   background: #e5eadf;
   border-radius: 9px;
 }
+.ai-entry { margin-top: 24px; }
+.ai-dialog { width: min(620px, calc(100vw - 40px)); max-height: calc(100vh - 50px); overflow: auto; border: 1px solid #9caf92; border-radius: 14px; padding: 28px; color: #243b2d; background: #f8f9f6; line-height: 1.6; }
+.ai-dialog::backdrop { background: #17271eb3; }
+.ai-dialog dt { font-weight: 650; }
+.ai-dialog dd { margin: 0 0 12px; overflow-wrap: anywhere; }
+.ai-dialog a { color: #345e3b; }
+.ai-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }
+.ai-dialog button:not(.primary) { border: 1px solid #afbea6; border-radius: 7px; background: #fff; color: #36543c; padding: 10px 14px; font: inherit; }
+.ai-consent { display: flex; align-items: baseline; gap: 10px; margin: 20px 0; }
+.ai-dialog form[method="dialog"] { text-align: right; margin-top: 20px; }
 .workspace-nav button {
   flex: 1;
   border: 0;

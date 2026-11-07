@@ -37,6 +37,12 @@ Use **Edit project**, **Edit milestone** or **Edit ticket** inside a ticket's de
 
 Use **Set prerequisites** in a ticket's details to choose work that must finish first. Click task cards to select or remove them; Selected cards show the saved choices when you reopen the picker. Links stay within the same project, including different milestones. Self-links and circular chains are rejected. Unfinished prerequisites appear by title; click one to open its details. A Ready ticket is recommended and startable only when every prerequisite is Done. Blocked tickets are never recommended, and completing a prerequisite never starts another ticket automatically.
 
+## AI connection preview
+
+Open **AI connection** in the sidebar to check the separate FocusFlow Codex account. Install the pinned official runtime explicitly with npm run ai:install from a source checkout, then choose **Sign in with ChatGPT** and follow the browser link. The shared runtime stays under %LOCALAPPDATA%\FocusFlow\codex-product\runtime. Each app profile supplies its own codex-profile directory for sign-in settings. Live Windows credential-store separation still needs verification. Credentials use the OS credential store; no plaintext fallback is configured and existing Codex App sessions are not copied.
+
+**Check account** does not request a model response. **Run read-only AI check** requires the allowance checkbox and a ChatGPT-authenticated account. It consumes Codex allowance; API-key and other auth modes are refused. Planning and code-writing remain later work. The new product login/keyring/live path still needs an owner-triggered Windows trial; ordinary tests use simulated accounts/results and never call a live model.
+
 ## Run on Windows
 
 Install Node 24.12.x or a later 24.x release. In the project folder, run:

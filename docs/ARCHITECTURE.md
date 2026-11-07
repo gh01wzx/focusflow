@@ -95,7 +95,9 @@ npm run typecheck also checks static import boundaries, unresolved local imports
 
 ## Codex and release work
 
-[src/codex](../src/codex) remains standalone groundwork invoked only by explicit developer commands. Today has no AI execution path.
+[src/codex](../src/codex) owns the checked stdio protocol, bounded process lifetime and fixed read-only probe. [src/ai](../src/ai) composes it for explicit account checks, managed ChatGPT sign-in and one opted-in model check. Shared AI contracts and the checked client expose only display fields, never provider responses or tokens. The sidebar dialog is available in both workspaces. Ordinary launch does not call a model.
+
+The desktop/browser composition shares a pinned codex-product runtime and supplies CODEX_HOME from the selected app profile's codex-profile directory. Ordinary and review launches use different credential-home paths; live Windows keyring isolation remains unverified. The runtime receives an allowlisted environment without API keys, keyring credential mode and a disposable working directory. On Windows, codex/runtime.ts validates both pinned package versions and resolves the native executable directly. The owned-process launcher hides that executable and avoids the npm wrapper opening another console. Missing native files refuse setup rather than falling back to the wrapper. Sign-in cancellation closes the local protocol without waiting for a provider acknowledgement; owned-process cleanup remains bounded. Service closure cancels an owned sign-in or probe before the local HTTP server closes. External links are limited to the official setup URL and validated HTTPS OpenAI/ChatGPT sign-in hosts. AI planning and writing-code gates remain unverified.
 
 Product GitHub authorization, coding permissions/recovery, independent review and signed updates remain future work. See the [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) and [validation](VALIDATION.md).
 

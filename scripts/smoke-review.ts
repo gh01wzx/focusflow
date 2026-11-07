@@ -1,3 +1,4 @@
+import { exerciseAiUI } from './ai-ui.ts';
 import { exerciseGitHubUI } from './github-ui.ts';
 import { _electron as electron } from 'playwright-core';
 import type { ElectronApplication } from 'playwright-core';
@@ -77,6 +78,8 @@ try {
   let review = await launch(['--review', 'pr-72']);
   await review.page.getByRole('note').filter({ hasText: 'Sample data' }).waitFor();
   assert.match(await review.page.title(), /Review pr-72 - Sample data/);
+  mark('ai-missing-runtime-and-simulated-consent-ui');
+  await exerciseAiUI(review.page, join(artifacts, 'ai-connection-simulated.png'));
   assert.equal(await review.page.getByText('Everyday task stays here', { exact: true }).count(), 0);
   await review.page.getByRole('checkbox', { name: 'Complete Try completing this sample task', exact: true }).click();
   await review.page.getByRole('status').filter({ hasText: 'Task completed.' }).waitFor();

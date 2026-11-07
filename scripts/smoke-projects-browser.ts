@@ -1,3 +1,4 @@
+import { exerciseAiUI } from './ai-ui.ts';
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
@@ -22,6 +23,8 @@ try {
   page.setDefaultTimeout(10000);
   await page.goto(server.origin, { waitUntil: 'domcontentloaded' });
   await page.getByRole('heading', { name: 'Today.', exact: true }).waitFor();
+  stage = 'simulated-ai-ui';
+  await exerciseAiUI(page, join(artifacts, 'ai-connection-simulated.png'));
   stage = 'project-interactions';
   const saved = await exerciseProjectUI(page, join(artifacts, 'actions.png'), join(artifacts, 'ticket-edit.png'));
   stage = 'simulated-github-ui';
@@ -56,6 +59,7 @@ try {
   await writeFile(join(artifacts, 'report.json'), JSON.stringify({
     status: 'verified', commit: process.env.GITHUB_SHA ?? 'unknown',
     scope: 'Browser project UI, status buttons, error/cancel drafts, focus restoration, cross-milestone prerequisites and local server/browser-context restart with disposable data.',
+    ai: 'Missing runtime and simulated account/consent UI; no live provider requests or model.',
     github: 'Simulated account/repository UI, explicit confirmation and late-read protection; no live provider requests.',
     limits: 'Does not verify Electron launch, native window close or Windows installation.',
   }, null, 2));

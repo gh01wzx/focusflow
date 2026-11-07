@@ -6,6 +6,9 @@ import type { LocalServer } from '../http/local-server.ts';
 import { MigrationError, NewerDatabaseError } from '../database/migrate.ts';
 import { SCHEMA_VERSION } from '../database/schema.ts';
 import { selectProfile } from '../runtime/profile.ts';
+import { createAiService } from '../ai/service.ts';
+import { createAiRuntime } from '../ai/runtime.ts';
+import { AI_SETUP_URL, isAiSignInUrl } from '../shared/ai.ts';
 
 import { createGitHubVault } from '../github/vault.ts';
 import { createGitHubService } from '../github/service.ts';
@@ -44,12 +47,13 @@ if (!app.requestSingleInstanceLock()) {
   app.on('window-all-closed', () => { if (!closing) app.quit(); });
 
   void app.whenReady().then(async () => {
+    const ai = createAiService(createAiRuntime(process.env.LOCALAPPDATA ?? app.getPath('appData'), true, profileDirectory));
     const github = createGitHubService(createGitHubVault(join(profileDirectory, 'github'), {
       available: async () => process.platform === 'win32' && await safeStorage.isAsyncEncryptionAvailable(),
       encrypt: value => safeStorage.encryptStringAsync(value),
       decrypt: async value => (await safeStorage.decryptStringAsync(value)).result,
     }));
-    service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), sampleLabel: profile.sampleLabel, github });
+    service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), sampleLabel: profile.sampleLabel, github, ai });
     const origin = service.origin;
     window = new BrowserWindow({
       width: 1120,
@@ -68,7 +72,8 @@ if (!app.requestSingleInstanceLock()) {
     });
     window.removeMenu();
     window.webContents.setWindowOpenHandler(({ url }) => {
-      if (['https://github.com/login/device', 'https://github.com/settings/apps'].includes(url)) {
+      if (url === AI_SETUP_URL || isAiSignInUrl(url) ||
+          ['https://github.com/login/device', 'https://github.com/settings/apps'].includes(url)) {
         void shell.openExternal(url).catch(() => {});
       }
       return { action: 'deny' };

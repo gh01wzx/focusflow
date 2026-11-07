@@ -71,7 +71,7 @@ The controller refreshes on focus/visibility and every 30 seconds while visible.
 
 ## Manual Projects
 
-Projects and milestones have titles/descriptions. Tickets add acceptance criteria, six manual statuses and creation/update timestamps. SQL foreign keys bind each Ticket to a milestone and each milestone to a project. Status writes are idempotent when unchanged.
+Projects and milestones have titles/descriptions. Tickets add acceptance criteria, four manual statuses and creation/update timestamps. SQL foreign keys bind each Ticket to a milestone and each milestone to a project. Status writes are idempotent when unchanged.
 
 GET /api/projects optionally accepts projectId; it returns the project list and only the selected project's milestones/tickets. POST /api/projects, /api/milestones and /api/project-tickets create each level. POST /api/project-tickets/:id/status changes a manual status.
 
@@ -81,9 +81,13 @@ The controller allows one details editor at a time. It blocks view navigation du
 
 The controller displays only the selected milestone's tickets. Write requests allow up to 32 KiB for multiline text; Personal keeps its 4 KiB limit. Runtime codecs check records, parent associations and manual execution mode. Manual ticket actions do not call GitHub or Codex; the optional project connection is separate.
 
-Deletion, Kanban and AI remain later Tickets.
+Deletion and AI remain later Tickets.
 
 ## Keep the boundaries
+
+TicketBlockerNotice renders a separate card notice, never a nested link inside the ticket's button. It lists unfinished prerequisites with direct ticket links and milestone context. ProjectHierarchy reuses its existing cross-milestone dialog navigation; ActionCenter can open that exact ticket through the same hierarchy. TicketBlockerEditor edits a separate manual reason through the checked client, controller, POST /api/project-tickets/:id/blocker, service validation and SQL repository. Editing blocks navigation/dismissal until Save or Cancel; failures retain the draft. Shared blocker rules exclude blocked Backlog tickets from recommendations and the final Start check. Blocker changes never change status. Done cards retain their records without displaying an active blocked notice.
+
+Schema 8 rebuilds the ticket table with four status values and a bounded manual block_reason. It retains IDs, text, timestamps, execution mode and every prerequisite link, and restores foreign keys, indexes and same-project/cycle triggers in the same transaction. Old Ready maps to Backlog; old Blocked maps to Backlog with a retained manual notice. A verified snapshot is required before an existing database changes. Schema 7 retains the exact published draft-storage table for compatibility with draft review data; it does not enable AI planning in this build.
 
 - Components render controls; the controller coordinates state; the client handles HTTP.
 - Shared contracts/calendar code have no Node, React or feature dependencies.
@@ -103,7 +107,7 @@ Product GitHub authorization, coding permissions/recovery, independent review an
 
 ## Project action center
 
-Projects opens ActionCenter with useActionsController. GET /api/project-actions reads all project views in one transaction; shared/actions.ts selects Review, In Progress and at most one eligible Ready task by creation time then ID. The client checks every project view and dependency graph before use. POST /api/project-tickets/:id/start checks Ready status and prerequisites inside its write transaction, using the same shared eligibility rule. Refresh responses cannot overwrite later mutations. Shared ProjectNavigation links the action center and individual projects directly; the hierarchy controller loads the selected project on entry. No AI ranking is implied.
+Projects opens ActionCenter with useActionsController. GET /api/project-actions reads all project views in one transaction; shared/actions.ts selects Review, In Progress and at most one eligible unblocked Backlog task by creation time then ID. The client checks every project view and dependency graph before use. POST /api/project-tickets/:id/start checks Backlog status and manual blockers and prerequisites inside its write transaction, using the same shared eligibility rule. Refresh responses cannot overwrite later mutations. Shared ProjectNavigation links the action center and individual projects directly; the hierarchy controller loads the selected project on entry. No AI ranking is implied.
 
 Ticket cards open a native ProjectDialog for details, status buttons and ticket editing. EntityComposer and TicketComposer render forms only inside creation dialogs; the project sidebar owns New project. Compact milestone/ticket buttons keep the main page focused on existing work. Dialogs use native focus containment and restore focus on close; busy saves and unfinished ticket edits prevent dismissal. ProjectHierarchy owns which dialog is open; the project controller owns saved feedback and navigation actions. ProjectDialog handles native focus containment, focus restoration and dismissal.
 
@@ -117,4 +121,4 @@ Prerequisite choices use native toggle buttons with aria-pressed and explicit Se
 
 GitHubConnection groups account status, repository selection, explicit confirmation and collapsible connection settings. It retains its existing request generation/busy guards. The shared scripts/github-ui.ts scenario exercises the same simulated UI in independent browser and installed review checks.
 
-ProjectBoard renders all selected-project tickets in six horizontal status columns only when requested. ProjectHierarchy owns the Milestones/Status board choice and reuses ManualTicket for cards and dialogs; SQL and status/dependency rules are unchanged. Board cards include milestone context. The shared project-board-ui scenario checks cross-milestone coverage, horizontal boundaries, status movement, focus restoration, failed writes, dependency navigation and agreement with Action center. Existing browser/installed restart checks retain the resulting records.
+ProjectBoard renders all selected-project tickets in four horizontal status columns only when requested. ProjectHierarchy owns the Milestones/Status board choice and reuses ManualTicket for cards and dialogs; Shared status/blocker rules also gate recommendations and Start. Board cards include milestone context. The shared project-board-ui scenario checks cross-milestone coverage, horizontal boundaries, status movement, focus restoration, failed writes, dependency navigation and agreement with Action center. Existing browser/installed restart checks retain the resulting records.

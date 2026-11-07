@@ -81,6 +81,8 @@ For a verified snapshot, run restore-snapshot.ts below with a new destination at
 
 ## Backup and recovery
 
+Format 8 adds four ticket statuses with independent blocker notices. Old Ready becomes Backlog; old Blocked becomes Backlog with a manual reason that remains until explicitly cleared. Upgrades retain prerequisite links and take the normal verified pre-change snapshot. Published draft-storage format 7 remains compatible. Named review/development profiles open separate format-8 sample directories without copying, resetting or deleting earlier format data. Use Review-FocusFlow.cmd task-41-four-states for a fresh sample board; reopen the same name to retain edits.
+
 Existing product schema changes take a verified snapshot before transactional migration. Schema 5 adds weekday selection while retaining Personal/project data and existing weekly periods. Append migrations; do not rewrite an applied migration. A fresh database needs no pre-upgrade snapshot.
 
 To restore a snapshot manually, close all app instances and preserve the original database plus any WAL/SHM sidecars. Keep the snapshot and matching .db.json manifest together, then run:

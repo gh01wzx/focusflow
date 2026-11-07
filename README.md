@@ -13,7 +13,7 @@ A Windows desktop task tracker built with TypeScript, React, Electron and SQLite
 - Repeat daily or on selected weekdays, retain missed periods in History and stop future repeats.
 - Switch to Projects, create projects/milestones/manual tickets, write acceptance criteria and change ticket status.
 
-Deletion, Kanban, AI planning, coding/review and one-click updates are not implemented.
+Deletion, AI planning, coding/review and one-click updates are not implemented.
 
 ## Repeating tasks
 
@@ -27,15 +27,19 @@ Expand **Repeating tasks** to stop a schedule. Its current-period task stays ava
 
 ## Manual projects
 
-Choose **Projects** to see three horizontal columns: Review, In Progress and one recommended Ready ticket across all projects. Each column has its own border, background and count. Smaller windows can scroll the columns horizontally. Lists use creation time, oldest first, with ticket ID breaking ties. Expand View details for descriptions and acceptance criteria. Start ticket moves only the chosen Ready ticket to In Progress; nothing starts automatically. Mark a ticket Ready only when its prerequisites are finished.
+Choose **Projects** to see three horizontal columns: Review, In Progress and one recommended unblocked Backlog ticket across all projects. Each column has its own border, background and count. Smaller windows can scroll the columns horizontally. Lists use creation time, oldest first, with ticket ID breaking ties. Expand View details for descriptions and acceptance criteria. Start ticket moves only the chosen Backlog ticket to In Progress; nothing starts automatically. A Backlog ticket can start only when its prerequisites are Done and no manual blocker remains.
 
-Select a project directly in the sidebar to open its milestones and tickets. **New project** is in the sidebar only. Compact **New milestone** and **New ticket** buttons open separate creation dialogs, keeping the main page focused on existing work. **Action center** stays in the sidebar to return to the overview. Open a ticket card for its description and acceptance criteria. Use its status buttons to move between Backlog, Ready, In Progress, Review, Done and Blocked. Descriptions and acceptance criteria support multiple lines.
+Select a project directly in the sidebar to open its milestones and tickets. **New project** is in the sidebar only. Compact **New milestone** and **New ticket** buttons open separate creation dialogs, keeping the main page focused on existing work. **Action center** stays in the sidebar to return to the overview. Open a ticket card for its description and acceptance criteria. Use its status buttons to move between Backlog, In Progress, Review and Done. Descriptions and acceptance criteria support multiple lines.
 
-The sidebar selects a project; the milestone selector limits the visible ticket list. Manual tickets have no GitHub/Codex controls. Everything stays in the local database across restarts. Switching workspaces starts their default view; unsaved form drafts are not retained across workspace changes. Choose Status board to browse tickets from all milestones in six horizontal status columns. Each card shows its milestone and opens the same details/status controls. Milestones returns to the focused list; Action center stays the default.
+The sidebar selects a project; the milestone selector limits the visible ticket list. Manual tickets have no GitHub/Codex controls. Everything stays in the local database across restarts. Switching workspaces starts their default view; unsaved form drafts are not retained across workspace changes. Choose Status board to browse tickets from all milestones in four horizontal status columns. Each card shows its milestone and opens the same details/status controls. Milestones returns to the focused list; Action center stays the default.
 
 Use **Edit project**, **Edit milestone** or **Edit ticket** inside a ticket's details dialog to correct its title and details. Tickets also allow editing acceptance criteria. **Save changes** keeps the same identity, parent and status, including Done; **Cancel** discards the draft without saving. A failed save keeps your input. Save or cancel an edit before switching projects, milestones or workspaces.
 
-Use **Set prerequisites** in a ticket's details to choose work that must finish first. Click task cards to select or remove them; Selected cards show the saved choices when you reopen the picker. Links stay within the same project, including different milestones. Self-links and circular chains are rejected. Unfinished prerequisites appear by title; click one to open its details. A Ready ticket is recommended and startable only when every prerequisite is Done. Blocked tickets are never recommended, and completing a prerequisite never starts another ticket automatically.
+Use **Set prerequisites** in a ticket's details to choose work that must finish first. Click task cards to select or remove them; Selected cards show the saved choices when you reopen the picker. Links stay within the same project, including different milestones. Self-links and circular chains are rejected. Unfinished prerequisites appear by title; click one to open its details. A Backlog ticket is recommended and startable only when every prerequisite is Done and no manual blocker remains. Blocked is a notice, not a status or column. The card lists unfinished prerequisite titles and milestone names as clickable links. Links open the exact ticket, including across milestones; the action center uses the same links. Completing prerequisites removes that notice without changing status or starting work.
+
+Use **Add blocker** inside a ticket for waiting on something outside the project. Save a reason, edit it later or choose **Clear blocker** explicitly. Manual blockers stay visible until cleared, even after prerequisites finish. A failed save keeps your input; Cancel discards it. Blockers can appear on Backlog, In Progress and Review cards. Done cards keep their saved reason and dependency records without displaying an active blocked notice.
+
+Existing installed data upgrades only after a verified pre-change backup. Old Ready tickets become Backlog; old Blocked tickets become Backlog with a manual blocker that you must explain or clear. IDs, text and dependency links remain. Named reviews use separate format-8 sample data; previous review formats remain untouched.
 
 ## AI connection preview
 
@@ -77,9 +81,9 @@ npm ci
 
 Use the name given in the PR. The equivalent command is npm run review -- pr-72. The window shows **Sample data - Review pr-72** in its title and a yellow **Sample data** notice above both workspaces.
 
-The first run creates a few Personal examples and **Sample project** with three milestones and 12 manual tickets: two in each status. Open the project and choose **Status board** to see them together. Examples include a Ready ticket waiting for a prerequisite in another milestone, Blocked tickets and an active ticket with a completed prerequisite. Descriptions explain what to try; each ticket includes acceptance steps.
+The first run creates a few Personal examples and **Sample project** with three milestones and 12 manual tickets covering all four statuses. Open the project and choose **Status board** to see them together. Examples include a Backlog ticket waiting for a prerequisite in another milestone, a manual blocker and an active ticket with a completed prerequisite. Descriptions explain what to try; each ticket includes acceptance steps.
 
-Add, complete or change examples freely. Reopen with the same name to keep your changes; a different name starts a separate workspace. Review names use letters, numbers and hyphens. Existing review databases are never topped up or reset. To get newly added examples, use a new review name, such as task-41-demo-1.
+Add, complete or change examples freely. Reopen with the same name to keep your changes; a different name starts a separate workspace. Review names use letters, numbers and hyphens. Existing review databases are never topped up or reset. To get newly added examples, use a new review name, such as task-41-four-states.
 
 An installed build also supports review mode:
 

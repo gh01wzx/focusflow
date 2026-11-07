@@ -22,6 +22,7 @@ export function createProjectClient(transport: typeof fetch = fetch) {
     addMilestone: (projectId: string, draft: EntityDraft) => request('/api/milestones', { ...draft, projectId }),
     addTicket: (draft: TicketDraft) => request('/api/project-tickets', draft),
     setPrerequisites: (id: string, prerequisiteIds: string[]) => request(`/api/project-tickets/${encodeURIComponent(id)}/prerequisites`, { prerequisiteIds }),
+    setBlocker: (id: string, reason: string) => request(`/api/project-tickets/${encodeURIComponent(id)}/blocker`, { reason }),
     editProject: (id: string, draft: EntityDraft) => request(`/api/projects/${encodeURIComponent(id)}/details`, draft),
     editMilestone: (id: string, draft: EntityDraft) => request(`/api/milestones/${encodeURIComponent(id)}/details`, draft),
     editTicket: (id: string, draft: TicketDetailsDraft) => request(`/api/project-tickets/${encodeURIComponent(id)}/details`, draft),

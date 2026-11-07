@@ -98,7 +98,7 @@ try {
   await board.waitFor();
   for (const status of TICKET_STATUSES) {
     assert.equal(await board.getByRole('region', { name: TICKET_STATUS_LABELS[status], exact: true })
-      .getByRole('button', { name: /^Open ticket / }).count(), 2);
+      .getByRole('button', { name: /^Open ticket / }).count(), status === 'backlog' ? 6 : 2);
   }
   assert.equal(await board.getByRole('button', { name: /^Open ticket / }).count(), 12);
   await review.page.getByRole('note').filter({ hasText: 'Review pr-72' }).waitFor();

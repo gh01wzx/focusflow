@@ -125,7 +125,7 @@ try {
   const dependentId = second.view.tickets.find(ticket => ticket.id !== prerequisiteId)!.id;
   await post(page, '/api/project-tickets/' + dependentId + '/prerequisites', { prerequisiteIds: [prerequisiteId] });
   await post(page, '/api/project-tickets/' + prerequisiteId + '/status', { status: 'done' });
-  await post(page, '/api/project-tickets/' + dependentId + '/status', { status: 'ready' });
+  await post(page, '/api/project-tickets/' + dependentId + '/status', { status: 'backlog' });
   const saved = await views(page, projectId);
   assert.equal(saved.projects.tickets.length, 2);
   assert.deepEqual(saved.projects.dependencies, [{ ticketId: dependentId, prerequisiteId }]);

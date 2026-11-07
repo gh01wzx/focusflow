@@ -22,7 +22,7 @@ Source: the owner's Personal & Projects Tracker brief v0.1 and later approvals. 
 
 - Project → Milestone → Ticket; checklists/acceptance criteria, no unlimited nesting.
 - Ticket fields: title, description, status, acceptance criteria, milestone, manual/Codex execution mode and optional dependencies.
-- States: Backlog, Ready, In Progress, Review, Done, Blocked.
+- States: Backlog, In Progress, Review, Done. Blocked is an independent notice: unfinished prerequisites link to their tickets; a manual reason can be added and cleared explicitly. Only unblocked Backlog work is eligible to start.
 - Manual tasks have no irrelevant GitHub/Codex controls.
 - Full hierarchy and Kanban remain available behind the simpler action center.
 

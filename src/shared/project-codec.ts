@@ -20,6 +20,7 @@ function ticket(value: unknown): value is ProjectTicket {
     && typeof value.milestoneId === 'string'
     && typeof value.title === 'string' && typeof value.description === 'string'
     && typeof value.acceptanceCriteria === 'string' && isTicketStatus(value.status)
+    && typeof value.blockReason === 'string' && value.blockReason.length <= 1000
     && value.executionMode === 'manual' && timestamp(value.createdAt) && timestamp(value.updatedAt);
 }
 export function parseProject(value: unknown): Project {

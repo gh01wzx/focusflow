@@ -20,19 +20,19 @@ export function seedSampleData(db: DatabaseSync, now: Date): void {
     tasks.add({ title: 'A sample task for tomorrow', plannedDate: nextOccurrence(today, 'daily') });
     tasks.addRecurrence({ title: 'Sample daily check-in', plannedDate: today, frequency: 'daily' });
     const project = projects.addProject({ title: 'Sample project',
-      description: 'A practice project with 12 tickets across three milestones. Open Status board to compare all six statuses. Changes stay in this sample workspace.' });
+      description: 'A practice project with 12 tickets across three milestones. Open Status board to compare all four statuses. Changes stay in this sample workspace.' });
     const plan = projects.addMilestone({ projectId: project.id, title: 'Plan the demo',
-      description: 'Try an available Ready ticket and prepare the input needed by later work.' });
+      description: 'Try an available Backlog ticket and prepare the input needed by later work.' });
     const build = projects.addMilestone({ projectId: project.id, title: 'Build the demo',
       description: 'Compare active, review and blocked tickets, including a prerequisite from another milestone.' });
     const review = projects.addMilestone({ projectId: project.id, title: 'Review the demo',
-      description: 'Check saved changes and finish the goal before starting its dependent Ready ticket.' });
+      description: 'Check saved changes and finish the goal before starting its dependent Backlog ticket.' });
     function add(milestoneId: string, status: TicketStatus, title: string, description: string, acceptanceCriteria: string) {
       const ticket = projects.addTicket({ milestoneId, title, description, acceptanceCriteria });
       projects.setStatus(ticket.id, status);
       return ticket;
     }
-    add(plan.id, 'ready', 'Move this sample ticket',
+    add(plan.id, 'backlog', 'Move this sample ticket',
       'Open this card and try its status buttons. Close and reopen the same review to check persistence.',
       'The card appears once in its chosen column, and its status remains after restarting.');
     const goal = add(plan.id, 'backlog', 'Write the demo goal',
@@ -46,31 +46,32 @@ export function seedSampleData(db: DatabaseSync, now: Date): void {
       'Descriptions and acceptance criteria are available in each example.');
     const cards = add(build.id, 'in_progress', 'Arrange the task cards',
       'An active task with a completed prerequisite in Plan the demo.',
-      'All six columns are visible by scrolling horizontally, with distinct boundaries.');
+      'All four columns are visible by scrolling horizontally, with distinct boundaries.');
     const layout = add(build.id, 'review', 'Check the narrow-window layout',
       'Inspect this example in Review. Resize the window and scroll across the board.',
       'Columns remain separate and cards can still be opened at the minimum window width.');
     add(build.id, 'backlog', 'Add a short column guide',
       'An unstarted example for testing Backlog details and text editing.',
       'A new user can explain what each status means.');
-    const image = add(build.id, 'blocked', 'Wait for the example image',
-      'This is explicitly Blocked and needs Write the demo goal in another milestone. Open its prerequisite to visit it.',
-      'Finish the goal, then choose a suitable next status explicitly.');
+    const image = add(build.id, 'backlog', 'Wait for the example image',
+      'This Backlog card has a manual blocker and needs Write the demo goal in another milestone. The card links directly to that prerequisite.',
+      'Finish the goal and clear the manual reason once the image arrives; then start the ticket explicitly.');
     add(review.id, 'in_progress', 'Check changes after restart',
       'An active example in a different milestone. Change one card and reopen this review name.',
       'The same ticket identity, text, status and prerequisite links are retained.');
     add(review.id, 'review', 'Review the example acceptance steps',
       'A second review item to compare cards from different milestones in the same column.',
       'Every acceptance step describes an observable result.');
-    const dependent = add(review.id, 'ready', 'Start after the demo goal is done',
-      'This Ready card cannot start yet. Its prerequisite is Write the demo goal in Plan the demo.',
+    const dependent = add(review.id, 'backlog', 'Start after the demo goal is done',
+      'This Backlog card cannot start yet. Its prerequisite is Write the demo goal in Plan the demo.',
       'In Progress is refused until the goal is Done. Finishing the goal does not start this card automatically.');
-    const feedback = add(review.id, 'blocked', 'Wait for layout feedback',
+    const feedback = add(review.id, 'backlog', 'Wait for layout feedback',
       'This Blocked example depends on the layout check currently in Review.',
       'Visit the layout check, finish it and explicitly choose this ticket\'s next status.');
     projects.setPrerequisites(cards.id, { prerequisiteIds: [fields.id] });
     projects.setPrerequisites(image.id, { prerequisiteIds: [goal.id] });
     projects.setPrerequisites(dependent.id, { prerequisiteIds: [goal.id] });
     projects.setPrerequisites(feedback.id, { prerequisiteIds: [layout.id] });
+    projects.setBlocker(image.id, { reason: 'Waiting for an example image from outside this project.' });
   });
 }

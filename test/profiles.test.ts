@@ -76,14 +76,15 @@ test('sample edits survive reopening without re-seeding or changing everyday dat
   const examples = store.projects.view();
   assert.equal(examples.milestones.length, 3);
   assert.equal(examples.tickets.length, 12);
-  for (const status of TICKET_STATUSES) assert.equal(examples.tickets.filter(ticket => ticket.status === status).length, 2);
+  for (const status of TICKET_STATUSES) assert.equal(examples.tickets.filter(ticket => ticket.status === status).length, status === 'backlog' ? 6 : 2);
   assert.ok(examples.tickets.every(ticket => ticket.executionMode === 'manual' && ticket.description && ticket.acceptanceCriteria));
   assert.equal(examples.dependencies.length, 4);
   assert.ok(examples.dependencies.every(link => examples.tickets.find(ticket => ticket.id === link.ticketId)!.milestoneId
     !== examples.tickets.find(ticket => ticket.id === link.prerequisiteId)!.milestoneId));
   const dependent = examples.tickets.find(ticket => ticket.title === 'Start after the demo goal is done')!;
   assert.throws(() => store.projects.start(dependent.id), /prerequisites/);
-  assert.equal(projectActions(store.projects.actions()).next?.ticket.title, 'Move this sample ticket');
+  assert.ok(['Move this sample ticket', 'Write the demo goal', 'Add a short column guide'].includes(projectActions(store.projects.actions()).next!.ticket.title));
+  assert.ok(examples.tickets.some(ticket => ticket.blockReason));
   const task = first.due.find(value => value.recurrenceId === null)!;
   store.tasks.resolve(task.id, 'completed');
   store.tasks.add({ title: 'My review task', plannedDate: '2026-11-05' });

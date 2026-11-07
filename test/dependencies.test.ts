@@ -23,7 +23,8 @@ test('unfinished prerequisites control both recommendations and the last Start c
     const a = store.projects.addTicket({ title: 'Use input', milestoneId: milestone.id });
     const b = store.projects.addTicket({ title: 'Prepare input', milestoneId: milestone.id });
     const c = store.projects.addTicket({ title: 'Check input', milestoneId: milestone.id });
-    store.projects.setStatus(a.id, 'ready');
+    store.projects.setStatus(b.id, 'review'); store.projects.setStatus(c.id, 'review');
+    store.projects.setStatus(a.id, 'backlog');
     store.projects.setPrerequisites(a.id, { prerequisiteIds: [b.id, c.id] });
     assert.equal(projectActions(store.projects.actions()).next, null);
     assert.throws(() => store.projects.start(a.id), /prerequisites/);
@@ -32,7 +33,7 @@ test('unfinished prerequisites control both recommendations and the last Start c
     assert.equal(projectActions(store.projects.actions()).next, null);
     store.projects.setStatus(c.id, 'done');
     assert.equal(projectActions(store.projects.actions()).next?.ticket.id, a.id);
-    assert.equal(store.projects.view().tickets.find(t => t.id === a.id)?.status, 'ready');
+    assert.equal(store.projects.view().tickets.find(t => t.id === a.id)?.status, 'backlog');
     store.projects.setStatus(b.id, 'review');
     assert.throws(() => store.projects.start(a.id), /prerequisites/);
     store.projects.setStatus(b.id, 'done');
@@ -43,7 +44,8 @@ test('unfinished prerequisites control both recommendations and the last Start c
     assert.deepEqual(store.projects.view(), before);
     store.projects.setPrerequisites(a.id, { prerequisiteIds: [] });
     assert.equal(store.projects.view().dependencies.length, 0);
-    store.projects.setStatus(a.id, 'blocked');
+    store.projects.setStatus(a.id, 'backlog');
+    store.projects.setBlocker(a.id, { reason: 'Waiting for external feedback' });
     assert.equal(projectActions(store.projects.actions()).next, null);
   } finally { store.close(); await rm(root, { recursive: true, force: true }); }
 });
@@ -94,7 +96,7 @@ test('prerequisite HTTP saves, checked reads and rejected starts agree', async (
   const project = fixture.projects.addProject({ title: 'Dependency test' });
   const milestone = fixture.projects.addMilestone({ projectId: project.id, title: 'Test' });
   const ticket = fixture.projects.addTicket({ milestoneId: milestone.id, title: 'Use input' });
-  fixture.projects.setStatus(ticket.id, 'ready'); fixture.close();
+  fixture.projects.setStatus(ticket.id, 'backlog'); fixture.close();
   const server = await startWorkspaceServer({ dataDirectory: root });
   const transport: typeof fetch = (path, options) => fetch(server.origin + String(path), {
     ...options, headers: { ...options?.headers, Origin: server.origin },
@@ -106,6 +108,7 @@ test('prerequisite HTTP saves, checked reads and rejected starts agree', async (
     const chosen = view.tickets[0]!;
     const next = await client.addTicket({ title: 'Input', description: '', acceptanceCriteria: '', milestoneId: chosen.milestoneId });
     const input = next.tickets.find(t => t.id !== chosen.id)!;
+    await client.setStatus(input.id, 'review');
     await client.setPrerequisites(chosen.id, [input.id]);
     assert.equal(projectActions(await actions.read()).next, null);
     await assert.rejects(actions.start(chosen.id), /prerequisites/);
@@ -131,7 +134,7 @@ test('schema 5 migrates with a restorable unchanged snapshot and backup failure 
     const path = join(root, 'tracker.db');
     prior(path);
     const before = await readFile(path);
-    await writeFile(join(root, 'backups'), 'blocked');
+    await writeFile(join(root, 'backups'), 'backlog');
     await assert.rejects(openWorkspaceStore(path), /DATABASE_MIGRATION_FAILED/);
     assert.deepEqual(await readFile(path), before);
     await rm(join(root, 'backups'));

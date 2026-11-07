@@ -6,7 +6,7 @@ export function createProjectRepository(db: DatabaseSync) {
   const projectColumns = 'SELECT id,title,description,created_at AS createdAt FROM projects';
   const milestoneColumns = 'SELECT id,project_id AS projectId,title,description,created_at AS createdAt FROM milestones';
   const ticketColumns = `SELECT t.id,m.project_id AS projectId,t.milestone_id AS milestoneId,t.title,t.description,
-    t.acceptance_criteria AS acceptanceCriteria,t.status,t.execution_mode AS executionMode,
+    t.acceptance_criteria AS acceptanceCriteria,t.status,t.block_reason AS blockReason,t.execution_mode AS executionMode,
     t.created_at AS createdAt,t.updated_at AS updatedAt FROM project_tickets t
     JOIN milestones m ON m.id=t.milestone_id`;
   const projects = db.prepare(projectColumns + ' ORDER BY created_at,rowid');
@@ -67,6 +67,9 @@ export function createProjectRepository(db: DatabaseSync) {
     },
     setStatus(id: string, status: TicketStatus, at: string) {
       updateStatus.run(status, at, id, status);
+    },
+    setBlocker(id: string, reason: string, at: string) {
+      db.prepare('UPDATE project_tickets SET block_reason=?,updated_at=? WHERE id=? AND block_reason!=?').run(reason, at, id, reason);
     },
     editProject(id: string, value: EntityDraft) {
       updateProject.run(value.title, value.description, id);

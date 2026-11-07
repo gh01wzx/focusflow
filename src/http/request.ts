@@ -10,6 +10,7 @@ export class HttpError extends Error {
 }
 
 export function sendJson(response: ServerResponse, status: number, body: unknown): void {
+  if (response.destroyed || response.writableEnded) return;
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
   response.end(JSON.stringify(body));
 }

@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -68,8 +68,49 @@ export const MIGRATIONS = [
     CREATE TRIGGER ticket_dependencies_update BEFORE UPDATE ON ticket_dependencies BEGIN
       SELECT RAISE(ABORT,'Replace prerequisite links instead of updating them.');
     END;` },
+  // Preserve the published draft-storage format before changing ticket states.
   { version: 7, sql: `CREATE TABLE plan_drafts (
       project_id TEXT PRIMARY KEY REFERENCES projects(id),
       draft_json TEXT NOT NULL CHECK(json_valid(draft_json))
     );` },
+  { version: 8, sql: `CREATE TABLE next_project_tickets (
+      id TEXT PRIMARY KEY, milestone_id TEXT NOT NULL REFERENCES milestones(id),
+      title TEXT NOT NULL, description TEXT NOT NULL, acceptance_criteria TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('backlog','in_progress','review','done')),
+      execution_mode TEXT NOT NULL CHECK(execution_mode='manual'),
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+      block_reason TEXT NOT NULL DEFAULT '' CHECK(length(block_reason)<=1000)
+    );
+    INSERT INTO next_project_tickets
+      SELECT id,milestone_id,title,description,acceptance_criteria,
+        CASE WHEN status IN ('ready','blocked') THEN 'backlog' ELSE status END,
+        execution_mode,created_at,updated_at,
+        CASE WHEN status='blocked' THEN 'Previously marked Blocked. Explain or clear this blocker when the work can continue.' ELSE '' END
+      FROM project_tickets ORDER BY rowid;
+    CREATE TEMP TABLE retained_ticket_dependencies AS SELECT ticket_id,prerequisite_id FROM ticket_dependencies;
+    DROP TABLE ticket_dependencies;
+    DROP TABLE project_tickets;
+    ALTER TABLE next_project_tickets RENAME TO project_tickets;
+    CREATE INDEX project_tickets_milestone ON project_tickets(milestone_id);
+    CREATE TABLE ticket_dependencies (
+      ticket_id TEXT NOT NULL REFERENCES project_tickets(id),
+      prerequisite_id TEXT NOT NULL REFERENCES project_tickets(id),
+      PRIMARY KEY(ticket_id,prerequisite_id), CHECK(ticket_id!=prerequisite_id)
+    );
+    CREATE TRIGGER ticket_dependencies_insert BEFORE INSERT ON ticket_dependencies BEGIN
+      SELECT RAISE(ABORT,'Prerequisites must belong to the same project.')
+      WHERE (SELECT m.project_id FROM project_tickets t JOIN milestones m ON m.id=t.milestone_id WHERE t.id=NEW.ticket_id)
+        != (SELECT m.project_id FROM project_tickets t JOIN milestones m ON m.id=t.milestone_id WHERE t.id=NEW.prerequisite_id);
+      SELECT RAISE(ABORT,'Prerequisites cannot form a cycle.') WHERE EXISTS (
+        WITH RECURSIVE reached(id) AS (
+          SELECT NEW.prerequisite_id UNION
+          SELECT d.prerequisite_id FROM ticket_dependencies d JOIN reached r ON d.ticket_id=r.id
+        ) SELECT 1 FROM reached WHERE id=NEW.ticket_id
+      );
+    END;
+    CREATE TRIGGER ticket_dependencies_update BEFORE UPDATE ON ticket_dependencies BEGIN
+      SELECT RAISE(ABORT,'Replace prerequisite links instead of updating them.');
+    END;
+    INSERT INTO ticket_dependencies SELECT ticket_id,prerequisite_id FROM retained_ticket_dependencies;
+    DROP TABLE retained_ticket_dependencies;` },
 ] as const;

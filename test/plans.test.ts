@@ -19,7 +19,7 @@ import { startWorkspaceServer } from '../src/workspace/server.ts';
 import { openWorkspaceStore } from '../src/workspace/store.ts';
 import { createPlanClient } from '../src/client/plans.ts';
 import { createProjectClient } from '../src/client/projects.ts';
-import { MIGRATIONS } from '../src/database/schema.ts';
+import { MIGRATIONS, SCHEMA_VERSION } from '../src/database/schema.ts';
 import { restoreSnapshot, schemaVersion } from '../src/database/backup.ts';
 
 function suggested(): SuggestedPlan {
@@ -213,11 +213,11 @@ test('schema 6 adds draft storage only after backup; old tasks, weekly days and 
     assert.equal(db.prepare('SELECT title FROM tasks').get()?.title, 'Keep Personal');
     assert.equal(db.prepare('SELECT weekdays_mask FROM recurrence_rules').get()?.weekdays_mask, 5);
     assert.equal(db.prepare('SELECT prerequisite_id FROM ticket_dependencies').get()?.prerequisite_id, 'b');
-    assert.equal(db.prepare('SELECT status FROM project_tickets WHERE id=?').get('a')?.status, 'ready');
+    assert.equal(db.prepare('SELECT status FROM project_tickets WHERE id=?').get('a')?.status, schemaVersion(db) === 6 ? 'ready' : 'backlog');
   }
   const path = join(root, 'tracker.db'); prior(path);
   const store = await openWorkspaceStore(path); store.close();
-  const db = new DatabaseSync(path); retained(db); assert.equal(schemaVersion(db), 7); db.close();
+  const db = new DatabaseSync(path); retained(db); assert.equal(schemaVersion(db), SCHEMA_VERSION); db.close();
   const backup = (await readdir(join(root, 'backups'))).find(file => file.endsWith('.db'))!;
   const recoveredPath = join(root, 'recovered.db'); await restoreSnapshot(join(root, 'backups', backup), recoveredPath);
   const recovered = new DatabaseSync(recoveredPath); retained(recovered); assert.equal(schemaVersion(recovered), 6);
@@ -240,4 +240,27 @@ test('private drafts are included in verified local snapshots', async t => {
     const restored = await openWorkspaceStore(path);
     try { assert.deepEqual(restored.planDrafts.read(project.id), saved); } finally { restored.close(); }
   } finally { store.close(); }
+});
+
+test('workspace shutdown cancels planning before SQLite closes and cannot save a late result', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'focusflow-plan-close-'));
+  const phases: string[] = []; let aborted = false;
+  const server = await startWorkspaceServer({ dataDirectory: root, sampleLabel: 'Test',
+    onShutdown: stage => { phases.push(stage); }, planGenerator: {
+      async generate(_goal, signal) {
+        await new Promise<void>(resolve => signal.addEventListener('abort', () => { aborted = true; resolve(); }, { once: true }));
+        return suggested();
+      },
+    } });
+  t.after(async () => { await server.close(); await rm(root, { recursive: true, force: true }); });
+  const transport: typeof fetch = (path, options) => fetch(server.origin + String(path), { ...options, headers: { ...options?.headers, Origin: server.origin } });
+  const project = await createProjectClient(transport).read();
+  const id = project.selectedProjectId!;
+  const state = await createPlanClient(transport).generate(id, 'Close this request', true);
+  assert.equal(state.busy, true); await server.close(); assert.equal(aborted, true);
+  assert.ok(phases.includes('plans:end')); assert.ok(phases.includes('database:begin'));
+  assert.ok(phases.indexOf('plans:end') < phases.indexOf('database:begin'));
+  const reopened = await openWorkspaceStore(join(root, 'tracker.db'));
+  try { assert.equal(reopened.planDrafts.read(id), null); assert.deepEqual(JSON.parse(JSON.stringify(reopened.projects.view())), project); }
+  finally { reopened.close(); }
 });

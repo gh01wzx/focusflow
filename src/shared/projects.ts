@@ -1,8 +1,7 @@
-export const TICKET_STATUSES = ['backlog', 'ready', 'in_progress', 'review', 'done', 'blocked'] as const;
+export const TICKET_STATUSES = ['backlog', 'in_progress', 'review', 'done'] as const;
 export type TicketStatus = typeof TICKET_STATUSES[number];
 export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
-  backlog: 'Backlog', ready: 'Ready', in_progress: 'In Progress',
-  review: 'Review', done: 'Done', blocked: 'Blocked',
+  backlog: 'Backlog', in_progress: 'In Progress', review: 'Review', done: 'Done',
 };
 
 export interface Project {
@@ -22,6 +21,7 @@ export interface ProjectTicket {
   description: string;
   acceptanceCriteria: string;
   status: TicketStatus;
+  blockReason: string;
   executionMode: 'manual';
   createdAt: string;
   updatedAt: string;

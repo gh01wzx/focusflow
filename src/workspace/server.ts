@@ -24,11 +24,15 @@ const assets = new Map([
   ['/style.css', ['today/style.css', 'text/css; charset=utf-8']],
   ['/projects.css', ['projects/style.css', 'text/css; charset=utf-8']],
 ]);
+export type ShutdownStage = 'transport:begin' | 'transport:stopped' | 'ai:begin' | 'ai:end' | 'github:begin' | 'github:end'
+  | 'plans:begin' | 'plans:end' | 'handlers:draining' | 'database:begin' | 'database:end' | 'workspace:closed';
 
 export async function startWorkspaceServer(options: {
   dataDirectory: string; clock?: () => Date; sampleLabel?: string | null; github?: GitHubService; ai?: AiService; planGenerator?: PlanGenerator;
+  onShutdown?: (stage: ShutdownStage) => void;
 }): Promise<LocalServer> {
   const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock, !!options.sampleLabel);
+  const trace = (stage: ShutdownStage) => { options.onShutdown?.(stage); };
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
   const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });
   const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai));
@@ -94,14 +98,22 @@ export async function startWorkspaceServer(options: {
         error: known ? error.message : 'Could not save local data. Check disk space and try again.',
       });
     }
-  }, store.close);
+  }, () => { trace('database:begin'); store.close(); trace('database:end'); }, async () => {
+    trace('transport:stopped');
+    const results = await Promise.allSettled([
+      (async () => { trace('plans:begin'); await plans.close(); trace('plans:end'); })(),
+      (async () => { trace('ai:begin'); await ai.close(); trace('ai:end'); })(),
+      (async () => { trace('github:begin'); await options.github?.close(); trace('github:end'); })(),
+    ]);
+    trace('handlers:draining');
+    if (results.some(result => result.status === 'rejected')) throw new Error('OWNED_REQUEST_SHUTDOWN_FAILED');
+  });
   let closing: Promise<void> | undefined;
   return { origin: local.origin, close() {
     return closing ??= (async () => {
-      await plans.close();
-      await ai.close();
-      await options.github?.close();
+      trace('transport:begin');
       await local.close();
+      trace('workspace:closed');
     })();
   } };
 }

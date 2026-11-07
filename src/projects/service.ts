@@ -1,6 +1,6 @@
 import type { Project, Milestone, ProjectTicket, ProjectView } from '../shared/projects.ts';
 import type { ProjectRepository } from './repository.ts';
-import { entityInput, parentId, ticketInput, ticketDetailsInput, prerequisiteInput, ticketStatus, ProjectNotFoundError, ProjectInputError } from './validation.ts';
+import { entityInput, parentId, ticketInput, ticketDetailsInput, prerequisiteInput, blockerInput, ticketStatus, ProjectNotFoundError, ProjectInputError } from './validation.ts';
 import { canStartTicket, reachesTicket, unfinishedPrerequisites } from '../shared/dependencies.ts';
 
 export type ProjectTransaction = <T>(operation: (now: Date) => T) => T;
@@ -35,7 +35,8 @@ export function createProjectService(repository: ProjectRepository, transaction:
     start: (id: string): void => transaction(now => {
       const ticket = repository.findTicket(id);
       if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
-      if (ticket.status !== 'ready') throw new ProjectInputError('This ticket is no longer Ready. Refresh before choosing another task.');
+      if (ticket.status !== 'backlog') throw new ProjectInputError('This ticket is no longer in Backlog. Refresh before choosing another task.');
+      if (ticket.blockReason) throw new ProjectInputError('Clear this ticket\'s blocker before starting it.');
       if (!canStartTicket(ticket, repository.listTickets(ticket.projectId), repository.listDependencies(ticket.projectId))) {
         throw new ProjectInputError('Finish this ticket\'s prerequisites before starting it.');
       }
@@ -56,6 +57,13 @@ export function createProjectService(repository: ProjectRepository, transaction:
       }
       const previous = dependencies.filter(link => link.ticketId === id).map(link => link.prerequisiteId).sort();
       if (JSON.stringify(ids) !== JSON.stringify(previous)) repository.setDependencies(id, ids, now.toISOString());
+      return ticket.projectId;
+    }),
+    setBlocker: (id: string, input: unknown): string => transaction(now => {
+      const reason = blockerInput(input);
+      const ticket = repository.findTicket(id);
+      if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
+      repository.setBlocker(id, reason, now.toISOString());
       return ticket.projectId;
     }),
     view: (id?: string): ProjectView => transaction(() => {
@@ -86,7 +94,7 @@ export function createProjectService(repository: ProjectRepository, transaction:
       const milestone = repository.findMilestone(draft.milestoneId);
       if (!milestone) throw new ProjectNotFoundError('Milestone not found.');
       const value: ProjectTicket = { id: nextId(), projectId: milestone.projectId,
-        ...draft, status: 'backlog', executionMode: 'manual',
+        ...draft, status: 'backlog', blockReason: '', executionMode: 'manual',
         createdAt: now.toISOString(), updatedAt: now.toISOString() };
       repository.insertTicket(value);
       return value;
@@ -95,6 +103,9 @@ export function createProjectService(repository: ProjectRepository, transaction:
       const status = ticketStatus(input);
       const ticket = repository.findTicket(id);
       if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
+      if (status === 'in_progress' && ticket.status !== 'in_progress' && ticket.blockReason) {
+        throw new ProjectInputError('Clear this ticket\'s blocker before moving it to In Progress.');
+      }
       if (status === 'in_progress' && ticket.status !== 'in_progress'
         && unfinishedPrerequisites(id, repository.listTickets(ticket.projectId), repository.listDependencies(ticket.projectId)).length) {
         throw new ProjectInputError('Finish the prerequisites before moving this ticket to In Progress.');

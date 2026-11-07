@@ -4,12 +4,15 @@ import { projectActions } from '../../src/shared/actions.ts';
 import type { ActionTicket } from '../../src/shared/actions.ts';
 import { useActionsController } from './useActionsController.ts';
 import { ProjectNavigation } from './components/ProjectNavigation.tsx';
-export function ActionCenter({ onWorkspaceChange, onProject, onNewProject }: WorkspaceProps & {
-  onProject(id: string): void; onNewProject(): void;
+import { TicketBlockerNotice } from './components/TicketBlockers.tsx';
+import { isTicketBlocked } from '../../src/shared/dependencies.ts';
+export function ActionCenter({ onWorkspaceChange, onProject, onTicket, onNewProject }: WorkspaceProps & {
+  onProject(id: string): void; onTicket(projectId: string, ticketId: string): void; onNewProject(): void;
 }) {
   const state = useActionsController();
   const actions = projectActions(state.views ?? []);
   function card(item: ActionTicket, recommended = false) {
+    const view = state.views!.find(view => view.selectedProjectId === item.ticket.projectId)!;
     return <li className="action-card" key={item.ticket.id}>
       <p className="eyebrow">{item.project} / {item.milestone}</p>
       <h3>{item.ticket.title}</h3>
@@ -18,6 +21,10 @@ export function ActionCenter({ onWorkspaceChange, onProject, onNewProject }: Wor
         <h4>Description</h4><p className="action-text">{item.ticket.description || 'No description yet.'}</p>
         <h4>Acceptance criteria</h4><p className="action-text">{item.ticket.acceptanceCriteria || 'No acceptance criteria yet.'}</p>
       </details>
+      <TicketBlockerNotice ticket={item.ticket} view={view} busy={state.busy}
+        onVisit={ticket => onTicket(ticket.projectId, ticket.id)} />
+      {isTicketBlocked(item.ticket, view.tickets, view.dependencies) && <button className="secondary-button" disabled={state.busy}
+        onClick={() => onTicket(item.ticket.projectId, item.ticket.id)}>Inspect blocker</button>}
       {recommended && <button className="primary" disabled={state.busy} onClick={() => void state.start(item.ticket.id)}>Start ticket</button>}
     </li>;
   }
@@ -42,9 +49,9 @@ export function ActionCenter({ onWorkspaceChange, onProject, onNewProject }: Wor
           ? <ul className="action-list">{actions.active.map(item => card(item))}</ul> : <p className="action-empty">No tickets in progress.</p>}</section>
         <section className="action-column next-column" aria-label="Next task">
           <header className="action-column-heading"><h2>Next task</h2><span className="count">{actions.next ? 1 : 0}</span></header>
-          <p className="action-hint">One Ready task with finished prerequisites, oldest created first.</p>
+          <p className="action-hint">One unblocked Backlog task, oldest created first.</p>
           {actions.next ? <ul className="action-list">{card(actions.next, true)}</ul>
-            : <p className="action-empty">No eligible Ready task. Select a project to inspect prerequisites or prepare a Ready ticket.</p>}
+            : <p className="action-empty">No eligible Backlog task. Select a project to add work or inspect blockers.</p>}
           <p className="action-hint action-order">Equal timestamps keep a stable order. Finishing prerequisites never starts another task automatically.</p>
         </section>
       </div>}

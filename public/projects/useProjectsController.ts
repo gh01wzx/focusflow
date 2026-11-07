@@ -4,7 +4,7 @@ import type { EntityDraft, ProjectView, TicketDraft, TicketDetailsDraft, TicketS
 
 const client = createProjectClient();
 
-export function useProjectsController(initialProjectId?: string) {
+export function useProjectsController(initialProjectId?: string, initialTicketId?: string) {
   const [view, setView] = useState<ProjectView | null>(null);
   const [milestoneId, setMilestoneId] = useState('');
   const [busy, setBusy] = useState(false);
@@ -12,16 +12,19 @@ export function useProjectsController(initialProjectId?: string) {
   const [message, setMessage] = useState('');
   const [editing, setEditing] = useState<{ kind: 'project' | 'milestone' | 'ticket'; id: string } | null>(null);
   const selectedProject = useRef<string | undefined>(initialProjectId);
+  const openingTicket = useRef(initialTicketId);
   const busyRef = useRef(false);
   const generation = useRef(0);
   const mounted = useRef(true);
 
   function apply(next: ProjectView, newMilestone = '') {
+    const requested = next.tickets.find(ticket => ticket.id === openingTicket.current)?.milestoneId;
+    openingTicket.current = undefined;
     const sameProject = selectedProject.current === next.selectedProjectId;
     selectedProject.current = next.selectedProjectId ?? undefined;
     setView(next);
     setMilestoneId(current => {
-      const candidate = newMilestone || (sameProject ? current : '');
+      const candidate = newMilestone || requested || (sameProject ? current : '');
       return next.milestones.some(item => item.id === candidate) ? candidate : next.milestones[0]?.id ?? '';
     });
   }
@@ -101,6 +104,7 @@ export function useProjectsController(initialProjectId?: string) {
     ),
     addTicket: (draft: TicketDraft) => run(() => client.addTicket(draft), 'Ticket added.'),
     setPrerequisites: (id: string, ids: string[]) => run(() => client.setPrerequisites(id, ids), 'Prerequisites saved.'),
+    setBlocker: (id: string, reason: string) => run(() => client.setBlocker(id, reason), reason.trim() ? 'Blocker saved.' : 'Blocker cleared.'),
     setStatus: (id: string, status: TicketStatus) => run(() => client.setStatus(id, status), 'Ticket updated.'),
   };
 }

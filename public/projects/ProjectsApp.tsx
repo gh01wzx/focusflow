@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GitHubConnection } from './components/GitHubConnection.tsx';
 import { ActionCenter } from './ActionCenter.tsx';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
@@ -16,14 +16,16 @@ import type { EntityDraft, ProjectTicket } from '../../src/shared/projects.ts';
 import type { EditKind } from './components/DetailsEditor.tsx';
 
 export function ProjectsApp(props: WorkspaceProps) {
-  const [destination, setDestination] = useState<{ projectId?: string } | null>(null);
-  return destination ? <ProjectHierarchy {...props} initialProjectId={destination.projectId} onBack={() => setDestination(null)} />
-    : <ActionCenter {...props} onProject={projectId => setDestination({ projectId })} onNewProject={() => setDestination({})} />;
+  const [destination, setDestination] = useState<{ projectId?: string; ticketId?: string } | null>(null);
+  return destination ? <ProjectHierarchy {...props} initialProjectId={destination.projectId} initialTicketId={destination.ticketId} onBack={() => setDestination(null)} />
+    : <ActionCenter {...props} onProject={projectId => setDestination({ projectId })}
+        onTicket={(projectId, ticketId) => setDestination({ projectId, ticketId })} onNewProject={() => setDestination({})} />;
 }
-function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: WorkspaceProps & { onBack(): void; initialProjectId: string | undefined }) {
-  const state = useProjectsController(initialProjectId);
+function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initialTicketId }: WorkspaceProps & { onBack(): void; initialProjectId: string | undefined; initialTicketId: string | undefined }) {
+  const state = useProjectsController(initialProjectId, initialTicketId);
   const [composing, setComposing] = useState<'project' | 'milestone' | 'ticket' | null>(initialProjectId === undefined ? 'project' : null);
   const [openTicketId, setOpenTicketId] = useState<string | null>(null);
+  const [openingTicket, setOpeningTicket] = useState<string | null>(initialTicketId ?? null);
   const [editingPrerequisites, setEditingPrerequisites] = useState(false);
   const [layout, setLayout] = useState<'milestones' | 'board'>('milestones');
   const [planning, setPlanning] = useState(false);
@@ -32,6 +34,11 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
   const project = view?.projects.find(item => item.id === view.selectedProjectId);
   const milestone = view?.milestones.find(item => item.id === milestoneId);
   const tickets = view?.tickets.filter(item => item.milestoneId === milestoneId) ?? [];
+  useEffect(() => {
+    if (!view || !openingTicket) return;
+    if (view.tickets.some(ticket => ticket.id === openingTicket)) setOpenTicketId(openingTicket);
+    setOpeningTicket(null);
+  }, [view, openingTicket]);
   function editor(kind: EditKind, id: string, initial: EntityDraft, acceptanceCriteria = '') {
     return state.editing?.kind === kind && state.editing.id === id
       ? <DetailsEditor key={kind + id} kind={kind} initial={initial} acceptanceCriteria={acceptanceCriteria}
@@ -42,7 +49,7 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
     return view && <ManualTicket key={ticket.id} ticket={ticket} view={view}
       context={layout === 'board' ? view.milestones.find(item => item.id === ticket.milestoneId)?.title : undefined}
       editingPrerequisites={editingPrerequisites} onEditingChange={setEditingPrerequisites}
-      onPrerequisites={state.setPrerequisites} onVisit={item => {
+      onPrerequisites={state.setPrerequisites} onBlocker={state.setBlocker} onVisit={item => {
         state.clearFeedback(); state.selectMilestone(item.milestoneId); setOpenTicketId(item.id);
       }} open={openTicketId === ticket.id}
       busy={busy || (!!state.editing && state.editing.id !== ticket.id) || !!composing || (openTicketId !== null && openTicketId !== ticket.id)}

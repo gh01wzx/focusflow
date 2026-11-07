@@ -4,6 +4,7 @@ type ProjectRoute =
   | { kind: 'actions' }
   | { kind: 'start'; id: string }
   | { kind: 'prerequisites'; id: string }
+  | { kind: 'blocker'; id: string }
   | { kind: 'view'; projectId?: string }
   | { kind: 'addProject' | 'addMilestone' | 'addTicket' }
   | { kind: 'editProject' | 'editMilestone' | 'editTicket'; id: string }
@@ -19,6 +20,8 @@ export function matchProjectRoute(method: string | undefined, path: string): Pro
   if (path === '/api/projects') return { kind: 'addProject' };
   if (path === '/api/milestones') return { kind: 'addMilestone' };
   if (path === '/api/project-tickets') return { kind: 'addTicket' };
+  const blocker = /^\/api\/project-tickets\/([a-f0-9-]{36})\/blocker$/.exec(path);
+  if (blocker?.[1]) return { kind: 'blocker', id: blocker[1] };
   const prerequisites = /^\/api\/project-tickets\/([a-f0-9-]{36})\/prerequisites$/.exec(path);
   if (prerequisites?.[1]) return { kind: 'prerequisites', id: prerequisites[1] };
   const edit = /^\/api\/(projects|milestones|project-tickets)\/([a-f0-9-]{36})\/details$/.exec(path);
@@ -32,6 +35,10 @@ export function matchProjectRoute(method: string | undefined, path: string): Pro
 }
 export function dispatchProjectRoute(route: ProjectRoute, input: unknown, service: ProjectService) {
   switch (route.kind) {
+    case 'blocker': {
+      const id = service.setBlocker(route.id, input);
+      return { status: 200, body: { view: service.view(id) } };
+    }
     case 'prerequisites': {
       const id = service.setPrerequisites(route.id, input);
       return { status: 200, body: { view: service.view(id) } };

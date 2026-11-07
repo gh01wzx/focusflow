@@ -43,6 +43,11 @@ export function ticketStatus(input: unknown): TicketStatus {
   if (!isTicketStatus(input)) throw new ProjectInputError('Choose a valid ticket status.');
   return input;
 }
+export function blockerInput(input: unknown): string {
+  const value = record(input).reason;
+  if (typeof value !== 'string' || value.length > 1000) throw new ProjectInputError('Describe the blocker using at most 1000 characters, or clear it explicitly.');
+  return value.trim();
+}
 export function prerequisiteInput(input: unknown): string[] {
   const ids = record(input).prerequisiteIds;
   if (!Array.isArray(ids) || !ids.every(id => typeof id === 'string' && /^[a-f0-9-]{36}$/.test(id))

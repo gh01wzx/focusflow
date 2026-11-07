@@ -63,6 +63,8 @@ Explicit developer overrides remain available for existing tools: FOCUSFLOW_TEST
 
 Previous spike data and the separate Codex profile are never imported or deleted by source cleanup. Installed everyday data stays in its original location; source launchers no longer open it by default.
 
+Private plan drafts use the current profile database and its snapshots. Reopening a draft reads local storage only. The shared current shutdown path cancels planning before data closure. No new schema version is introduced for enabling this interface.
+
 ## AI account setup and validation
 
 The AI connection preview uses official Codex app-server over owned stdio, pinned to 0.166.0, with a shared codex-product runtime, a codex-profile directory in the selected app profile, and keyring credential mode. The existing codex-phase0 probe remains separate and keeps its established commands. Runtime installation needs Node 24/npm; the desktop bundles neither a model nor this external runtime.
@@ -81,7 +83,7 @@ For a verified snapshot, run restore-snapshot.ts below with a new destination at
 
 ## Backup and recovery
 
-Schema 7 adds private AI plan drafts as a separate table. Upgrading installed data from schema 6 requires the normal verified pre-change snapshot. Named review/development profiles use fresh schema-7 sample directories and do not copy schema-6 profiles. Keep the same review name to reopen a saved draft; reopening never calls a model. Draft goals and generated text are user data and belong only in local databases/backups, never source, screenshots or CI uploads.
+Format 8 adds four ticket statuses with independent blocker notices. Old Ready becomes Backlog; old Blocked becomes Backlog with a manual reason that remains until explicitly cleared. Upgrades retain prerequisite links and take the normal verified pre-change snapshot. Published draft-storage format 7 remains compatible. Named review/development profiles open separate format-8 sample directories without copying, resetting or deleting earlier format data. Use Review-FocusFlow.cmd task-41-four-states for a fresh sample board; reopen the same name to retain edits.
 
 Existing product schema changes take a verified snapshot before transactional migration. Schema 5 adds weekday selection while retaining Personal/project data and existing weekly periods. Append migrations; do not rewrite an applied migration. A fresh database needs no pre-upgrade snapshot.
 

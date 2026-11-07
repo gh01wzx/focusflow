@@ -145,12 +145,21 @@ nav[aria-label="Project list"] .nav-item {
 .project-dialog .details-editor { margin-bottom: 0; }
 @media (max-width: 760px) { .project-tools { gap: 6px; } .ticket-card-heading { flex-wrap: wrap; gap: 10px; } .project-dialog { padding: 20px; max-height: calc(100vh - 32px); } .ticket-status-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-.prerequisites { margin-top: 18px; border-top: 1px solid #dfe5d9; padding-top: 12px; font-size: 12px; }
-.prerequisite-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.prerequisite-heading h4 { margin: 0; }
-.prerequisite-button, .prerequisite-link { background: none; border: 0; color: #36543c; padding: 6px 0; font: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.prerequisites { margin-top: 18px; border-top: 1px solid #dfe5d9; padding-top: 16px; font-size: 12px; }
+.prerequisite-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.prerequisite-heading h3 { margin: 0; }
+.prerequisite-heading .secondary-button, .prerequisite-buttons button { min-height: 40px; padding: 10px 16px; font-size: 12px; }
+.prerequisite-link { text-align: left; overflow-wrap: anywhere; margin: 4px 0; }
 .blocker-note { display: block; color: #74562a; background: #f8efde; border-left: 3px solid #b89150; padding: 12px; }
-.prerequisites fieldset { border: 1px solid #ccd8c2; padding: 14px; margin: 12px 0; }
-.prerequisites fieldset label { display: flex; align-items: baseline; gap: 8px; margin: 10px 0; overflow-wrap: anywhere; }
-.prerequisites small { color: #66755d; }
-.prerequisite-buttons { display: flex; align-items: center; gap: 12px; }
+.prerequisites fieldset { min-width: 0; border: 0; padding: 0; margin: 18px 0; }
+.prerequisites legend { padding: 0; margin-bottom: 12px; color: #4e6048; }
+.prerequisite-options { display: grid; gap: 8px; }
+.prerequisite-option { display: flex; justify-content: space-between; align-items: center; gap: 16px; width: 100%; min-width: 0; padding: 14px 16px; border: 1px solid #c8d3c0; border-radius: 8px; background: #fff; color: #31482e; text-align: left; }
+.prerequisite-option:hover:not(:disabled) { background: #f0f5eb; border-color: #8ca783; }
+.prerequisite-option[aria-pressed="true"] { border-color: #527557; background: #e8f1e6; box-shadow: inset 3px 0 #527557; }
+.prerequisite-option-details { display: grid; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.prerequisite-option small { color: #66755d; }
+.prerequisite-choice-state { flex-shrink: 0; border-radius: 999px; padding: 5px 10px; background: #eef2e9; color: #52654b; font-size: 11px; }
+.prerequisite-option[aria-pressed="true"] .prerequisite-choice-state { background: #35543c; color: #fff; }
+.prerequisite-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.prerequisite-buttons .primary { margin-left: 0; }

@@ -57,6 +57,13 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string, e
     await setTicketStatus(page, PROJECT_SMOKE_TITLE, value);
   }
   const ticketDialog = await openTicket(page, PROJECT_SMOKE_TITLE);
+  await ticketDialog.getByRole('button', { name: 'Set prerequisites for ' + PROJECT_SMOKE_TITLE, exact: true }).click();
+  const emptyChoices = ticketDialog.getByRole('form', { name: 'Prerequisites for ' + PROJECT_SMOKE_TITLE, exact: true });
+  await emptyChoices.getByText('Add another ticket in this project to choose a prerequisite.', { exact: true }).waitFor();
+  assert.equal(await emptyChoices.getByRole('button', { name: 'Save prerequisites', exact: true }).isDisabled(), true);
+  const cancelChoices = emptyChoices.getByRole('button', { name: 'Cancel', exact: true });
+  if (editScreenshot) await ticketDialog.screenshot({ path: editScreenshot.replace('.png', '-prerequisites-empty.png') });
+  await cancelChoices.click();
   const beforeFailedStatus = await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
   await page.route('**/api/project-tickets/*/status', route => route.fulfill({ status: 500,
     json: { error: 'Could not change ticket status.' } }));
@@ -86,11 +93,12 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string, e
   await addTicket('Separate project work');
   await addEntity('milestone', 'Preparation');
   await addTicket('Prepare input');
+  await addTicket('Check input');
   await page.getByLabel('Milestone', { exact: true }).selectOption({ label: 'Separate goal' });
   let dependent = await openTicket(page, 'Separate project work');
   const prerequisites = dependent.getByRole('form', { name: 'Prerequisites for Separate project work', exact: true });
   const begin = () => dependent.getByRole('button', { name: 'Set prerequisites for Separate project work', exact: true }).click();
-  const choice = () => prerequisites.getByRole('checkbox', { name: 'Prepare input / Preparation', exact: true });
+  const choice = () => prerequisites.getByRole('button', { name: 'Prepare input / Preparation', exact: true });
   const projectId = await page.evaluate(async () => {
     const view = await (await fetch('/api/projects')).json() as ProjectView;
     return view.projects.find(project => project.title === 'Another project')!.id;
@@ -98,8 +106,15 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string, e
   const read = () => page.evaluate(async id => (await fetch('/api/projects?projectId=' + id)).json(), projectId) as Promise<ProjectView>;
   const beforeChoices = await read();
   await begin();
-  assert.equal(await prerequisites.getByRole('checkbox', { name: /Separate project work|Plan / }).count(), 0);
-  await choice().check();
+  assert.equal(await prerequisites.getByRole('button', { name: /Separate project work|Plan / }).count(), 0);
+  assert.equal(await prerequisites.getByRole('checkbox').count(), 0);
+  assert.equal(await prerequisites.getByRole('button', { name: 'Save prerequisites', exact: true }).isDisabled(), true);
+  await choice().focus();
+  await page.keyboard.press('Space');
+  assert.equal(await choice().getAttribute('aria-pressed'), 'true');
+  await page.keyboard.press('Enter');
+  assert.equal(await choice().getAttribute('aria-pressed'), 'false');
+  await choice().click();
   await page.keyboard.press('Escape');
   await dependent.waitFor();
   assert.equal(await dependent.getByRole('button', { name: 'Close Separate project work', exact: true }).isDisabled(), true);
@@ -111,14 +126,21 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string, e
   await prerequisites.getByRole('button', { name: 'Cancel', exact: true }).click();
   assert.deepEqual(await read(), beforeChoices);
   await begin();
-  assert.equal(await choice().isChecked(), false);
-  await choice().check();
+  assert.equal(await choice().getAttribute('aria-pressed'), 'false');
+  await choice().click();
+  const otherChoice = prerequisites.getByRole('button', { name: 'Check input / Preparation', exact: true });
+  await otherChoice.click();
+  assert.equal(await choice().getAttribute('aria-pressed'), 'true');
+  assert.equal(await otherChoice.getAttribute('aria-pressed'), 'true');
+  await otherChoice.click();
+  assert.equal(await otherChoice.getAttribute('aria-pressed'), 'false');
+  if (editScreenshot) await dependent.screenshot({ path: editScreenshot.replace('.png', '-prerequisites.png') });
   await page.route('**/api/project-tickets/*/prerequisites', route => route.fulfill({
     status: 500, json: { error: 'Could not save prerequisite choices.' },
   }));
   await prerequisites.getByRole('button', { name: 'Save prerequisites', exact: true }).click();
   await dependent.getByRole('alert').filter({ hasText: 'Could not save prerequisite choices.' }).waitFor();
-  assert.equal(await choice().isChecked(), true);
+  assert.equal(await choice().getAttribute('aria-pressed'), 'true');
   assert.deepEqual(await read(), beforeChoices);
   await page.unroute('**/api/project-tickets/*/prerequisites');
   await prerequisites.getByRole('button', { name: 'Save prerequisites', exact: true }).click();

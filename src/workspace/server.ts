@@ -73,6 +73,10 @@ export async function startWorkspaceServer(options: {
       if (githubRoute) {
         store.projects.view(githubRoute.projectId);
         const input = request.method === 'GET' ? undefined : await readJson(request, origin);
+        if (githubRoute.action === 'connect') {
+          store.projects.assertRepositoryChange(githubRoute.projectId,
+            input && typeof input === 'object' && 'repositoryId' in input ? input.repositoryId : undefined);
+        }
         sendJson(response, 200, await dispatchGitHubRoute(githubRoute, input, options.github));
         return;
       }

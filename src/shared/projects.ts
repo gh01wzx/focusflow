@@ -1,5 +1,10 @@
 export const TICKET_STATUSES = ['backlog', 'in_progress', 'review', 'done'] as const;
 export type TicketStatus = typeof TICKET_STATUSES[number];
+export type ExecutionMode = 'manual' | 'codex';
+export interface CodingLink {
+  repository: { id: number; fullName: string; private: boolean } | null;
+  issueNumber: number | null;
+}
 export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
   backlog: 'Backlog', in_progress: 'In Progress', review: 'Review', done: 'Done',
 };
@@ -22,7 +27,8 @@ export interface ProjectTicket {
   acceptanceCriteria: string;
   status: TicketStatus;
   blockReason: string;
-  executionMode: 'manual';
+  executionMode: ExecutionMode;
+  coding?: CodingLink;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,6 +46,10 @@ export interface EntityDraft {
 }
 export interface TicketDetailsDraft extends EntityDraft {
   acceptanceCriteria: string;
+  executionMode?: ExecutionMode;
+}
+export function ticketLabel(ticket: ProjectTicket): string {
+  return ticket.coding?.issueNumber ? '#' + ticket.coding.issueNumber + ' ' + ticket.title : ticket.title;
 }
 export interface TicketDraft extends TicketDetailsDraft {
   milestoneId: string;

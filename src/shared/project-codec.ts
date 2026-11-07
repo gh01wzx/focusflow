@@ -1,6 +1,7 @@
 import { isTicketStatus } from './projects.ts';
 import type { Project, Milestone, ProjectTicket, ProjectView } from './projects.ts';
 import { reachesTicket } from './dependencies.ts';
+import { parseGitHubRepository } from './github.ts';
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -21,7 +22,16 @@ function ticket(value: unknown): value is ProjectTicket {
     && typeof value.title === 'string' && typeof value.description === 'string'
     && typeof value.acceptanceCriteria === 'string' && isTicketStatus(value.status)
     && typeof value.blockReason === 'string' && value.blockReason.length <= 1000
-    && value.executionMode === 'manual' && timestamp(value.createdAt) && timestamp(value.updatedAt);
+    && (value.executionMode === 'manual' && value.coding === undefined || value.executionMode === 'codex' && coding(value.coding))
+    && timestamp(value.createdAt) && timestamp(value.updatedAt);
+}
+function coding(value: unknown): boolean {
+  if (!record(value)) return false;
+  try {
+    if (value.repository !== null) parseGitHubRepository(value.repository);
+    return value.issueNumber === null || (value.repository !== null && typeof value.issueNumber === 'number'
+      && Number.isSafeInteger(value.issueNumber) && value.issueNumber > 0);
+  } catch { return false; }
 }
 export function parseProject(value: unknown): Project {
   if (!project(value)) throw new Error('Invalid stored project.');

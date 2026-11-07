@@ -74,7 +74,7 @@ test('invalid titles, parents, status and coding modes create no project records
     const missing = '00000000-0000-0000-0000-000000000000';
     assert.throws(() => store.projects.addMilestone({ projectId: missing, title: 'Missing' }), ProjectNotFoundError);
     assert.throws(() => store.projects.addTicket({ milestoneId: missing, title: 'Missing' }), ProjectNotFoundError);
-    assert.throws(() => store.projects.addTicket({ milestoneId: milestone.id, title: 'Coding', executionMode: 'codex' }), ProjectInputError);
+    assert.throws(() => store.projects.addTicket({ milestoneId: milestone.id, title: 'Coding', executionMode: 'robot' }), ProjectInputError);
     assert.throws(() => store.projects.addTicket({ milestoneId: milestone.id, title: 'Too long', acceptanceCriteria: 'x'.repeat(2001) }), ProjectInputError);
     assert.throws(() => store.projects.setStatus(missing, 'done'), ProjectNotFoundError);
     assert.throws(() => store.projects.view(missing), ProjectNotFoundError);

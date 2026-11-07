@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { parseProject, parseMilestone, parseProjectTicket } from '../shared/project-codec.ts';
-import type { Project, Milestone, ProjectTicket, TicketStatus, EntityDraft, TicketDetailsDraft, TicketDependency } from '../shared/projects.ts';
+import type { Project, Milestone, ProjectTicket, TicketStatus, EntityDraft, TicketDetailsDraft, TicketDependency, ExecutionMode } from '../shared/projects.ts';
 
 export function createProjectRepository(db: DatabaseSync) {
   const projectColumns = 'SELECT id,title,description,created_at AS createdAt FROM projects';
@@ -31,10 +31,21 @@ export function createProjectRepository(db: DatabaseSync) {
   const updateMilestone = db.prepare('UPDATE milestones SET title=?,description=? WHERE id=?');
   const updateTicket = db.prepare(`UPDATE project_tickets SET title=?,description=?,acceptance_criteria=?,updated_at=?
     WHERE id=? AND (title!=? OR description!=? OR acceptance_criteria!=?)`);
+  function parseTicket(row: Record<string, unknown>) {
+    const link = db.prepare('SELECT repository_json,issue_number FROM coding_tickets WHERE ticket_id=?').get(String(row.id));
+    return parseProjectTicket(link ? { ...row, executionMode: 'codex', coding: {
+      repository: link.repository_json === null ? null : JSON.parse(String(link.repository_json)) as unknown,
+      issueNumber: link.issue_number,
+    } } : row);
+  }
+  function setExecutionMode(id: string, mode: ExecutionMode) {
+    if (mode === 'codex') db.prepare('INSERT OR IGNORE INTO coding_tickets(ticket_id) VALUES(?)').run(id);
+    else db.prepare('DELETE FROM coding_tickets WHERE ticket_id=?').run(id);
+  }
   return {
     listProjects: () => projects.all().map(parseProject),
     listMilestones: (id: string) => milestones.all(id).map(parseMilestone),
-    listTickets: (id: string) => tickets.all(id).map(parseProjectTicket),
+    listTickets: (id: string) => tickets.all(id).map(parseTicket),
     listDependencies: (id: string): TicketDependency[] => dependencies.all(id).map(row => ({
       ticketId: String(row.ticketId), prerequisiteId: String(row.prerequisiteId),
     })),
@@ -53,7 +64,7 @@ export function createProjectRepository(db: DatabaseSync) {
     },
     findTicket(id: string) {
       const row = ticketById.get(id);
-      return row === undefined ? undefined : parseProjectTicket(row);
+      return row === undefined ? undefined : parseTicket(row);
     },
     insertProject(value: Project) {
       insertProject.run(value.id, value.title, value.description, value.createdAt);
@@ -63,7 +74,8 @@ export function createProjectRepository(db: DatabaseSync) {
     },
     insertTicket(value: ProjectTicket) {
       insertTicket.run(value.id, value.milestoneId, value.title, value.description, value.acceptanceCriteria,
-        value.status, value.executionMode, value.createdAt, value.updatedAt);
+        value.status, 'manual', value.createdAt, value.updatedAt);
+      setExecutionMode(value.id, value.executionMode);
     },
     setStatus(id: string, status: TicketStatus, at: string) {
       updateStatus.run(status, at, id, status);
@@ -80,6 +92,10 @@ export function createProjectRepository(db: DatabaseSync) {
     editTicket(id: string, value: TicketDetailsDraft, at: string) {
       updateTicket.run(value.title, value.description, value.acceptanceCriteria, at, id,
         value.title, value.description, value.acceptanceCriteria);
+    },
+    setExecutionMode(id: string, mode: ExecutionMode, at: string) {
+      setExecutionMode(id, mode);
+      touchTicket.run(at, id);
     },
   };
 }

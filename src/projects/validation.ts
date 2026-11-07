@@ -27,14 +27,15 @@ export function parentId(input: unknown, field: 'projectId' | 'milestoneId'): st
 }
 export function ticketDetailsInput(input: unknown): TicketDetailsDraft {
   const value = record(input);
-  if (value.executionMode !== undefined && value.executionMode !== 'manual') {
-    throw new ProjectInputError('Only manual tickets are available in this version.');
+  if (value.executionMode !== undefined && value.executionMode !== 'manual' && value.executionMode !== 'codex') {
+    throw new ProjectInputError('Choose Manual or Coding work.');
   }
   const acceptanceCriteria = value.acceptanceCriteria ?? '';
   if (typeof acceptanceCriteria !== 'string' || acceptanceCriteria.length > 2000) {
     throw new ProjectInputError('Keep acceptance criteria within 2000 characters.');
   }
-  return { ...entityInput(input), acceptanceCriteria };
+  return { ...entityInput(input), acceptanceCriteria,
+    ...(value.executionMode === undefined ? {} : { executionMode: value.executionMode as 'manual' | 'codex' }) };
 }
 export function ticketInput(input: unknown): TicketDraft {
   return { ...ticketDetailsInput(input), milestoneId: parentId(input, 'milestoneId') };

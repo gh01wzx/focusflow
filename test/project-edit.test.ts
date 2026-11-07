@@ -75,7 +75,7 @@ test('invalid or missing edit targets leave the complete plan unchanged', async 
         assert.deepEqual(store.projects.view(project.id), before);
       }
     }
-    for (const extra of [{ acceptanceCriteria: 10 }, { acceptanceCriteria: 'x'.repeat(2001) }, { executionMode: 'codex' }]) {
+    for (const extra of [{ acceptanceCriteria: 10 }, { acceptanceCriteria: 'x'.repeat(2001) }, { executionMode: 'robot' }]) {
       assert.throws(() => store.projects.editTicket(ticket.id, { title: 'Valid', ...extra }), ProjectInputError);
     }
     for (const edit of [store.projects.editProject, store.projects.editMilestone, store.projects.editTicket]) {

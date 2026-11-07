@@ -7,6 +7,11 @@ export type ProjectTransaction = <T>(operation: (now: Date) => T) => T;
 
 export function createProjectService(repository: ProjectRepository, transaction: ProjectTransaction, nextId: () => string) {
   return {
+    assertRepositoryChange: (projectId: string, repositoryId: unknown): void => transaction(() => {
+      if (repository.listTickets(projectId).some(ticket => ticket.coding?.issueNumber && ticket.coding.repository?.id !== repositoryId)) {
+        throw new ProjectInputError('This project has published coding work. Keep its repository; use a new project for another repository.');
+      }
+    }),
     editProject: (id: string, input: unknown): string => transaction(() => {
       const value = entityInput(input);
       if (!repository.findProject(id)) throw new ProjectNotFoundError('Project not found.');
@@ -24,6 +29,12 @@ export function createProjectService(repository: ProjectRepository, transaction:
       const value = ticketDetailsInput(input);
       const ticket = repository.findTicket(id);
       if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
+      if (value.executionMode !== undefined && value.executionMode !== ticket.executionMode) {
+        if (ticket.status !== 'backlog' || ticket.coding?.issueNumber) {
+          throw new ProjectInputError('Only an unpublished Backlog ticket can change its execution mode.');
+        }
+        repository.setExecutionMode(id, value.executionMode, now.toISOString());
+      }
       repository.editTicket(id, value, now.toISOString());
       return ticket.projectId;
     }),
@@ -36,6 +47,7 @@ export function createProjectService(repository: ProjectRepository, transaction:
       const ticket = repository.findTicket(id);
       if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
       if (ticket.status !== 'backlog') throw new ProjectInputError('This ticket is no longer in Backlog. Refresh before choosing another task.');
+      if (ticket.executionMode === 'codex') throw new ProjectInputError('Coding work needs an approved published Issue and a verified coding runner before Start is available.');
       if (ticket.blockReason) throw new ProjectInputError('Clear this ticket\'s blocker before starting it.');
       if (!canStartTicket(ticket, repository.listTickets(ticket.projectId), repository.listDependencies(ticket.projectId))) {
         throw new ProjectInputError('Finish this ticket\'s prerequisites before starting it.');
@@ -94,15 +106,18 @@ export function createProjectService(repository: ProjectRepository, transaction:
       const milestone = repository.findMilestone(draft.milestoneId);
       if (!milestone) throw new ProjectNotFoundError('Milestone not found.');
       const value: ProjectTicket = { id: nextId(), projectId: milestone.projectId,
-        ...draft, status: 'backlog', blockReason: '', executionMode: 'manual',
+        ...draft, status: 'backlog', blockReason: '', executionMode: draft.executionMode ?? 'manual',
         createdAt: now.toISOString(), updatedAt: now.toISOString() };
       repository.insertTicket(value);
-      return value;
+      return repository.findTicket(value.id)!;
     }),
     setStatus: (id: string, input: unknown): string => transaction(now => {
       const status = ticketStatus(input);
       const ticket = repository.findTicket(id);
       if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
+      if (ticket.executionMode === 'codex' && status !== ticket.status) {
+        throw new ProjectInputError('Coding progress comes from its run and Done requires an observed pull request merge.');
+      }
       if (status === 'in_progress' && ticket.status !== 'in_progress' && ticket.blockReason) {
         throw new ProjectInputError('Clear this ticket\'s blocker before moving it to In Progress.');
       }

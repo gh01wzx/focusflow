@@ -223,5 +223,28 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string, e
   await exerciseProjectEdits(page, PROJECT_SMOKE_TITLE, editScreenshot);
   await exerciseProjectBoard(page);
   await exercisePlanUI(page);
+  await exerciseCodingIntent(page);
   return await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
+}
+
+async function exerciseCodingIntent(page: Page) {
+  await page.getByRole('button', { name: 'Milestones', exact: true }).click();
+  await page.getByRole('button', { name: 'New ticket', exact: true }).click();
+  await page.getByLabel('Ticket title', { exact: true }).fill('Unpublished coding example');
+  await page.getByLabel('Work type', { exact: true }).selectOption('codex');
+  await page.getByRole('button', { name: 'Add ticket', exact: true }).click();
+  const draft = await openTicket(page, 'Unpublished coding example');
+  await draft.getByText('Coding draft / Unpublished', { exact: true }).waitFor();
+  assert.equal(await draft.getByRole('button', { name: 'Done', exact: true }).count(), 0);
+  assert.equal(await draft.getByRole('button', { name: /Start/ }).count(), 0);
+  await draft.getByRole('button', { name: 'Edit ticket Unpublished coding example', exact: true }).click();
+  await draft.getByLabel('Work type', { exact: true }).selectOption('manual');
+  await draft.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await draft.getByRole('button', { name: 'Done', exact: true }).waitFor();
+  assert.equal(await draft.getByText('Coding draft / Unpublished', { exact: true }).count(), 0);
+  await draft.getByRole('button', { name: 'Edit ticket Unpublished coding example', exact: true }).click();
+  await draft.getByLabel('Work type', { exact: true }).selectOption('codex');
+  await draft.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await draft.getByText('Coding draft / Unpublished', { exact: true }).waitFor();
+  await closeTicket(page, 'Unpublished coding example');
 }

@@ -253,3 +253,4 @@ nav[aria-label="Project list"] .nav-item {
 .plan-milestone li { border-top: 1px solid #e1e7db; padding: 12px 0; }
 .plan-milestone summary { cursor: pointer; color: #35543c; overflow-wrap: anywhere; }
 .plan-mode { color: #66755d; }
+.coding-notice { border-left: 3px solid var(--accent, #55745f); padding: 12px 16px; margin: 16px 0; background: #eef2ee; }

@@ -48,7 +48,7 @@ npm ci
 
 Run npm ci again when dependencies change. After setup, double-click Start-FocusFlow.cmd. The source launcher builds the app and keeps its console open. Source runs open separate development data, marked **Sample data**. Electron downloads its pinned runtime on first use.
 
-For an unsigned installer, open the passing **Windows desktop checks** run and download **windows-today**. Check the run result before using its artifact. The installer bundles Node/Electron; it does not provide automatic updates.
+To build an unsigned installer locally, run npm run package:windows. The output is in release. CI checks packaging but does not retain downloadable installers, screenshots or caches. The installer bundles Node/Electron; it does not provide automatic updates.
 
 ## Local data
 

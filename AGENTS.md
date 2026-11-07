@@ -24,6 +24,11 @@
 - Separate executed checks, code observations, owner-reported results and inference. Bind verification and approval to a commit SHA; changes invalidate earlier approval.
 - A retry passing does not diagnose a failure. A temporary workaround is not a permanent fix. Stop repeated native launches after a crash and record a controlled next experiment.
 
+## CI cost and notifications
+
+- The owner requires no paid CI usage. Automatic workflows run only in public repositories on standard GitHub-hosted Windows/Linux runners. Keep persistent artifact uploads and caches disabled. Paid runners, storage and external services require explicit owner approval.
+- Run feature changes through pull_request and merged code through push on main. Cancel superseded runs for the same PR. Keep real failures visible. Personal email notification settings and billing budgets are separate account controls; never claim they changed without observing the change.
+
 ## Code and data
 
 - Keep components, state coordination, HTTP, task rules and SQL separate. Follow [Architecture](docs/ARCHITECTURE.md) and dependency checks; add abstractions only for current needs.

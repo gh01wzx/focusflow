@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createProjectClient } from '../../src/client/projects.ts';
-import type { EntityDraft, ProjectView, TicketDraft, TicketStatus } from '../../src/shared/projects.ts';
+import type { EntityDraft, ProjectView, TicketDraft, TicketDetailsDraft, TicketStatus } from '../../src/shared/projects.ts';
 
 const client = createProjectClient();
 
@@ -10,6 +10,7 @@ export function useProjectsController(initialProjectId?: string) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [editing, setEditing] = useState<{ kind: 'project' | 'milestone' | 'ticket'; id: string } | null>(null);
   const selectedProject = useRef<string | undefined>(initialProjectId);
   const busyRef = useRef(false);
   const generation = useRef(0);
@@ -76,7 +77,22 @@ export function useProjectsController(initialProjectId?: string) {
     }
   }
   return {
-    view, milestoneId, busy, error, message, refresh,
+    view, milestoneId, busy, error, message, refresh, editing,
+    clearError: () => { if (!busyRef.current) setError(''); },
+    clearFeedback: () => { if (!busyRef.current) { setError(''); setMessage(''); } },
+    beginEdit: (kind: 'project' | 'milestone' | 'ticket', id: string) => {
+      if (!busyRef.current && !editing) { setError(''); setMessage(''); setEditing({ kind, id }); }
+    },
+    cancelEdit: () => { if (!busyRef.current) { setEditing(null); setError(''); } },
+    saveEdit: async (draft: TicketDetailsDraft) => {
+      if (!editing) return false;
+      const { kind, id } = editing;
+      const saved = await run(() => kind === 'ticket' ? client.editTicket(id, draft)
+        : kind === 'project' ? client.editProject(id, { title: draft.title, description: draft.description })
+        : client.editMilestone(id, { title: draft.title, description: draft.description }), 'Changes saved.');
+      if (saved && mounted.current) setEditing(null);
+      return saved;
+    },
     selectProject: (id: string) => run(() => client.read(id), ''),
     selectMilestone: (id: string) => { if (!busyRef.current) setMilestoneId(id); },
     addProject: (draft: EntityDraft) => run(() => client.addProject(draft), 'Project added.'),

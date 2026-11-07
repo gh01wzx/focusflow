@@ -21,6 +21,8 @@
     "scripts/smoke-today.ts",
     "scripts/smoke-review.ts",
     "scripts/project-ui.ts",
+    "scripts/project-edit-ui.ts",
+    "scripts/smoke-projects-browser.ts",
     "scripts/weekday-ui.ts",
     "scripts/smoke-install-update.ts"
   ]

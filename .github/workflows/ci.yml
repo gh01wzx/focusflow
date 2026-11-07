@@ -18,6 +18,24 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm test
+  project-browser:
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.12.0'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm exec -- playwright-core install chromium
+      - run: npm run build
+      - run: node dist/scripts/smoke-projects-browser.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: project-browser-ui
+          path: artifacts/project-browser/
+          retention-days: 14
   codex-transport:
     runs-on: windows-latest
     timeout-minutes: 5

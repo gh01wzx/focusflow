@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { parseProject, parseMilestone, parseProjectTicket } from '../shared/project-codec.ts';
-import type { Project, Milestone, ProjectTicket, TicketStatus } from '../shared/projects.ts';
+import type { Project, Milestone, ProjectTicket, TicketStatus, EntityDraft, TicketDetailsDraft } from '../shared/projects.ts';
 
 export function createProjectRepository(db: DatabaseSync) {
   const projectColumns = 'SELECT id,title,description,created_at AS createdAt FROM projects';
@@ -21,6 +21,10 @@ export function createProjectRepository(db: DatabaseSync) {
     (id,milestone_id,title,description,acceptance_criteria,status,execution_mode,created_at,updated_at)
     VALUES(?,?,?,?,?,?,?,?,?)`);
   const updateStatus = db.prepare('UPDATE project_tickets SET status=?,updated_at=? WHERE id=? AND status!=?');
+  const updateProject = db.prepare('UPDATE projects SET title=?,description=? WHERE id=?');
+  const updateMilestone = db.prepare('UPDATE milestones SET title=?,description=? WHERE id=?');
+  const updateTicket = db.prepare(`UPDATE project_tickets SET title=?,description=?,acceptance_criteria=?,updated_at=?
+    WHERE id=? AND (title!=? OR description!=? OR acceptance_criteria!=?)`);
   return {
     listProjects: () => projects.all().map(parseProject),
     listMilestones: (id: string) => milestones.all(id).map(parseMilestone),
@@ -49,6 +53,16 @@ export function createProjectRepository(db: DatabaseSync) {
     },
     setStatus(id: string, status: TicketStatus, at: string) {
       updateStatus.run(status, at, id, status);
+    },
+    editProject(id: string, value: EntityDraft) {
+      updateProject.run(value.title, value.description, id);
+    },
+    editMilestone(id: string, value: EntityDraft) {
+      updateMilestone.run(value.title, value.description, id);
+    },
+    editTicket(id: string, value: TicketDetailsDraft, at: string) {
+      updateTicket.run(value.title, value.description, value.acceptanceCriteria, at, id,
+        value.title, value.description, value.acceptanceCriteria);
     },
   };
 }

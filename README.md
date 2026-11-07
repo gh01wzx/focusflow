@@ -98,3 +98,5 @@ The [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) is the road
 | [Codex commands](docs/CODEX.md) | Optional standalone integration checks |
 
 Source, app text and repository documentation use English. User-entered content keeps its original language.
+
+GitHub project connection is under development; see [setup and limits](docs/GITHUB_CONNECTION.md). Manual projects work without a GitHub account.

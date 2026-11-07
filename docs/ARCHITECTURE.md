@@ -79,7 +79,7 @@ POST /api/projects/:id/details, /api/milestones/:id/details and /api/project-tic
 
 The controller allows one details editor at a time. It blocks view navigation during editing, retains the editor after failed saves and ignores older refresh responses after a save. DetailsEditor owns its draft, so a background read cannot replace entered text. Cancel only closes the editor.
 
-The controller displays only the selected milestone's tickets. Write requests allow up to 32 KiB for multiline text; Personal keeps its 4 KiB limit. Runtime codecs check records, parent associations and manual execution mode. No GitHub/Codex controls or calls exist in this workflow.
+The controller displays only the selected milestone's tickets. Write requests allow up to 32 KiB for multiline text; Personal keeps its 4 KiB limit. Runtime codecs check records, parent associations and manual execution mode. Manual ticket actions do not call GitHub or Codex; the optional project connection is separate.
 
 Deletion, Kanban and AI remain later Tickets.
 
@@ -108,3 +108,9 @@ Ticket cards open a native ProjectDialog for details, status buttons and ticket 
 POST /api/project-tickets/:id/prerequisites replaces that ticket's prerequisite set atomically. Service validation rejects self-links, missing/foreign parents, duplicate links and cycles. Schema 6 adds foreign keys, uniqueness, self-link checks and insert triggers for same-project/cycle protection; direct SQL updates to links are refused. SQL stays in the repository. Prerequisite changes retain the ticket's chosen status.
 
 Prerequisite choices use native toggle buttons with aria-pressed and explicit Selected labels. Keyboard Enter/Space toggles a card. Save stays disabled until the selection changes; Cancel discards the draft. No checkbox controls or additional request/state layer are used.
+
+## GitHub connection
+
+`shared/github.ts` validates display data; `client/github.ts` handles checked local requests; `github/service.ts` owns the device grant and read-only provider calls; `github/vault.ts` stores encrypted profile credentials. Electron injects async safeStorage. Tokens never enter project SQL or renderer responses. Project links remain separate from manual task state.
+
+GitHubConnection groups account status, repository selection, explicit confirmation and collapsible connection settings. It retains its existing request generation/busy guards. The shared scripts/github-ui.ts scenario exercises the same simulated UI in independent browser and installed review checks.

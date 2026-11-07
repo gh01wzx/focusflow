@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { startWorkspaceServer } from '../src/workspace/server.ts';
+import { exerciseGitHubUI } from './github-ui.ts';
 import { exerciseProjectUI } from './project-ui.ts';
 import { EDITED_PROJECT, EDITED_TICKET } from './project-edit-ui.ts';
 import type { ProjectView } from '../src/shared/projects.ts';
@@ -23,6 +24,8 @@ try {
   await page.getByRole('heading', { name: 'Today.', exact: true }).waitFor();
   stage = 'project-interactions';
   const saved = await exerciseProjectUI(page, join(artifacts, 'actions.png'), join(artifacts, 'ticket-edit.png'));
+  stage = 'simulated-github-ui';
+  await exerciseGitHubUI(page, EDITED_PROJECT, join(artifacts, 'github-connection-simulated.png'));
   await page.screenshot({ path: join(artifacts, 'project-cards.png'), fullPage: true });
   const readAll = () => page.evaluate(async () => {
     const first = await (await fetch('/api/projects')).json() as ProjectView;
@@ -53,6 +56,7 @@ try {
   await writeFile(join(artifacts, 'report.json'), JSON.stringify({
     status: 'verified', commit: process.env.GITHUB_SHA ?? 'unknown',
     scope: 'Browser project UI, status buttons, error/cancel drafts, focus restoration, cross-milestone prerequisites and local server/browser-context restart with disposable data.',
+    github: 'Simulated account/repository UI, explicit confirmation and late-read protection; no live provider requests.',
     limits: 'Does not verify Electron launch, native window close or Windows installation.',
   }, null, 2));
   console.log('PROJECT_BROWSER_VERIFIED');

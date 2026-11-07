@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { GitHubConnection } from './components/GitHubConnection.tsx';
 import { ActionCenter } from './ActionCenter.tsx';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
@@ -71,6 +72,7 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
               </div>
               {editor('project', project.id, project)}
               {project.description && <p className="project-description">{project.description}</p>}
+              <GitHubConnection key={project.id} projectId={project.id} />
               {milestone ? (
                 <>
                   <div className="milestone-picker">

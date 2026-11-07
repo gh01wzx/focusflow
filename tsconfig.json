@@ -1,11 +1,29 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2023"],
-    "types": ["node"],
+    "lib": [
+      "ES2023"
+    ],
+    "types": [
+      "node"
+    ],
     "rootDir": ".",
     "outDir": "dist"
   },
-  "include": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"],
-  "exclude": ["src/desktop/**", "scripts/build-renderer.ts", "scripts/smoke-today.ts", "scripts/smoke-review.ts", "scripts/project-ui.ts", "scripts/project-edit-ui.ts", "scripts/smoke-projects-browser.ts", "scripts/weekday-ui.ts"]
+  "include": [
+    "src/**/*.ts",
+    "scripts/**/*.ts",
+    "test/**/*.ts"
+  ],
+  "exclude": [
+    "src/desktop/**",
+    "scripts/build-renderer.ts",
+    "scripts/smoke-today.ts",
+    "scripts/smoke-review.ts",
+    "scripts/project-ui.ts",
+    "scripts/project-edit-ui.ts",
+    "scripts/smoke-projects-browser.ts",
+    "scripts/weekday-ui.ts",
+    "scripts/github-ui.ts"
+  ]
 }

@@ -61,3 +61,9 @@ Project-edit checks cover text changes at every level, all six statuses, identit
 Prerequisite checks cover recommendation/Start agreement, status changes between recommendation and Start, self/cycle/cross-project rejection, SQL constraints, malformed graphs, restart persistence and schema-5 backup/recovery protection. Installed checks link across milestones, navigate to a blocker and finish it before starting the dependent ticket.
 
 Prerequisite picker UI checks cover empty-choice Save state, styled cancellation, card selection with mouse/Enter/Space, cancelled drafts, failed-save retention and persistence.
+
+## GitHub connection
+
+Simulated provider tests cover explicit device grants, polling intervals, cancellation, repository identity/visibility confirmation, revoked access and disconnect serialization. Disposable vault tests use a fixture codec; installed Windows smoke separately checks real async safeStorage and simulated UI. A real GitHub App and owner account trial remain unverified; see [setup and limits](GITHUB_CONNECTION.md).
+
+Independent browser and installed review checks share simulated GitHub panel interactions, connection settings visibility, mouse/keyboard confirmation, rename invalidation, failed reads and disconnect protection against late status responses. Browser simulation does not verify Windows encryption or live authorization.

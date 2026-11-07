@@ -46,10 +46,11 @@ test('action client uses the real API, preserves failed starts, and rejects malf
     const client = createActionClient((path, options) => fetch(app.origin + String(path), {
       ...options, headers: { ...options?.headers, Origin: app.origin },
     }));
-    const next = projectActions(await client.read()).next!;
-    assert.equal(projectActions(await client.start(next.ticket.id)).active.length, 1);
+    const before = projectActions(await client.read());
+    const next = before.next!;
+    assert.equal(projectActions(await client.start(next.ticket.id)).active.length, before.active.length + 1);
     await assert.rejects(client.start(next.ticket.id), /no longer Ready/);
-    assert.equal(projectActions(await client.read()).active.length, 1);
+    assert.equal(projectActions(await client.read()).active.length, before.active.length + 1);
     for (const data of [{}, [null], [{ projects: [] }]]) {
       const invalid = createActionClient(async () => new Response(JSON.stringify(data)));
       await assert.rejects(invalid.read());

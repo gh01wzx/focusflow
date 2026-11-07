@@ -9,6 +9,8 @@ import { selectProfile } from '../src/runtime/profile.ts';
 import { openWorkspaceStore } from '../src/workspace/store.ts';
 import { startWorkspaceServer } from '../src/workspace/server.ts';
 import { MIGRATIONS, SCHEMA_VERSION } from '../src/database/schema.ts';
+import { TICKET_STATUSES } from '../src/shared/projects.ts';
+import { projectActions } from '../src/shared/actions.ts';
 
 async function fixture(t: TestContext) {
   const root = await mkdtemp(join(tmpdir(), 'focusflow-profiles-'));
@@ -71,10 +73,21 @@ test('sample edits survive reopening without re-seeding or changing everyday dat
   assert.equal(first.due.length, 2);
   assert.equal(first.upcoming.length, 1);
   assert.equal(first.recurrences.length, 1);
+  const examples = store.projects.view();
+  assert.equal(examples.milestones.length, 3);
+  assert.equal(examples.tickets.length, 12);
+  for (const status of TICKET_STATUSES) assert.equal(examples.tickets.filter(ticket => ticket.status === status).length, 2);
+  assert.ok(examples.tickets.every(ticket => ticket.executionMode === 'manual' && ticket.description && ticket.acceptanceCriteria));
+  assert.equal(examples.dependencies.length, 4);
+  assert.ok(examples.dependencies.every(link => examples.tickets.find(ticket => ticket.id === link.ticketId)!.milestoneId
+    !== examples.tickets.find(ticket => ticket.id === link.prerequisiteId)!.milestoneId));
+  const dependent = examples.tickets.find(ticket => ticket.title === 'Start after the demo goal is done')!;
+  assert.throws(() => store.projects.start(dependent.id), /prerequisites/);
+  assert.equal(projectActions(store.projects.actions()).next?.ticket.title, 'Move this sample ticket');
   const task = first.due.find(value => value.recurrenceId === null)!;
   store.tasks.resolve(task.id, 'completed');
   store.tasks.add({ title: 'My review task', plannedDate: '2026-11-05' });
-  const ticket = store.projects.view().tickets[0]!;
+  const ticket = examples.tickets.find(ticket => ticket.title === 'Move this sample ticket')!;
   store.projects.setStatus(ticket.id, 'done');
   const saved = store.tasks.view();
   const projects = store.projects.view();

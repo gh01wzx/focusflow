@@ -77,7 +77,9 @@ npm ci
 
 Use the name given in the PR. The equivalent command is npm run review -- pr-72. The window shows **Sample data - Review pr-72** in its title and a yellow **Sample data** notice above both workspaces.
 
-The first run creates a few example tasks and a sample project. Add, complete or change them freely. Reopen with the same name to keep your changes; a different name starts a separate workspace. Review names use letters, numbers and hyphens.
+The first run creates a few Personal examples and **Sample project** with three milestones and 12 manual tickets: two in each status. Open the project and choose **Status board** to see them together. Examples include a Ready ticket waiting for a prerequisite in another milestone, Blocked tickets and an active ticket with a completed prerequisite. Descriptions explain what to try; each ticket includes acceptance steps.
+
+Add, complete or change examples freely. Reopen with the same name to keep your changes; a different name starts a separate workspace. Review names use letters, numbers and hyphens. Existing review databases are never topped up or reset. To get newly added examples, use a new review name, such as task-41-demo-1.
 
 An installed build also supports review mode:
 

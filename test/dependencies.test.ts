@@ -90,7 +90,12 @@ test('cycle, self, duplicate, missing and cross-project prerequisites are reject
 
 test('prerequisite HTTP saves, checked reads and rejected starts agree', async () => {
   const root = await mkdtemp(join(tmpdir(), 'focusflow-deps-http-'));
-  const server = await startWorkspaceServer({ dataDirectory: root, sampleLabel: 'Test' });
+  const fixture = await openWorkspaceStore(join(root, 'tracker.db'));
+  const project = fixture.projects.addProject({ title: 'Dependency test' });
+  const milestone = fixture.projects.addMilestone({ projectId: project.id, title: 'Test' });
+  const ticket = fixture.projects.addTicket({ milestoneId: milestone.id, title: 'Use input' });
+  fixture.projects.setStatus(ticket.id, 'ready'); fixture.close();
+  const server = await startWorkspaceServer({ dataDirectory: root });
   const transport: typeof fetch = (path, options) => fetch(server.origin + String(path), {
     ...options, headers: { ...options?.headers, Origin: server.origin },
   });

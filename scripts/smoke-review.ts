@@ -12,6 +12,7 @@ import { SCHEMA_VERSION } from '../src/database/schema.ts';
 import { openWorkspaceStore } from '../src/workspace/store.ts';
 import { localDay } from '../src/shared/calendar.ts';
 import type { TaskView } from '../src/shared/tasks.ts';
+import { TICKET_STATUSES, TICKET_STATUS_LABELS } from '../src/shared/projects.ts';
 
 assert.ok(process.argv[2], 'Provide the installed FocusFlow executable.');
 const executable = resolve(process.argv[2]);
@@ -92,6 +93,14 @@ try {
   await review.page.getByRole('navigation', { name: 'Project list', exact: true })
     .getByRole('button', { name: 'Sample project', exact: true }).click();
   await review.page.getByRole('heading', { name: 'Sample project', exact: true }).waitFor();
+  await review.page.getByRole('button', { name: 'Status board', exact: true }).click();
+  const board = review.page.getByRole('region', { name: 'Project status board', exact: true });
+  await board.waitFor();
+  for (const status of TICKET_STATUSES) {
+    assert.equal(await board.getByRole('region', { name: TICKET_STATUS_LABELS[status], exact: true })
+      .getByRole('button', { name: /^Open ticket / }).count(), 2);
+  }
+  assert.equal(await board.getByRole('button', { name: /^Open ticket / }).count(), 12);
   await review.page.getByRole('note').filter({ hasText: 'Review pr-72' }).waitFor();
   await review.page.screenshot({ path: join(artifacts, 'sample-projects.png'), fullPage: true });
   mark('github-os-storage-and-simulated-confirmation');

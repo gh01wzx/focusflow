@@ -63,6 +63,8 @@ Explicit developer overrides remain available for existing tools: FOCUSFLOW_TEST
 
 Previous spike data and the separate Codex profile are never imported or deleted by source cleanup. Installed everyday data stays in its original location; source launchers no longer open it by default.
 
+Private plan drafts use the current profile database and its snapshots. Reopening a draft reads local storage only. The shared current shutdown path cancels planning before data closure. No new schema version is introduced for enabling this interface.
+
 ## AI account setup and validation
 
 The AI connection preview uses official Codex app-server over owned stdio, pinned to 0.166.0, with a shared codex-product runtime, a codex-profile directory in the selected app profile, and keyring credential mode. The existing codex-phase0 probe remains separate and keeps its established commands. Runtime installation needs Node 24/npm; the desktop bundles neither a model nor this external runtime.

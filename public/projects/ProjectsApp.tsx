@@ -8,6 +8,7 @@ import { EntityComposer } from './components/EntityComposer.tsx';
 import { TicketComposer } from './components/TicketComposer.tsx';
 import { ManualTicket } from './components/ManualTicket.tsx';
 import { ProjectBoard } from './components/ProjectBoard.tsx';
+import { PlanDraftPanel } from './components/PlanDraftPanel.tsx';
 import { ProjectNavigation } from './components/ProjectNavigation.tsx';
 import { ProjectDialog } from './components/ProjectDialog.tsx';
 import { DetailsEditor } from './components/DetailsEditor.tsx';
@@ -27,8 +28,9 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
   const [openingTicket, setOpeningTicket] = useState<string | null>(initialTicketId ?? null);
   const [editingPrerequisites, setEditingPrerequisites] = useState(false);
   const [layout, setLayout] = useState<'milestones' | 'board'>('milestones');
+  const [planning, setPlanning] = useState(false);
   const { view, busy, milestoneId, error, message } = state;
-  const locked = busy || editingPrerequisites || !!state.editing || openTicketId !== null || (composing !== null && view !== null);
+  const locked = busy || planning || editingPrerequisites || !!state.editing || openTicketId !== null || (composing !== null && view !== null);
   const project = view?.projects.find(item => item.id === view.selectedProjectId);
   const milestone = view?.milestones.find(item => item.id === milestoneId);
   const tickets = view?.tickets.filter(item => item.milestoneId === milestoneId) ?? [];
@@ -88,6 +90,7 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
               <div className="detail-heading">
                 <h2 className="project-heading">{project.title}</h2>
                 <div className="project-tools">
+                  <PlanDraftPanel key={project.id} projectId={project.id} disabled={locked} onOpenChange={setPlanning} />
                   <button className="text-button" disabled={locked} onClick={() => state.beginEdit('project', project.id)}>Edit project</button>
                   <button className="secondary-button" disabled={locked} onClick={() => openComposer('milestone')}>New milestone</button>
                 </div>

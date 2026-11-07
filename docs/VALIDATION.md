@@ -9,6 +9,7 @@ The maintained checks cover the scenarios below. This list describes coverage; e
 - Language, strict TypeScript, static dependency boundaries, build and compiled behavior tests.
 - Browser clients against the real local API; malformed response rejection; architecture-guard failure cases.
 - Real SQLite/HTTP/calendar checks with disposable directories.
+- AI draft checks use simulated replies for consent, fresh ChatGPT account gates, shared concurrency, bounded JSON/graphs, progress/cancel/late replies, old-draft retention, unchanged formal tasks, restart and snapshots. No live model or authenticated GitHub writes run in tests.
 - Shutdown checks use incomplete JSON bodies and pre-header sockets, verify accepted writes finish before database closure, retain cancellation errors and ensure cleanup runs once. Installed review checks include a pending incomplete loopback request while closing, with the original 15-second native-exit deadline and fixed phase-only diagnostics.
 - Board checks assert all four columns fit normal window widths and top Previous/Next controls expose all of Done at a narrow width; links/status interaction checks run after restoring the original viewport.
 - Migration rollback, backup failure, WAL snapshot consistency, checksum/target protection and product identity/newer-schema refusal.

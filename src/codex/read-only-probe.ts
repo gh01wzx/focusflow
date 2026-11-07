@@ -38,12 +38,17 @@ export function readOnlyProbe(client: CodexClient, cwd: string, options: ProbeOp
   return runProbe(client, cwd, options, false) as Promise<ProbeEvidence>;
 }
 
+export function readOnlyResponse(client: CodexClient, cwd: string, prompt: string, options: ProbeOptions = {}): Promise<string> {
+  if (!prompt.trim() || prompt.length > 20_000) return Promise.reject(new ProbeFailure('INVALID_PROMPT'));
+  return runProbe(client, cwd, options, false, prompt) as Promise<string>;
+}
+
 /** Cancels one real turn as soon as its started event identifies the target. */
 export function cancelReadOnlyProbe(client: CodexClient, cwd: string, options: ProbeOptions = {}): Promise<CancellationEvidence> {
   return runProbe(client, cwd, options, true) as Promise<CancellationEvidence>;
 }
 
-async function runProbe(client: CodexClient, cwd: string, options: ProbeOptions, cancelOnStarted: boolean): Promise<ProbeEvidence | CancellationEvidence> {
+async function runProbe(client: CodexClient, cwd: string, options: ProbeOptions, cancelOnStarted: boolean, prompt?: string): Promise<ProbeEvidence | CancellationEvidence | string> {
   let threadId: string | undefined;
   let turnId: string | undefined;
   let deltaEvents = 0;
@@ -88,7 +93,7 @@ async function runProbe(client: CodexClient, cwd: string, options: ProbeOptions,
         stop('UNEXPECTED_TOOL'); return;
       }
       if (method === 'item/completed' && item.type === 'agentMessage' && typeof item.text === 'string') {
-        if (finalText.length + item.text.length > 4096) { stop('OUTPUT_LIMIT'); return; }
+        if (finalText.length + item.text.length > (prompt ? 64_000 : 4096)) { stop('OUTPUT_LIMIT'); return; }
         finalText += item.text;
       }
     }
@@ -112,13 +117,15 @@ async function runProbe(client: CodexClient, cwd: string, options: ProbeOptions,
     if (options.signal?.aborted) throw new ProbeFailure('CANCELLED');
     const started = record(await request('thread/start', {
       cwd, approvalPolicy: 'never', sandbox: 'read-only', ephemeral: true,
-      baseInstructions: 'This is a connectivity probe. Do not use tools, read files, run commands or access the network. Reply only with the requested marker.',
+      baseInstructions: prompt
+        ? 'Answer the supplied planning request using text only. Do not use tools, read files, run commands or access the network.'
+        : 'This is a connectivity probe. Do not use tools, read files, run commands or access the network. Reply only with the requested marker.',
     }));
     const id = record(started.thread).id;
     if (typeof id !== 'string') throw new ProbeFailure('INVALID_THREAD');
     threadId = id;
     const startedTurn = record(await request('turn/start', {
-      threadId, input: [{ type: 'text', text: `Reply with exactly ${PROBE_MARKER}. Do not use any tools.` }],
+      threadId, input: [{ type: 'text', text: prompt ?? `Reply with exactly ${PROBE_MARKER}. Do not use any tools.` }],
     }));
     const returnedId = record(startedTurn.turn).id;
     if (typeof returnedId !== 'string' || (turnId && returnedId !== turnId)) throw new ProbeFailure('INVALID_TURN');
@@ -131,6 +138,7 @@ async function runProbe(client: CodexClient, cwd: string, options: ProbeOptions,
     }
     if (completed.status !== 'completed') throw new ProbeFailure('TURN_NOT_COMPLETED');
     if (cancelOnStarted) throw new ProbeFailure('CANCELLATION_NOT_CONFIRMED');
+    if (prompt) return finalText;
     if (finalText.trim() !== PROBE_MARKER) throw new ProbeFailure('MARKER_MISMATCH');
     return { status: 'verified', check: 'read-only-model-turn', deltaEvents, markerMatched: true };
   } catch (error) {

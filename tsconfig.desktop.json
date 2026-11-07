@@ -23,6 +23,7 @@
     "scripts/github-ui.ts",
     "scripts/ai-ui.ts",
     "scripts/smoke-install-update.ts",
-    "scripts/project-board-ui.ts"
+    "scripts/project-board-ui.ts",
+    "scripts/plan-ui.ts"
   ]
 }

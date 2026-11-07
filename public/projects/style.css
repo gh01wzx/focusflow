@@ -240,3 +240,16 @@ nav[aria-label="Project list"] .nav-item {
 .ticket-blocker-editor { margin: 18px 0; }
 .ticket-blocker-editor textarea { display: block; width: 100%; box-sizing: border-box; margin: 10px 0; min-height: 84px; padding: 12px; border: 1px solid #b9c6af; border-radius: 7px; resize: vertical; }
 .blocker-help { color: #65745e; font-size: 12px; }
+
+.plan-notice { padding: 12px; border: 1px solid #c9b779; border-radius: 8px; background: #faf3df; }
+.plan-consent { display: flex; align-items: flex-start; gap: 10px; line-height: 1.6; }
+.project-form .plan-consent input { width: auto; flex: 0 0 auto; margin-top: 3px; }
+.plan-actions { display: flex; gap: 12px; align-items: center; }
+.plan-draft { margin-top: 24px; border-top: 1px solid #c8d3c0; }
+.plan-draft p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.7; }
+.plan-milestone { border: 1px solid #c8d3c0; border-radius: 8px; padding: 14px; margin-top: 14px; }
+.plan-milestone h3 { margin-top: 0; }
+.plan-milestone ul { list-style: none; padding: 0; margin: 0; }
+.plan-milestone li { border-top: 1px solid #e1e7db; padding: 12px 0; }
+.plan-milestone summary { cursor: pointer; color: #35543c; overflow-wrap: anywhere; }
+.plan-mode { color: #66755d; }

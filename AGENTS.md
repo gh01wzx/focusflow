@@ -9,7 +9,7 @@
 ## Work with the owner
 
 - Discuss the work in Chinese. Use simple English in source, comments, UI, docs, Issues, commits and PRs. Preserve user-entered text; escape non-English test fixtures.
-- Work on one owner-selected Issue at a time, using small PRs. The owner chooses the next task and decides merge. Do not automatically start another task, merge, release or deploy.
+- By default, work on one owner-selected Issue at a time in a small PR; the owner chooses the next task and merge. An explicitly authorized batch may proceed in dependency order with self-review and passing required checks before each merge. Keep one implementation Issue/PR at a time. Batch merge permission does not authorize new account scopes, live-model spending, paid services, release or deployment.
 - A coding task is complete only after its linked PR is observed merged.
 - Use the Issue number as the task ID: [ID] Plain-English outcome for Issue/PR titles, ID-short-outcome for branches, and Closes #ID in the PR. GitHub's separate PR number is only a platform reference. Apply this from task 21 onward.
 - Keep lasting rules here. Keep task status, approvals and development history in GitHub rather than adding a chronological log to this file.

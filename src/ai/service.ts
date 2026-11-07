@@ -7,7 +7,7 @@ import type { AiStatus } from '../shared/ai.ts';
 
 export interface AiRuntime {
   installed(): Promise<boolean>;
-  run(operation: (client: CodexClient, cwd: string) => Promise<AiStatus>): Promise<AiStatus>;
+  run<T>(operation: (client: CodexClient, cwd: string) => Promise<T>): Promise<T>;
 }
 const initial: AiStatus = { mode: 'unchecked', runtimeVersion: CODEX_VERSION, account: null, plan: null,
   message: 'Check your FocusFlow AI account before using a model.', signInUrl: null, verified: false };
@@ -37,14 +37,14 @@ export function createAiService(runtime: AiRuntime, probe = readOnlyProbe) {
   let pending = false;
   let login: { client: CodexClient; id: string; cancelled: boolean; finish(): void } | null = null;
   let task: Promise<AiStatus> | null = null;
-  let active: Promise<AiStatus> | null = null;
+  let active: Promise<unknown> | null = null;
   let probing = false;
   const abort = new AbortController();
   const status = () => ({ ...state });
   function execute(operation: (client: CodexClient, cwd: string) => Promise<AiStatus>): Promise<AiStatus> {
     if (pending || abort.signal.aborted) return Promise.resolve(status());
     pending = true;
-    active = (async () => {
+    const work = (async () => {
       try {
         if (!await runtime.installed()) {
           state = { ...initial, mode: 'missing', message: 'Install the pinned official Codex runtime using npm run ai:install, then Check account.' };
@@ -61,7 +61,32 @@ export function createAiService(runtime: AiRuntime, probe = readOnlyProbe) {
       finally { pending = false; }
       return status();
     })();
-    return active;
+    active = work;
+    return work;
+  }
+  async function runWithChatGPT<T>(operation: (client: CodexClient, cwd: string, signal: AbortSignal) => Promise<T>, signal: AbortSignal): Promise<T> {
+    if (pending) throw new ProbeFailure('BUSY');
+    const combined = AbortSignal.any([abort.signal, signal]);
+    if (combined.aborted) throw new ProbeFailure('CANCELLED');
+    pending = true;
+    const work = (async () => {
+      if (!await runtime.installed()) throw new ProbeFailure('MISSING');
+      if (combined.aborted) throw new ProbeFailure('CANCELLED');
+      return runtime.run(async (client, cwd) => {
+        const cancelSetup = () => client.close();
+        combined.addEventListener('abort', cancelSetup, { once: true });
+        try {
+          if (combined.aborted) throw new ProbeFailure('CANCELLED');
+          await client.initialize();
+          const account = accountStatus(await client.request('account/read', { refreshToken: false }));
+          if (account.mode !== 'chatgpt') throw new CodexFailure('AUTH_REQUIRED');
+        } finally { combined.removeEventListener('abort', cancelSetup); }
+        if (combined.aborted) throw new ProbeFailure('CANCELLED');
+        return operation(client, cwd, combined);
+      });
+    })();
+    active = work.catch(() => {});
+    try { return await work; } finally { pending = false; }
   }
   async function check() {
     return execute(async client => { await client.initialize(); return accountStatus(await client.request('account/read', { refreshToken: false })); });
@@ -112,7 +137,7 @@ export function createAiService(runtime: AiRuntime, probe = readOnlyProbe) {
     return status();
   }
   return {
-    status, check, signIn,
+    status, check, signIn, runWithChatGPT,
     async cancel() {
       const owned = login;
       if (owned) {

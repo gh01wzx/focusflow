@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -126,5 +126,16 @@ export const MIGRATIONS = [
       project_id TEXT NOT NULL REFERENCES projects(id),
       approved_plan_json TEXT NOT NULL CHECK(json_valid(approved_plan_json)),
       receipt_json TEXT NOT NULL CHECK(json_valid(receipt_json))
+    );` },
+  { version: 11, sql: `CREATE TABLE publication_batches (
+      id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
+      repository_json TEXT NOT NULL CHECK(json_valid(repository_json)), approved_at TEXT
+    );
+    CREATE TABLE issue_publications (
+      ticket_id TEXT PRIMARY KEY REFERENCES project_tickets(id), batch_id TEXT NOT NULL REFERENCES publication_batches(id),
+      content_json TEXT NOT NULL CHECK(json_valid(content_json)),
+      stage TEXT NOT NULL CHECK(stage IN ('pending','creating','uncertain','linked','published','conflict')),
+      issue_number INTEGER CHECK(issue_number IS NULL OR (typeof(issue_number)='integer' AND issue_number>0)),
+      message TEXT NOT NULL DEFAULT ''
     );` },
 ] as const;

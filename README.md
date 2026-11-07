@@ -13,7 +13,7 @@ A Windows desktop task tracker built with TypeScript, React, Electron and SQLite
 - Repeat daily or on selected weekdays, retain missed periods in History and stop future repeats.
 - Switch to Projects, create projects/milestones/manual tickets, write acceptance criteria and change ticket status.
 
-Deletion, GitHub publication, coding execution/review and one-click updates are not implemented.
+Deletion, coding execution/review and one-click updates are not implemented.
 
 ## Repeating tasks
 
@@ -41,7 +41,7 @@ Use **Add blocker** inside a ticket for waiting on something outside the project
 
 Choose **Work type** when creating or editing an unpublished Backlog ticket. **Manual** keeps the usual status controls. **Coding with Codex** saves a local unpublished coding draft and shows its project repository, if connected. It creates no Issue or coding run. Coding drafts are excluded from next-task recommendations and cannot start or be marked Done. Published coding records show their GitHub Issue number as the task ID and retain their repository identity; work type cannot change after publication or while running. Publication and coding execution are later features.
 
-Existing installed data upgrades only after a verified pre-change backup. Old Ready tickets become Backlog; old Blocked tickets become Backlog with a manual blocker that you must explain or clear. IDs, text and dependency links remain. Named reviews use separate format-10 sample data; previous review formats remain untouched.
+Existing installed data upgrades only after a verified pre-change backup. Old Ready tickets become Backlog; old Blocked tickets become Backlog with a manual blocker that you must explain or clear. IDs, text and dependency links remain. Named reviews use separate format-11 sample data; previous review formats remain untouched.
 
 ## AI connection preview
 
@@ -60,6 +60,12 @@ A valid result is saved only in this data profile, separately from project miles
 Choose **Edit draft plan** to correct milestone/task text, acceptance criteria, work types and prerequisite links. Clear **Include task** to exclude an unwanted suggestion. Save draft changes keeps those choices across restarts without creating project tickets. Cancel discards unsaved changes; failed saves retain your input. Save or cancel before closing the editor. A draft changed elsewhere must be reopened before saving or approving.
 
 Choose **Preview selected plan** to inspect exactly which milestones and tasks will be created. Excluded prerequisites must be included or their links removed explicitly. Confirm the checkbox and choose **Approve selected plan**. The selected plan is saved together in Backlog with its dependencies. Nothing starts or publishes to GitHub. Coding tasks remain unpublished and unstartable. Repeated approval, a lost reply or restarting cannot duplicate that plan. A failed write saves none of the plan; reopen to check its approval result before retrying. Approved drafts cannot be edited again; edit their saved tickets or generate a new draft instead.
+
+## Publish approved coding work
+
+Open **Publish approved work** in a project, then **Preview publication**. The Windows GitHub connection must already have an owner-authorized App installation with Issues read/write access. This feature cannot grant that permission. Inspect the repository name, visibility and public Issue content, confirm the checkbox, then approve the whole batch. Only coding tasks from approved plans are published. Personal data, goals, project notes and manual task text are excluded. One publication approval covers the batch; no per-task approval or automatic coding Start follows.
+
+GitHub assigns each Issue number after creation; the final title uses [ID] and coding prerequisite references use assigned numbers. The preview explains these substitutions and shows the public recovery marker. Results are saved per task. Reopen after restart or **Resume approved publication** to recover missing links, without duplicating successful creations. A definite refusal retains uncreated work for an explicit retry. An uncertain creation is searched by its marker; absence does not permit another creation. Conflicting/duplicate markers or remote edits require reconciliation. A wholly unstarted batch can be cancelled before revising its preview. Approved publication content and repository are locked; requirement reconciliation is a later feature. No product live-write trial is claimed by simulated tests.
 
 ## Run on Windows
 

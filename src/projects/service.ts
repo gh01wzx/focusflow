@@ -8,6 +8,9 @@ export type ProjectTransaction = <T>(operation: (now: Date) => T) => T;
 export function createProjectService(repository: ProjectRepository, transaction: ProjectTransaction, nextId: () => string) {
   return {
     assertRepositoryChange: (projectId: string, repositoryId: unknown): void => transaction(() => {
+      if (repository.publicationRepositoryChanged(projectId, repositoryId)) {
+        throw new ProjectInputError('Keep the repository used by approved publication work. Reconcile it before changing projects.');
+      }
       if (repository.listTickets(projectId).some(ticket => ticket.coding?.issueNumber && ticket.coding.repository?.id !== repositoryId)) {
         throw new ProjectInputError('This project has published coding work. Keep its repository; use a new project for another repository.');
       }
@@ -29,6 +32,7 @@ export function createProjectService(repository: ProjectRepository, transaction:
       const value = ticketDetailsInput(input);
       const ticket = repository.findTicket(id);
       if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
+      if (repository.publicationLocked(id)) throw new ProjectInputError('This ticket has an approved GitHub publication. Reconcile its linked requirements before editing.');
       if (value.executionMode !== undefined && value.executionMode !== ticket.executionMode) {
         if (ticket.status !== 'backlog' || ticket.coding?.issueNumber) {
           throw new ProjectInputError('Only an unpublished Backlog ticket can change its execution mode.');
@@ -55,6 +59,7 @@ export function createProjectService(repository: ProjectRepository, transaction:
       repository.setStatus(id, 'in_progress', now.toISOString());
     }),
     setPrerequisites: (id: string, input: unknown): string => transaction(now => {
+      if (repository.publicationLocked(id)) throw new ProjectInputError('Reconcile published prerequisites explicitly instead of replacing them locally.');
       const ids = prerequisiteInput(input);
       const ticket = repository.findTicket(id);
       if (!ticket) throw new ProjectNotFoundError('Ticket not found.');

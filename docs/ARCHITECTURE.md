@@ -59,7 +59,7 @@ Electron owns the window and an OS-selected IPv4 loopback service. The renderer 
 
 ## Data and repeating periods
 
-Schema **5** adds optional weekday masks to repeating rules; null retains existing schedules. Migrations 1-4 retain their SQL behavior. Product data stays outside source/install directories. Foreign/newer databases are refused; upgrades require verified pre-change snapshots.
+Schema **6** adds ticket prerequisite links. Schema 5 added optional weekday masks to repeating rules; null retains existing schedules. Applied migrations retain their SQL behavior. Product data stays outside source/install directories. Foreign/newer databases are refused; upgrades require verified pre-change snapshots.
 
 Each rule records its frequency, start date and next unmaterialized date. New weekly rules also record selected weekdays; SQL mask conversion stays in the repository, while shared calendar helpers and domain rules use weekday arrays. Occurrences have unique rule/date pairs and independent statuses. Daily and selected-weekday occurrences span one local day. Existing weekly rules without weekday selections retain their seven-day periods. Date-only arithmetic avoids DST-hour assumptions.
 
@@ -79,9 +79,9 @@ POST /api/projects/:id/details, /api/milestones/:id/details and /api/project-tic
 
 The controller allows one details editor at a time. It blocks view navigation during editing, retains the editor after failed saves and ignores older refresh responses after a save. DetailsEditor owns its draft, so a background read cannot replace entered text. Cancel only closes the editor.
 
-The controller displays only the selected milestone's tickets. Write requests allow up to 32 KiB for multiline text; Personal keeps its 4 KiB limit. Runtime codecs check records, parent associations and manual execution mode. No GitHub/Codex controls or calls exist in this workflow.
+The controller displays only the selected milestone's tickets. Write requests allow up to 32 KiB for multiline text; Personal keeps its 4 KiB limit. Runtime codecs check records, parent associations and manual execution mode. Manual ticket actions do not call GitHub or Codex; the optional project connection is separate.
 
-Dependencies, deletion, Kanban and AI remain later Tickets.
+Deletion, Kanban and AI remain later Tickets.
 
 ## Keep the boundaries
 
@@ -95,12 +95,24 @@ npm run typecheck also checks static import boundaries, unresolved local imports
 
 ## Codex and release work
 
-[src/codex](../src/codex) remains standalone groundwork invoked only by explicit developer commands. Today has no AI execution path.
+[src/codex](../src/codex) owns the checked stdio protocol, bounded process lifetime and fixed read-only probe. [src/ai](../src/ai) composes it for explicit account checks, managed ChatGPT sign-in and one opted-in model check. Shared AI contracts and the checked client expose only display fields, never provider responses or tokens. The sidebar dialog is available in both workspaces. Ordinary launch does not call a model.
+
+The desktop/browser composition shares a pinned codex-product runtime and supplies CODEX_HOME from the selected app profile's codex-profile directory. Ordinary and review launches use different credential-home paths; live Windows keyring isolation remains unverified. The runtime receives an allowlisted environment without API keys, keyring credential mode and a disposable working directory. On Windows, codex/runtime.ts validates both pinned package versions and resolves the native executable directly. The owned-process launcher hides that executable and avoids the npm wrapper opening another console. Missing native files refuse setup rather than falling back to the wrapper. Sign-in cancellation closes the local protocol without waiting for a provider acknowledgement; owned-process cleanup remains bounded. Service closure cancels an owned sign-in or probe before the local HTTP server closes. External links are limited to the official setup URL and validated HTTPS OpenAI/ChatGPT sign-in hosts. AI planning and writing-code gates remain unverified.
 
 Product GitHub authorization, coding permissions/recovery, independent review and signed updates remain future work. See the [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) and [validation](VALIDATION.md).
 
 ## Project action center
 
-Projects opens ActionCenter with useActionsController. GET /api/project-actions reads all project views in one transaction; shared/actions.ts selects Review, In Progress and at most one Ready task by creation time then ID. The client checks every project view before use. POST /api/project-tickets/:id/start checks Ready status inside its write transaction. Refresh responses cannot overwrite later mutations. Shared ProjectNavigation links the action center and individual projects directly; the hierarchy controller loads the selected project on entry. No dependency model or AI ranking is implied.
+Projects opens ActionCenter with useActionsController. GET /api/project-actions reads all project views in one transaction; shared/actions.ts selects Review, In Progress and at most one eligible Ready task by creation time then ID. The client checks every project view and dependency graph before use. POST /api/project-tickets/:id/start checks Ready status and prerequisites inside its write transaction, using the same shared eligibility rule. Refresh responses cannot overwrite later mutations. Shared ProjectNavigation links the action center and individual projects directly; the hierarchy controller loads the selected project on entry. No AI ranking is implied.
 
 Ticket cards open a native ProjectDialog for details, status buttons and ticket editing. EntityComposer and TicketComposer render forms only inside creation dialogs; the project sidebar owns New project. Compact milestone/ticket buttons keep the main page focused on existing work. Dialogs use native focus containment and restore focus on close; busy saves and unfinished ticket edits prevent dismissal. ProjectHierarchy owns which dialog is open; the project controller owns saved feedback and navigation actions. ProjectDialog handles native focus containment, focus restoration and dismissal.
+
+POST /api/project-tickets/:id/prerequisites replaces that ticket's prerequisite set atomically. Service validation rejects self-links, missing/foreign parents, duplicate links and cycles. Schema 6 adds foreign keys, uniqueness, self-link checks and insert triggers for same-project/cycle protection; direct SQL updates to links are refused. SQL stays in the repository. Prerequisite changes retain the ticket's chosen status.
+
+Prerequisite choices use native toggle buttons with aria-pressed and explicit Selected labels. Keyboard Enter/Space toggles a card. Save stays disabled until the selection changes; Cancel discards the draft. No checkbox controls or additional request/state layer are used.
+
+## GitHub connection
+
+`shared/github.ts` validates display data; `client/github.ts` handles checked local requests; `github/service.ts` owns the device grant and read-only provider calls; `github/vault.ts` stores encrypted profile credentials. Electron injects async safeStorage. Tokens never enter project SQL or renderer responses. Project links remain separate from manual task state.
+
+GitHubConnection groups account status, repository selection, explicit confirmation and collapsible connection settings. It retains its existing request generation/busy guards. The shared scripts/github-ui.ts scenario exercises the same simulated UI in independent browser and installed review checks.

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { AiPanel } from './AiPanel.tsx';
 
 export type Workspace = 'personal' | 'projects';
 export interface WorkspaceProps {
@@ -31,6 +32,7 @@ export function WorkspaceShell({ workspace, busy, navigation, children, onWorksp
           <span className="local-pill">Local</span>
         </div>
         {navigation}
+        <AiPanel disabled={busy} />
         <div className="sidebar-note"><span className="local-dot" />Saved on this computer</div>
       </aside>
       {children}

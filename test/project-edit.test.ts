@@ -29,6 +29,9 @@ test('editing every level preserves identities, relationships and all ticket sta
       store.projects.setStatus(ticket.id, status);
       return store.projects.view(project.id).tickets.find(item => item.id === ticket.id)!;
     });
+    store.projects.setPrerequisites(originals[0]!.id, { prerequisiteIds: [originals.find(ticket => ticket.status === 'done')!.id] });
+    originals[0] = store.projects.view(project.id).tickets.find(ticket => ticket.id === originals[0]!.id)!;
+    const links = store.projects.view(project.id).dependencies;
     now = new Date('2026-11-06T01:00:00Z');
     store.projects.editProject(project.id, draft);
     store.projects.editMilestone(milestone.id, { ...draft, projectId: other.id });
@@ -38,6 +41,7 @@ test('editing every level preserves identities, relationships and all ticket sta
       assert.deepEqual({ ...updated }, { ...ticket, ...draft, updatedAt: now.toISOString() });
     }
     const expected = store.projects.view(project.id);
+    assert.deepEqual(expected.dependencies, links);
     assert.deepEqual({ ...expected.projects.find(item => item.id === project.id) }, { ...project, title: text, description: draft.description });
     assert.deepEqual({ ...expected.milestones[0] }, { ...milestone, title: text, description: draft.description });
     now = new Date('2026-11-06T02:00:00Z');

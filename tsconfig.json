@@ -24,6 +24,8 @@
     "scripts/project-edit-ui.ts",
     "scripts/smoke-projects-browser.ts",
     "scripts/weekday-ui.ts",
+    "scripts/github-ui.ts",
+    "scripts/ai-ui.ts",
     "scripts/smoke-install-update.ts"
   ]
 }

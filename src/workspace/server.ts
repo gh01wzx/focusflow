@@ -1,3 +1,8 @@
+import { matchAiRoute, dispatchAiRoute } from '../ai/routes.ts';
+import { createAiService } from '../ai/service.ts';
+import type { AiService } from '../ai/service.ts';
+import type { GitHubService } from '../github/service.ts';
+import { matchGitHubRoute, dispatchGitHubRoute } from '../github/routes.ts';
 import { matchProjectRoute, dispatchProjectRoute } from '../projects/routes.ts';
 import { ProjectInputError, ProjectNotFoundError } from '../projects/validation.ts';
 import { readFile } from 'node:fs/promises';
@@ -17,11 +22,12 @@ const assets = new Map([
 ]);
 
 export async function startWorkspaceServer(options: {
-  dataDirectory: string; clock?: () => Date; sampleLabel?: string | null;
+  dataDirectory: string; clock?: () => Date; sampleLabel?: string | null; github?: GitHubService; ai?: AiService;
 }): Promise<LocalServer> {
   const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock, !!options.sampleLabel);
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
-  return listenLocal(async (request, response, origin) => {
+  const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });
+  const local = await listenLocal(async (request, response, origin) => {
     try {
       secureRequest(request, response, origin);
       const resource = request.url ?? '';
@@ -39,6 +45,19 @@ export async function startWorkspaceServer(options: {
         }
         response.writeHead(200, { 'Content-Type': type! });
         response.end(content);
+        return;
+      }
+      const aiRoute = matchAiRoute(request.method, resource);
+      if (aiRoute) {
+        const input = request.method === 'GET' ? undefined : await readJson(request, origin, 4096);
+        sendJson(response, 200, await dispatchAiRoute(aiRoute, input, ai));
+        return;
+      }
+      const githubRoute = matchGitHubRoute(request.method, resource);
+      if (githubRoute) {
+        store.projects.view(githubRoute.projectId);
+        const input = request.method === 'GET' ? undefined : await readJson(request, origin);
+        sendJson(response, 200, await dispatchGitHubRoute(githubRoute, input, options.github));
         return;
       }
       const route = matchTaskRoute(request.method, resource);
@@ -64,4 +83,12 @@ export async function startWorkspaceServer(options: {
       });
     }
   }, store.close);
+  let closing: Promise<void> | undefined;
+  return { origin: local.origin, close() {
+    return closing ??= (async () => {
+      await ai.close();
+      await options.github?.close();
+      await local.close();
+    })();
+  } };
 }

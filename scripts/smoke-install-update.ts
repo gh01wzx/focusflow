@@ -17,6 +17,7 @@ import { runInstallerProcess } from './installer-process.ts';
 
 assert.equal(process.platform, 'win32', 'Run only on the disposable Windows Actions runner.');
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Installer registration and shortcuts require a disposable Actions runner.');
+assert.equal(process.env.RUNNER_ENVIRONMENT, 'github-hosted', 'Do not install experimental builds on a personal or self-hosted runner.');
 assert.ok(process.argv[2] && process.argv[3], 'Provide baseline and candidate installers.');
 const baseline = resolve(process.argv[2]!);
 const candidate = resolve(process.argv[3]!);
@@ -113,10 +114,18 @@ try {
   const added = await post(page, '/api/projects', { title: 'Retained project', description: 'Disposable update fixture' }) as { view: ProjectView };
   const projectId = added.view.selectedProjectId!;
   const milestone = await post(page, '/api/milestones', { projectId, title: 'Retained milestone' }) as { view: ProjectView };
-  await post(page, '/api/project-tickets', { milestoneId: milestone.view.milestones[0]!.id,
-    title: 'Retained manual ticket', description: 'Keep original work', acceptanceCriteria: 'Data survives replacement.' });
+  const first = await post(page, '/api/project-tickets', { milestoneId: milestone.view.milestones[0]!.id,
+    title: 'Retained prerequisite', description: 'Keep original work', acceptanceCriteria: 'Data survives replacement.' }) as { view: ProjectView };
+  const prerequisiteId = first.view.tickets[0]!.id;
+  const second = await post(page, '/api/project-tickets', { milestoneId: milestone.view.milestones[0]!.id,
+    title: 'Retained dependent ticket', description: 'Keep the prerequisite link', acceptanceCriteria: 'Dependency survives replacement.' }) as { view: ProjectView };
+  const dependentId = second.view.tickets.find(ticket => ticket.id !== prerequisiteId)!.id;
+  await post(page, '/api/project-tickets/' + dependentId + '/prerequisites', { prerequisiteIds: [prerequisiteId] });
+  await post(page, '/api/project-tickets/' + prerequisiteId + '/status', { status: 'done' });
+  await post(page, '/api/project-tickets/' + dependentId + '/status', { status: 'ready' });
   const saved = await views(page, projectId);
-  assert.equal(saved.projects.tickets.length, 1);
+  assert.equal(saved.projects.tickets.length, 2);
+  assert.deepEqual(saved.projects.dependencies, [{ ticketId: dependentId, prerequisiteId }]);
   const snapshot = await post(page, '/api/tasks/backup', {}) as { name: string };
   assert.equal(basename(snapshot.name), snapshot.name);
   const source = join(profile, 'data', 'backups', snapshot.name);
@@ -151,7 +160,7 @@ try {
     status: 'verified', commit: process.env.GITHUB_SHA ?? 'unknown', schema: SCHEMA_VERSION,
     baseline: { version: '0.1.0-alpha.3', sha256: await digest(baseline) },
     candidate: { version: '0.1.0-alpha.4', sha256: await digest(candidate) },
-    scope: 'Unsigned offline full-installer replacement of the same code/schema, exact Personal/repeat/project data preservation, separate snapshot recovery and same-schema binary rollback.',
+    scope: 'Unsigned offline full-installer replacement of the same code/schema, exact Personal/repeat/project/prerequisite/status data preservation, separate snapshot recovery and same-schema binary rollback.',
     unverified: 'No signed update feed, download/signature verification, SmartScreen acceptance, in-app one-click updater or cross-schema downgrade proof.',
   }, null, 2));
   console.log('INSTALL_UPDATE_VERIFIED');

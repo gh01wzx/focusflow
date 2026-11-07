@@ -24,6 +24,7 @@
     "test": "node --test dist/test/*.test.js",
     "test:source": "node --test test/*.test.ts",
     "codex:install": "node scripts/codex-verify.ts install",
+    "ai:install": "node scripts/codex-verify.ts install --product",
     "codex:login": "node scripts/codex-verify.ts login",
     "codex:status": "node scripts/codex-verify.ts status",
     "codex:probe": "node scripts/codex-verify.ts live",

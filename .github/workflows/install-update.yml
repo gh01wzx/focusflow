@@ -1,18 +1,38 @@
 name: Windows installer replacement experiment
 on:
-  pull_request:
+  push:
+    branches: [main]
     paths:
       - '.github/workflows/install-update.yml'
       - 'scripts/smoke-install-update.ts'
       - 'scripts/installer-process.ts'
       - 'test/installer-process.test.ts'
       - 'electron-builder.json'
-      - 'docs/RELEASE_ROUTE.md'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/database/**'
+      - 'src/runtime/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/install-update.yml'
+      - 'scripts/smoke-install-update.ts'
+      - 'scripts/installer-process.ts'
+      - 'test/installer-process.test.ts'
+      - 'electron-builder.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/database/**'
+      - 'src/runtime/**'
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   disposable-install-update:
+    if: github.event.repository.private == false
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
@@ -34,9 +54,11 @@ jobs:
           $candidate = Get-Item -LiteralPath .phase0/update-candidate/FocusFlow-0.1.0-alpha.4-x64.exe
           node dist/scripts/smoke-install-update.js $baseline.FullName $candidate.FullName
           exit $LASTEXITCODE
-      - uses: actions/upload-artifact@v4
+      - name: Print replacement results in the run log
         if: always()
-        with:
-          name: windows-installer-replacement-experiment
-          path: artifacts/install-update/
-          retention-days: 14
+        shell: pwsh
+        run: |
+          foreach ($name in @('report.json', 'failure.json', 'installer-processes.json')) {
+            $report = Join-Path 'artifacts/install-update' $name
+            if (Test-Path -LiteralPath $report) { Get-Content -LiteralPath $report }
+          }

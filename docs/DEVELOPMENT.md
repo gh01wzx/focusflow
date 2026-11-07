@@ -36,6 +36,7 @@ After GitHub creates an Issue, add its actual number to the title; do not guess 
 | npm run build | Clean ignored dist output, compile TypeScript and bundle assets |
 | npm test | Run compiled tests |
 | npm run test:source | Optional Node type-stripping execution; not a type check |
+| npm run ai:install | Explicitly install pinned Codex into the separate product runtime; no login or model turn |
 | npm run package:windows | Build an unsigned NSIS installer; publication is disabled |
 
 Start-FocusFlow.cmd opens development data. Review-FocusFlow.cmd pr-72 opens a named review. Run npm ci again when dependencies change. The installed app bundles its runtime and accepts --review pr-72 without Node or npm.
@@ -61,6 +62,14 @@ Development/review windows show a sample-data notice and title. Examples are add
 Explicit developer overrides remain available for existing tools: FOCUSFLOW_TEST_PROFILE selects a desktop-test directory, and FOCUSFLOW_DATA_DIR selects browser-service data directly. Neither seeds examples. Clear FOCUSFLOW_TEST_PROFILE before using --review; a conflict is refused. Browser review mode ignores FOCUSFLOW_DATA_DIR and uses the named review. These overrides are not everyday/review launch instructions.
 
 Previous spike data and the separate Codex profile are never imported or deleted by source cleanup. Installed everyday data stays in its original location; source launchers no longer open it by default.
+
+## AI account setup and validation
+
+The AI connection preview uses official Codex app-server over owned stdio, pinned to 0.166.0, with a shared codex-product runtime, a codex-profile directory in the selected app profile, and keyring credential mode. The existing codex-phase0 probe remains separate and keeps its established commands. Runtime installation needs Node 24/npm; the desktop bundles neither a model nor this external runtime.
+
+The route follows [official app-server authentication](https://developers.openai.com/codex/app-server/) and [credential-storage guidance](https://developers.openai.com/codex/auth/). Account checks read sanitized account/plan fields. Sign-in is explicit and stays in an owned process until completion, cancellation or timeout. Windows starts the version-checked native executable with a hidden window; it does not use the npm wrapper for background requests. Cancel sign-in closes the local protocol and waits for owned-process cleanup rather than waiting for a provider reply. A timeout gives a retry message. The read-only model check uses the existing tool-denying probe in a disposable directory and requires a fresh server-side ChatGPT account check plus explicit allowance confirmation. No automatic API-key fallback exists.
+
+Automated account, quota and login results are simulated. Before accepting the product integration gate, the owner must install the pinned runtime, explicitly sign in on Windows, confirm OS credential-store use, run one opted-in read-only check and record the exact app commit and result in its PR. Do not treat earlier Phase 0 results as verification of this new profile or UI. No new model run or authorization occurs on app launch.
 
 Do not point test overrides at real data. Do not commit databases, credentials, local config or logs.
 
@@ -92,7 +101,17 @@ This is developer recovery tooling, not an automatic updater or user recovery UI
 - Record executed checks, failures, unverified behavior and the tested commit in the PR. Label owner-reported results, code observations and inference separately. Keep implementation details in the PR's expandable notes.
 - After the owner merges, confirm the merge and update affected Issues/overviews. Leave temporary PR status out of stable documents.
 
-CI repeats cross-platform checks and operates an installed Windows app, including restart and synthetic prior-schema recovery. Existing workflows also run for documentation pushes; their results still belong to the tested commit.
+CI runs once per workflow for a PR update and again for a push to main. New commits cancel superseded runs for that PR. Standard hosted Windows/Linux jobs require a public repository; private-repository jobs are skipped. Cross-platform language/type/build/tests still run for documentation changes. Native desktop checks skip Markdown-only changes.
+
+Installed task, review and synthetic prior-schema recovery checks use the same disposable installation in one job. Recovery still requires earlier steps to pass. This avoids transferring an installer through artifact storage. Real failures still fail the job; existing native-close failures are not suppressed.
+
+CI does not upload installers, screenshots, reports or dependency caches. Result/failure reports are printed in run logs; screenshots and installer files exist only on the disposable runner. The scripts still produce local files when run by a developer. Build a local unsigned installer with npm run package:windows; historical artifacts remain subject to their existing expiration dates.
+
+### Personal account controls
+
+Repository workflow edits do not change personal GitHub email delivery or billing budgets. At [notification settings](https://github.com/settings/notifications), under System / Actions, turn off Email and use On GitHub if desired. At [billing settings](https://github.com/settings/billing), open Budgets and alerts, set a zero paid-usage Actions budget and enable Stop usage when budget limit is reached. A budget that only sends alerts does not stop paid usage. These are owner account settings and must be checked directly; a PR is not proof that either setting changed.
+
+Existing retained artifacts are not deleted by this change. Use the repository Actions pages to inspect or remove unwanted old artifacts if needed. Prior accrued storage is not erased by deleting files. See [GitHub budget controls](https://docs.github.com/en/billing/how-tos/set-up-budgets) and [Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
 
 Tests never use a live model, authenticated GitHub writes or real personal data. Keep evidence tied to the reviewed commit. See [validation](VALIDATION.md) and [Codex commands](CODEX.md).
 
@@ -102,6 +121,10 @@ Before retrying, record the observed failure, the hypothesis to test, one contro
 
 After a native crash, stop repeated launches. Preserve user data and directory permissions. Do not delete the personal database, reset project permissions or disable the sandbox as a routine diagnostic step. The temporary Electron-path workaround does not establish a permanent fix. [Task #73](https://github.com/gh01wzx/focusflow/issues/73) holds the startup observations and remaining diagnostic work.
 
+## GitHub product connection
+
+See [GitHub connection](GITHUB_CONNECTION.md) for the authorization comparison, owner setup and disposable review steps. Review profile credentials are separate from everyday credentials. Connecting alone performs no repository writes.
+
 ## Disposable installer replacement experiment
 
-The [Windows release route](RELEASE_ROUTE.md) describes a dedicated ephemeral Windows Actions job. It builds two unsigned versions from the same code, replaces binaries, compares sample records and restores a snapshot separately. Run it on an ephemeral runner because installers change per-user registration. It stops on native launch/close failure. It does not publish or implement one-click updates.
+The [Windows release route](RELEASE_ROUTE.md) describes a dedicated standard GitHub-hosted Windows Actions job in a public repository. It builds two unsigned versions from the same code, replaces binaries, compares sample records and restores a snapshot separately. It prints result/process reports in the run log without artifact uploads or caches. The harness refuses personal and self-hosted execution because installers change per-user registration. It stops on native launch/close failure. It does not publish or implement one-click updates.

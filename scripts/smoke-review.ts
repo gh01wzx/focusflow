@@ -1,3 +1,5 @@
+import { exerciseAiUI } from './ai-ui.ts';
+import { exerciseGitHubUI } from './github-ui.ts';
 import { _electron as electron } from 'playwright-core';
 import type { ElectronApplication } from 'playwright-core';
 import assert from 'node:assert/strict';
@@ -76,6 +78,8 @@ try {
   let review = await launch(['--review', 'pr-72']);
   await review.page.getByRole('note').filter({ hasText: 'Sample data' }).waitFor();
   assert.match(await review.page.title(), /Review pr-72 - Sample data/);
+  mark('ai-missing-runtime-and-simulated-consent-ui');
+  await exerciseAiUI(review.page, join(artifacts, 'ai-connection-simulated.png'));
   assert.equal(await review.page.getByText('Everyday task stays here', { exact: true }).count(), 0);
   await review.page.getByRole('checkbox', { name: 'Complete Try completing this sample task', exact: true }).click();
   await review.page.getByRole('status').filter({ hasText: 'Task completed.' }).waitFor();
@@ -90,6 +94,15 @@ try {
   await review.page.getByRole('heading', { name: 'Sample project', exact: true }).waitFor();
   await review.page.getByRole('note').filter({ hasText: 'Review pr-72' }).waitFor();
   await review.page.screenshot({ path: join(artifacts, 'sample-projects.png'), fullPage: true });
+  mark('github-os-storage-and-simulated-confirmation');
+  assert.equal(await review.application.evaluate(async ({ safeStorage }) => {
+    if (!await safeStorage.isAsyncEncryptionAvailable()) return false;
+    const plain = 'disposable safeStorage fixture';
+    const encrypted = await safeStorage.encryptStringAsync(plain);
+    const decrypted = await safeStorage.decryptStringAsync(encrypted);
+    return decrypted.result === plain && !encrypted.includes(Buffer.from(plain));
+  }), true, 'Real Windows OS-protected credential storage must round-trip.');
+  await exerciseGitHubUI(review.page, 'Sample project', join(artifacts, 'github-connection-simulated.png'));
   mark('reopen-same-review-data');
   await close(review.application);
   review = await launch(['--review', 'pr-72']);

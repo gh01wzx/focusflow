@@ -1,5 +1,5 @@
 import { parseProjectView } from '../shared/project-codec.ts';
-import type { EntityDraft, ProjectView, TicketDraft, TicketStatus } from '../shared/projects.ts';
+import type { EntityDraft, ProjectView, TicketDraft, TicketDetailsDraft, TicketStatus } from '../shared/projects.ts';
 
 export function createProjectClient(transport: typeof fetch = fetch) {
   async function request(path: string, value?: unknown): Promise<ProjectView> {
@@ -21,6 +21,9 @@ export function createProjectClient(transport: typeof fetch = fetch) {
     addProject: (draft: EntityDraft) => request('/api/projects', draft),
     addMilestone: (projectId: string, draft: EntityDraft) => request('/api/milestones', { ...draft, projectId }),
     addTicket: (draft: TicketDraft) => request('/api/project-tickets', draft),
+    editProject: (id: string, draft: EntityDraft) => request(`/api/projects/${encodeURIComponent(id)}/details`, draft),
+    editMilestone: (id: string, draft: EntityDraft) => request(`/api/milestones/${encodeURIComponent(id)}/details`, draft),
+    editTicket: (id: string, draft: TicketDetailsDraft) => request(`/api/project-tickets/${encodeURIComponent(id)}/details`, draft),
     setStatus: (id: string, status: TicketStatus) => request(`/api/project-tickets/${encodeURIComponent(id)}/status`, { status }),
   };
 }

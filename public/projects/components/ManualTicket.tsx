@@ -39,7 +39,7 @@ export function ManualTicket({ ticket, view, editingPrerequisites, onEditingChan
             onClick={() => void onStatus(ticket.id, status)}>{TICKET_STATUS_LABELS[status]}</button>)}
         </div>
         {error && <p className="error" role="alert">{error}</p>}
-        <Prerequisites ticket={ticket} view={view} busy={busy} editingLocked={false}
+        <Prerequisites ticket={ticket} view={view} busy={busy}
           onEditingChange={onEditingChange} onSave={onPrerequisites} onVisit={onVisit} />
         <h3>Description</h3>
         <p className="project-description">{ticket.description || 'No description yet.'}</p>

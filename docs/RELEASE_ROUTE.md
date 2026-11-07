@@ -46,7 +46,7 @@ Open the **Windows installer replacement experiment** Actions workflow for this 
 1. Build the existing unsigned 0.1.0-alpha.3 full installer.
 2. Build the same code/schema as a test-only 0.1.0-alpha.4 installer, without changing package.json or publishing anything.
 3. Install the baseline in an owned temporary directory, keeping an allowlisted hosted Windows shell environment for the installer. Launch its ordinary packaged desktop executable with separate synthetic APPDATA/LOCALAPPDATA paths and an isolated test profile. Do not point the installer itself at the synthetic app profile; NSIS uses Windows shell/PowerShell helpers.
-4. Save Personal tasks, a selected-weekday repeat and a project/milestone with two manual tickets, Done/Ready statuses and a prerequisite link. Create a verified product snapshot.
+4. Save Personal tasks, a selected-weekday repeat and a project/milestone with two manual tickets, Done/Backlog statuses and a prerequisite link. Create a verified product snapshot.
 5. Close the owned process, replace its binaries with the candidate installer and assert that the installer leaves database bytes unchanged.
 6. Launch the candidate and compare exact task/repeat/project records, including identities, statuses and the prerequisite link. Restore the snapshot to a separate target and verify its contents while leaving the current database unchanged.
 7. Reinstall the baseline and verify the same records again. This last step tests same-schema binary rollback only.

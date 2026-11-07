@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { exerciseProjectBoard } from './project-board-ui.ts';
 import type { Page } from 'playwright-core';
 import type { ProjectView, TicketStatus } from '../src/shared/projects.ts';
 import { openTicket, closeTicket, setTicketStatus, exerciseProjectEdits } from './project-edit-ui.ts';
@@ -53,7 +54,7 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string, e
   await addEntity('milestone', 'First milestone');
   await addTicket(PROJECT_SMOKE_TITLE);
   const card = page.getByRole('button', { name: 'Open ticket ' + PROJECT_SMOKE_TITLE, exact: true });
-  for (const value of ['ready', 'in_progress', 'review', 'blocked', 'backlog', 'done'] as TicketStatus[]) {
+  for (const value of ['in_progress', 'review', 'backlog', 'done'] as TicketStatus[]) {
     await setTicketStatus(page, PROJECT_SMOKE_TITLE, value);
   }
   const ticketDialog = await openTicket(page, PROJECT_SMOKE_TITLE);
@@ -67,7 +68,7 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string, e
   const beforeFailedStatus = await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
   await page.route('**/api/project-tickets/*/status', route => route.fulfill({ status: 500,
     json: { error: 'Could not change ticket status.' } }));
-  await ticketDialog.getByRole('button', { name: 'Blocked', exact: true }).click();
+  await ticketDialog.getByRole('button', { name: 'Backlog', exact: true }).click();
   await ticketDialog.getByRole('alert').filter({ hasText: 'Could not change ticket status.' }).waitFor();
   assert.equal(await ticketDialog.getByRole('button', { name: 'Done', exact: true }).getAttribute('aria-pressed'), 'true');
   assert.deepEqual(await page.evaluate(async () => (await fetch('/api/projects')).json()), beforeFailedStatus);
@@ -93,7 +94,9 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string, e
   await addTicket('Separate project work');
   await addEntity('milestone', 'Preparation');
   await addTicket('Prepare input');
+  await setTicketStatus(page, 'Prepare input', 'review');
   await addTicket('Check input');
+  await setTicketStatus(page, 'Check input', 'done');
   await page.getByLabel('Milestone', { exact: true }).selectOption({ label: 'Separate goal' });
   let dependent = await openTicket(page, 'Separate project work');
   const prerequisites = dependent.getByRole('form', { name: 'Prerequisites for Separate project work', exact: true });
@@ -148,9 +151,8 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string, e
   await dependent.getByText('Waiting for 1 prerequisite. This ticket cannot start yet.', { exact: true }).waitFor();
   assert.equal(await dependent.getByRole('button', { name: 'In Progress', exact: true }).isDisabled(), true);
   await closeTicket(page, 'Separate project work');
-  await setTicketStatus(page, 'Separate project work', 'ready');
   await page.getByRole('button', { name: 'Action center', exact: true }).click();
-  await page.getByRole('region', { name: 'Next task', exact: true }).getByText('No eligible Ready task.', { exact: false }).waitFor();
+  await page.getByRole('region', { name: 'Next task', exact: true }).getByText('No eligible Backlog task.', { exact: false }).waitFor();
   assert.equal(await page.getByRole('button', { name: 'Start ticket', exact: true }).count(), 0);
   await page.getByRole('navigation', { name: 'Project list', exact: true })
     .getByRole('button', { name: 'Another project', exact: true }).click();
@@ -218,5 +220,6 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string, e
     .getByRole('button', { name: 'Learning project', exact: true }).click();
   await page.getByRole('heading', { name: 'Learning project', exact: true }).waitFor();
   await exerciseProjectEdits(page, PROJECT_SMOKE_TITLE, editScreenshot);
+  await exerciseProjectBoard(page);
   return await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
 }

@@ -36,6 +36,7 @@ const setupEnvironment = installerEnvironment(process.env);
 environment.LOCALAPPDATA = join(root, 'local');
 environment.APPDATA = join(root, 'roaming');
 environment.FOCUSFLOW_TEST_PROFILE = profile;
+environment.FOCUSFLOW_SHUTDOWN_TRACE = '1';
 await mkdir(environment.APPDATA, { recursive: true });
 const installerRuns: unknown[] = [];
 const digest = async (path: string) => createHash('sha256').update(await readFile(path)).digest('hex');
@@ -58,6 +59,13 @@ async function install(installer: string) {
 }
 async function launch(version: string) {
   application = await electron.launch({ executablePath: join(installation, 'FocusFlow.exe'), env: environment, timeout: 30000 });
+  let shutdownOutput = '';
+  application.process().stdout?.on('data', (chunk: Buffer) => {
+    shutdownOutput += chunk.toString('utf8');
+    const lines = shutdownOutput.split(/\r?\n/); shutdownOutput = lines.pop() ?? '';
+    if (shutdownOutput.length > 1024) shutdownOutput = '';
+    for (const line of lines) if (/^FOCUSFLOW_SHUTDOWN:[a-z:-]+$/.test(line)) console.log(line);
+  });
   assert.equal(await application.evaluate(({ app }) => app.getVersion()), version);
   assert.equal(await application.evaluate(({ app }) => app.getPath('userData')), profile);
   const page = await application.firstWindow({ timeout: 15000 });
@@ -125,7 +133,7 @@ try {
   const dependentId = second.view.tickets.find(ticket => ticket.id !== prerequisiteId)!.id;
   await post(page, '/api/project-tickets/' + dependentId + '/prerequisites', { prerequisiteIds: [prerequisiteId] });
   await post(page, '/api/project-tickets/' + prerequisiteId + '/status', { status: 'done' });
-  await post(page, '/api/project-tickets/' + dependentId + '/status', { status: 'ready' });
+  await post(page, '/api/project-tickets/' + dependentId + '/status', { status: 'backlog' });
   const saved = await views(page, projectId);
   assert.equal(saved.projects.tickets.length, 2);
   assert.deepEqual(saved.projects.dependencies, [{ ticketId: dependentId, prerequisiteId }]);

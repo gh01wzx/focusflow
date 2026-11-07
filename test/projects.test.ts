@@ -177,7 +177,7 @@ test('project SQL constraints reject orphan parents and coding tickets', async t
   try {
     db.exec('PRAGMA foreign_keys=ON');
     assert.throws(() => db.exec("INSERT INTO milestones VALUES('orphan','missing','Orphan','','2026-11-04T00:00:00Z')"), /FOREIGN KEY/);
-    assert.throws(() => db.prepare('INSERT INTO project_tickets VALUES(?,?,?,?,?,?,?,?,?)').run(
+    assert.throws(() => db.prepare('INSERT INTO project_tickets(id,milestone_id,title,description,acceptance_criteria,status,execution_mode,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)').run(
       'coding', milestone.id, 'Coding', '', '', 'done', 'codex', '2026-11-04T00:00:00Z', '2026-11-04T00:00:00Z'), /CHECK/);
     assert.equal(db.prepare('PRAGMA user_version').get()?.user_version, SCHEMA_VERSION);
   } finally { db.close(); }
@@ -225,7 +225,7 @@ test('project client rejects invalid nested data, foreign parents and unsupporte
   const project = { id: 'a', title: 'A', description: '', createdAt: '2026-11-04T00:00:00Z' };
   const milestone = { ...project, id: 'm', projectId: 'a' };
   const ticket = { id: 't', projectId: 'a', milestoneId: 'm', title: 'Ticket', description: '', acceptanceCriteria: '',
-    status: 'backlog', executionMode: 'manual', createdAt: project.createdAt, updatedAt: project.createdAt };
+    status: 'backlog', blockReason: '', executionMode: 'manual', createdAt: project.createdAt, updatedAt: project.createdAt };
   const valid = { projects: [project], selectedProjectId: 'a', milestones: [milestone], tickets: [ticket], dependencies: [] };
   for (const payload of [null, { ...valid, selectedProjectId: 'missing' },
     { ...valid, milestones: [{ ...milestone, projectId: 'other' }] },

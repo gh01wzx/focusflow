@@ -22,6 +22,7 @@
     "scripts/weekday-ui.ts",
     "scripts/github-ui.ts",
     "scripts/ai-ui.ts",
-    "scripts/smoke-install-update.ts"
+    "scripts/smoke-install-update.ts",
+    "scripts/project-board-ui.ts"
   ]
 }

@@ -9,7 +9,11 @@ The maintained checks cover the scenarios below. This list describes coverage; e
 - Language, strict TypeScript, static dependency boundaries, build and compiled behavior tests.
 - Browser clients against the real local API; malformed response rejection; architecture-guard failure cases.
 - Real SQLite/HTTP/calendar checks with disposable directories.
+- Shutdown checks use incomplete JSON bodies and pre-header sockets, verify accepted writes finish before database closure, retain cancellation errors and ensure cleanup runs once. Installed review checks include a pending incomplete loopback request while closing, with the original 15-second native-exit deadline and fixed phase-only diagnostics.
+- Board checks assert all four columns fit normal window widths and top Previous/Next controls expose all of Done at a narrow width; links/status interaction checks run after restoring the original viewport.
 - Migration rollback, backup failure, WAL snapshot consistency, checksum/target protection and product identity/newer-schema refusal.
+- Format 6/7 to 8 retains ticket IDs/text/timestamps, prerequisites, Personal/weekly data and published draft JSON. Legacy Ready/Blocked conversion retains blocking; old snapshots restore their original statuses. Failed rebuild and failed backup retain old schema/data/constraints.
+- Four-status blocker checks cover explicit manual reasons, rejected old status writes, read validation, same-origin HTTP, both Start paths, clearing without automatic status changes, failed-save retention, direct cross-milestone card links and exact-ticket navigation from Action center.
 - Windows installed UI: add/complete/cancel, overdue/future/history, text escaping, second instance, graceful exit and restart.
 - Synthetic prior product schema migration and separate snapshot recovery.
 - Daily/weekly rollover, closed-app catch-up, completion/cancellation, stop, restart, clock rollback, Auckland DST and failed reconciliation rollback.
@@ -54,9 +58,9 @@ GitHub Issues/PRs and Git history are the development record. Old experiment doc
 
 No personal database, credentials or raw execution logs belong in the repository.
 
-Action-center checks cover cross-project ordering, one Ready recommendation, stale/non-Ready start rejection, persistence, malformed responses, installed detail expansion and failed-start recovery.
+Action-center checks cover cross-project ordering, one unblocked Backlog recommendation, stale/non-Backlog start rejection, persistence, malformed responses, installed detail expansion and failed-start recovery.
 
-Project-edit checks cover text changes at every level, all six statuses, identity/parent retention, unchanged-text timestamps, invalid input, real HTTP boundaries, failed writes and restart persistence. Installed UI checks cover ticket cards and details dialogs, all six status buttons, failed status writes, compact creation dialogs, cancelled creation, focus restoration, edit dismissal locks, failed-save drafts, background refresh during editing, direct navigation and escaped non-English text.
+Project-edit checks cover text changes at every level, all four statuses, identity/parent retention, unchanged-text timestamps, invalid input, real HTTP boundaries, failed writes and restart persistence. Installed UI checks cover ticket cards and details dialogs, all four status buttons, failed status writes, compact creation dialogs, cancelled creation, focus restoration, edit dismissal locks, failed-save drafts, background refresh during editing, direct navigation and escaped non-English text.
 
 Prerequisite checks cover recommendation/Start agreement, status changes between recommendation and Start, self/cycle/cross-project rejection, SQL constraints, malformed graphs, restart persistence and schema-5 backup/recovery protection. Installed checks link across milestones, navigate to a blocker and finish it before starting the dependent ticket.
 

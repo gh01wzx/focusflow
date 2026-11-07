@@ -259,3 +259,4 @@ nav[aria-label="Project list"] .nav-item {
 .plan-editor label { display: grid; gap: 6px; margin-bottom: 12px; }
 .plan-editor .plan-consent { display: flex; align-items: flex-start; gap: 8px; }
 .plan-preview p, .plan-preview strong { white-space: pre-wrap; overflow-wrap: anywhere; }
+.publication-content { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; padding: 12px; background: #f5f5f0; }

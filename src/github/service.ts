@@ -1,11 +1,16 @@
 import type { GitHubRepository, GitHubStatus } from '../shared/github.ts';
 import { repositoryName, parseGitHubRepository, unavailableGitHub } from '../shared/github.ts';
 import type { GitHubVault, StoredGitHub } from './vault.ts';
+import { createIssueProvider } from './issues.ts';
+import type { RepositoryRequest } from './issues.ts';
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
-class GitHubFailure extends Error {}
+class GitHubFailure extends Error {
+  readonly refused: boolean;
+  constructor(message: string, refused = false) { super(message); this.refused = refused; }
+}
 function providerRepository(value: unknown) {
   const item = record(value);
   return parseGitHubRepository({ id: item.id, fullName: item.full_name, private: item.private });
@@ -39,10 +44,11 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
     if (!response.ok) {
       if (response.status === 401) {
         if (saved) { saved = { ...saved, token: '', expiresAt: 0 }; await vault.write(saved); }
-        throw new GitHubFailure('GitHub access expired or was revoked. Authorize again.');
+        throw new GitHubFailure('GitHub access expired or was revoked. Authorize again.', options.method === 'POST');
       }
-      if (response.status === 403 || response.status === 429) throw new GitHubFailure('GitHub refused access or reached a rate limit. Check the App permissions, repository access and retry time.');
-      if (response.status === 404) throw new GitHubFailure('Repository not accessible. Check owner/name and the GitHub App installation.');
+      if (response.status === 403 || response.status === 429) throw new GitHubFailure('GitHub refused access or reached a rate limit. Check the App permissions, repository access and retry time.', options.method === 'POST');
+      if (response.status === 404) throw new GitHubFailure('Repository not accessible. Check owner/name and the GitHub App installation.', options.method === 'POST');
+      if (response.status === 400 || response.status === 422) throw new GitHubFailure('GitHub rejected the Issue content. Correct the approved plan before another publication.', options.method === 'POST');
       throw new GitHubFailure('GitHub could not complete the request. Retry later.');
     }
     try { return await response.json() as unknown; }
@@ -52,12 +58,13 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
     method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams(fields).toString(),
   });
-  async function api(path: string, token = saved?.token ?? '') {
+  async function api(path: string, token = saved?.token ?? '', method = 'GET', body?: unknown) {
     if (!token || (saved && token === saved.token && saved.expiresAt !== null && saved.expiresAt <= now())) {
       throw new GitHubFailure('GitHub access is missing or expired. Authorize GitHub again.');
     }
-    return request('https://api.github.com' + path, { headers: {
+    return request('https://api.github.com' + path, { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }), headers: {
       Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + token, 'X-GitHub-Api-Version': '2022-11-28',
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
     } });
   }
   async function account(token: string) {
@@ -80,7 +87,23 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
     queue = pending.catch(() => {});
     return pending;
   }
+  const repositoryRequest: RepositoryRequest = (projectId, expected, operation) => {
+    const pending = queue.then(async () => {
+      if (shutdown.signal.aborted || !await vault.available()) throw new GitHubFailure('GitHub is unavailable or closing.');
+      await load();
+      const linked = saved?.repositories[projectId];
+      if (!linked) throw new GitHubFailure('Connect this project to GitHub first.');
+      if (expected && JSON.stringify(linked) !== JSON.stringify(expected)) throw new GitHubFailure('Repository changed. Inspect and confirm it again.');
+      const path = '/repos/' + linked.fullName.split('/').map(encodeURIComponent).join('/');
+      const checked = providerRepository(await api(path));
+      if (JSON.stringify(checked) !== JSON.stringify(linked)) throw new GitHubFailure('Repository identity or visibility changed. No write was authorized.');
+      return operation(checked, (suffix, method = 'GET', body) => api(path + suffix, undefined, method, body));
+    });
+    queue = pending.catch(() => {});
+    return pending;
+  };
   return {
+    issues: createIssueProvider(repositoryRequest),
     status: (projectId: string) => run(projectId, async () => {}),
     start: (projectId: string, clientId: unknown) => run(projectId, async () => {
       if (typeof clientId !== 'string' || !/^[A-Za-z0-9_.-]{5,100}$/.test(clientId)) throw new GitHubFailure('Enter the client ID of your registered GitHub App with device flow enabled.');

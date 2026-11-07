@@ -1,6 +1,6 @@
 # GitHub project connection
 
-This product-owned connection is separate from the ChatGPT GitHub connector. It only reads account/repository metadata and saves a local project link. It creates no remote work.
+This product-owned connection is separate from the ChatGPT GitHub connector. Connection setup reads account/repository metadata and saves a local project link. Only a separately previewed and explicitly approved coding publication creates remote Issues.
 
 ## Authorization decision
 
@@ -11,7 +11,7 @@ This product-owned connection is separate from the ChatGPT GitHub connector. It 
 | Personal access token | Manual setup | User creates, copies, rotates and revokes a secret | Not selected |
 | ChatGPT connector credentials | Belong to the connector | Not available to the installed product | Not reusable |
 
-Repository metadata read access is sufficient for this connection step. Seeing metadata does not prove permission to create Issues, branches or PRs. Later write stories must separately explain and validate each required permission.
+Repository metadata read access is sufficient for the connection step. Seeing metadata does not prove permission to create Issues, branches or PRs. Issue publication requires Issues read/write permission on the selected repository. The owner must grant that permission at GitHub and authorize again as required; the app never grants scopes automatically. Repository contents/PR writes and coding remain separate work.
 
 ## Try with your own App
 
@@ -37,7 +37,7 @@ The browser-only app keeps manual projects available but cannot connect GitHub. 
 
 ## Verification boundaries
 
-Unit/integration tests use simulated GitHub responses, disposable storage and real local HTTP. Windows installed smoke tests exercise actual safeStorage encryption/decryption and simulated repository confirmation UI. These checks cannot prove a live App installation, current provider policy or real account access. Keep the PR draft until the owner records that live trial at an exact build.
+Unit/integration tests use simulated GitHub responses, disposable storage and real local HTTP. Windows installed smoke tests exercise actual safeStorage encryption/decryption and simulated repository confirmation/publication UI. These checks cannot prove a live App installation, current provider policy or real account access. An implementation may merge under the owner's explicit batch authorization; live authorization/write acceptance remains recorded separately until demonstrated at an exact build.
 
 Official references:
 
@@ -45,4 +45,5 @@ Official references:
 - [OAuth device flow and polling rules](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow)
 - [OAuth App scopes](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps)
 - [Repository metadata API](https://docs.github.com/en/rest/repos/repos)
+- [Issue list, create and update API and required permissions](https://docs.github.com/en/rest/issues/issues)
 - [Electron safeStorage](https://www.electronjs.org/docs/latest/api/safe-storage)

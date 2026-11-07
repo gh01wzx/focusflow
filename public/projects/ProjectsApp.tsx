@@ -10,6 +10,7 @@ import { ProjectTicketCard } from './components/ProjectTicketCard.tsx';
 import type { GitHubRepository } from '../../src/shared/github.ts';
 import { ProjectBoard } from './components/ProjectBoard.tsx';
 import { PlanDraftPanel } from './components/PlanDraftPanel.tsx';
+import { PublicationPanel } from './components/PublicationPanel.tsx';
 import { ProjectNavigation } from './components/ProjectNavigation.tsx';
 import { ProjectDialog } from './components/ProjectDialog.tsx';
 import { DetailsEditor } from './components/DetailsEditor.tsx';
@@ -96,6 +97,7 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
                 <h2 className="project-heading">{project.title}</h2>
                 <div className="project-tools">
                   <PlanDraftPanel key={project.id} projectId={project.id} disabled={locked} onOpenChange={setPlanning} onApproved={() => { void state.refresh(); }} />
+                  <PublicationPanel projectId={project.id} disabled={locked} onOpenChange={setPlanning} onChanged={() => { void state.refresh(); }} />
                   <button className="text-button" disabled={locked} onClick={() => state.beginEdit('project', project.id)}>Edit project</button>
                   <button className="secondary-button" disabled={locked} onClick={() => openComposer('milestone')}>New milestone</button>
                 </div>

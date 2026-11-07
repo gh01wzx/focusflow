@@ -43,6 +43,10 @@ export function createProjectRepository(db: DatabaseSync) {
     else db.prepare('DELETE FROM coding_tickets WHERE ticket_id=?').run(id);
   }
   return {
+    publicationLocked: (id: string) => !!db.prepare(`SELECT 1 FROM issue_publications i JOIN publication_batches b ON b.id=i.batch_id
+      WHERE i.ticket_id=? AND b.approved_at IS NOT NULL`).get(id),
+    publicationRepositoryChanged: (projectId: string, repositoryId: unknown) => !!db.prepare(`SELECT 1 FROM publication_batches
+      WHERE project_id=? AND approved_at IS NOT NULL AND json_extract(repository_json,'$.id')!=?`).get(projectId, typeof repositoryId === 'number' ? repositoryId : -1),
     listProjects: () => projects.all().map(parseProject),
     listMilestones: (id: string) => milestones.all(id).map(parseMilestone),
     listTickets: (id: string) => tickets.all(id).map(parseTicket),

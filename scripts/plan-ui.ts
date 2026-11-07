@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import type { Page } from 'playwright-core';
 import type { PlanDraft, PlanState } from '../src/shared/plans.ts';
+import type { PublicationState } from '../src/shared/publication.ts';
 
 /** UI replies are simulated; persistence is checked separately against real SQLite/HTTP. */
 export async function exercisePlanUI(page: Page): Promise<void> {
@@ -113,5 +114,49 @@ export async function exercisePlanUI(page: Page): Promise<void> {
     await dialog.getByRole('status').filter({ hasText: 'Plan approved: 2 saved tasks.' }).waitFor();
     assert.equal(approvals, 1);
     await dialog.getByRole('button', { name: 'Close AI plan draft', exact: true }).click();
+  } finally { await page.unroute(pattern); }
+}
+
+export async function exercisePublicationUI(page: Page): Promise<void> {
+  const entry = page.getByRole('button', { name: 'Publish approved work', exact: true });
+  const projectId = (await entry.getAttribute('id'))!.slice('publication-'.length);
+  let state: PublicationState = { batch: null, busy: false, message: 'No publication has been approved.' };
+  let previews = 0, publications = 0;
+  const pattern = '**/api/projects/*/publication**';
+  await page.route(pattern, route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/preview')) {
+      previews++;
+      state = { ...state, batch: { id: '11111111-1111-4111-8111-111111111111', projectId,
+        repository: { id: 7, fullName: 'sample/work', private: false }, approvedAt: null, items: [{
+          content: { ticketId: '22222222-2222-4222-8222-222222222222', title: 'Publish <script>example</script>', description: 'Approved public description', acceptanceCriteria: 'Public steps', prerequisites: [], privatePrerequisites: 1 },
+          stage: 'pending', issueNumber: null, message: '',
+        }] } };
+    }
+    if (path.endsWith('/publish')) {
+      publications++; assert.equal(route.request().postDataJSON().confirm, true);
+      state = { ...state, batch: { ...state.batch!, approvedAt: '2026-11-08T00:00:00Z', items: state.batch!.items.map(item => ({ ...item, stage: 'published', issueNumber: 123 })) }, message: 'Approved coding Issues are linked. Nothing started.' };
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(state) });
+  });
+  try {
+    await entry.click(); const dialog = page.getByRole('dialog', { name: 'Publish approved work', exact: true });
+    await dialog.getByRole('status').filter({ hasText: 'No publication has been approved.' }).waitFor();
+    assert.equal(previews, 0); assert.equal(publications, 0);
+    await dialog.getByRole('button', { name: 'Preview publication', exact: true }).click();
+    const preview = dialog.getByRole('region', { name: 'Publication preview', exact: true });
+    await preview.getByRole('heading', { name: 'sample/work', exact: true }).waitFor();
+    await preview.getByText('Public repository - anyone can read these Issues', { exact: true }).waitFor();
+    await preview.locator('summary').click();
+    await preview.getByText('Approved public description', { exact: false }).waitFor();
+    assert.equal(await preview.locator('script').count(), 0);
+    const approve = preview.getByRole('button', { name: 'Approve and publish batch', exact: true });
+    assert.equal(await approve.isDisabled(), true); assert.equal(publications, 0);
+    await preview.getByRole('checkbox').check(); await approve.click();
+    await preview.getByRole('link', { name: 'Open Issue #123', exact: true }).waitFor();
+    assert.equal(publications, 1);
+    await dialog.getByRole('button', { name: 'Close Publish approved work', exact: true }).click();
+    await entry.click(); await preview.getByRole('link', { name: 'Open Issue #123', exact: true }).waitFor();
+    assert.equal(publications, 1); await dialog.getByRole('button', { name: 'Close Publish approved work', exact: true }).click();
   } finally { await page.unroute(pattern); }
 }

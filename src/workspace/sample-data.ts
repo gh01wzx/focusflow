@@ -8,6 +8,7 @@ import type { TaskTransaction } from '../tasks/service.ts';
 import { createProjectRepository } from '../projects/repository.ts';
 import { createProjectService } from '../projects/service.ts';
 import type { TicketStatus } from '../shared/projects.ts';
+import { createPlanRepository } from '../plans/repository.ts';
 
 export function seedSampleData(db: DatabaseSync, now: Date): void {
   inTransaction(db, () => {
@@ -73,5 +74,14 @@ export function seedSampleData(db: DatabaseSync, now: Date): void {
     projects.setPrerequisites(dependent.id, { prerequisiteIds: [goal.id] });
     projects.setPrerequisites(feedback.id, { prerequisiteIds: [layout.id] });
     projects.setBlocker(image.id, { reason: 'Waiting for an example image from outside this project.' });
+    createPlanRepository(db).save({ id: randomUUID(), projectId: project.id, goal: 'Try editing and approving a small plan without a model call.',
+      createdAt: now.toISOString(), plan: { milestones: [{ key: 'sample-draft', title: 'Try a saved plan', description: 'Sample suggestions, not a model response.', tickets: [
+        { key: 'sample-prepare', title: 'Prepare a sample input', description: 'Edit this task, or exclude it together with its dependent.',
+          acceptanceCriteria: 'One input is available.', executionMode: 'manual', prerequisiteKeys: [] },
+        { key: 'sample-code', title: 'Build a sample tool', description: 'This coding suggestion stays unpublished and cannot start after approval.',
+          acceptanceCriteria: 'The sample output matches the input.', executionMode: 'codex', prerequisiteKeys: ['sample-prepare'] },
+        { key: 'sample-optional', title: 'An optional suggestion', description: 'Try excluding this task before approval.',
+          acceptanceCriteria: 'Only selected tasks become real tickets.', executionMode: 'manual', prerequisiteKeys: [] },
+      ] }] } });
   });
 }

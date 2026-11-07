@@ -95,7 +95,7 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
               <div className="detail-heading">
                 <h2 className="project-heading">{project.title}</h2>
                 <div className="project-tools">
-                  <PlanDraftPanel key={project.id} projectId={project.id} disabled={locked} onOpenChange={setPlanning} />
+                  <PlanDraftPanel key={project.id} projectId={project.id} disabled={locked} onOpenChange={setPlanning} onApproved={() => { void state.refresh(); }} />
                   <button className="text-button" disabled={locked} onClick={() => state.beginEdit('project', project.id)}>Edit project</button>
                   <button className="secondary-button" disabled={locked} onClick={() => openComposer('milestone')}>New milestone</button>
                 </div>

@@ -35,7 +35,7 @@ export async function startWorkspaceServer(options: {
   const trace = (stage: ShutdownStage) => { options.onShutdown?.(stage); };
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
   const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });
-  const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai));
+  const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai), store.planApproval);
   const local = await listenLocal(async (request, response, origin) => {
     try {
       secureRequest(request, response, origin);
@@ -59,7 +59,7 @@ export async function startWorkspaceServer(options: {
       const planRoute = matchPlanRoute(request.method, resource);
       if (planRoute) {
         store.projects.view(planRoute.projectId);
-        const input = request.method === 'GET' ? undefined : await readJson(request, origin, 16384);
+        const input = request.method === 'GET' ? undefined : await readJson(request, origin, 1048576);
         sendJson(response, 200, dispatchPlanRoute(planRoute, input, plans));
         return;
       }

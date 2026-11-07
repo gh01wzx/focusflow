@@ -1,9 +1,18 @@
 name: Checks
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   test:
+    if: github.event.repository.private == false
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest]
@@ -19,6 +28,7 @@ jobs:
       - run: npm run build
       - run: npm test
   project-browser:
+    if: github.event.repository.private == false
     runs-on: windows-latest
     timeout-minutes: 8
     steps:
@@ -30,13 +40,15 @@ jobs:
       - run: npm exec -- playwright-core install chromium
       - run: npm run build
       - run: node dist/scripts/smoke-projects-browser.js
-      - uses: actions/upload-artifact@v4
+      - name: Print browser result in the run log
         if: always()
-        with:
-          name: project-browser-ui
-          path: artifacts/project-browser/
-          retention-days: 14
+        shell: pwsh
+        run: |
+          foreach ($report in @('artifacts/project-browser/report.json', 'artifacts/project-browser/failure.json')) {
+            if (Test-Path -LiteralPath $report) { Get-Content -LiteralPath $report }
+          }
   codex-transport:
+    if: github.event.repository.private == false
     runs-on: windows-latest
     timeout-minutes: 5
     steps:

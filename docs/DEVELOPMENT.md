@@ -92,7 +92,17 @@ This is developer recovery tooling, not an automatic updater or user recovery UI
 - Record executed checks, failures, unverified behavior and the tested commit in the PR. Label owner-reported results, code observations and inference separately. Keep implementation details in the PR's expandable notes.
 - After the owner merges, confirm the merge and update affected Issues/overviews. Leave temporary PR status out of stable documents.
 
-CI repeats cross-platform checks and operates an installed Windows app, including restart and synthetic prior-schema recovery. Existing workflows also run for documentation pushes; their results still belong to the tested commit.
+CI runs once per workflow for a PR update and again for a push to main. New commits cancel superseded runs for that PR. Standard hosted Windows/Linux jobs require a public repository; private-repository jobs are skipped. Cross-platform language/type/build/tests still run for documentation changes. Native desktop checks skip Markdown-only changes.
+
+Installed task, review and synthetic prior-schema recovery checks use the same disposable installation in one job. Recovery still requires earlier steps to pass. This avoids transferring an installer through artifact storage. Real failures still fail the job; existing native-close failures are not suppressed.
+
+CI does not upload installers, screenshots, reports or dependency caches. Result/failure reports are printed in run logs; screenshots and installer files exist only on the disposable runner. The scripts still produce local files when run by a developer. Build a local unsigned installer with npm run package:windows; historical artifacts remain subject to their existing expiration dates.
+
+### Personal account controls
+
+Repository workflow edits do not change personal GitHub email delivery or billing budgets. At [notification settings](https://github.com/settings/notifications), under System / Actions, turn off Email and use On GitHub if desired. At [billing settings](https://github.com/settings/billing), open Budgets and alerts, set a zero paid-usage Actions budget and enable Stop usage when budget limit is reached. A budget that only sends alerts does not stop paid usage. These are owner account settings and must be checked directly; a PR is not proof that either setting changed.
+
+Existing retained artifacts are not deleted by this change. Use the repository Actions pages to inspect or remove unwanted old artifacts if needed. Prior accrued storage is not erased by deleting files. See [GitHub budget controls](https://docs.github.com/en/billing/how-tos/set-up-budgets) and [Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
 
 Tests never use a live model, authenticated GitHub writes or real personal data. Keep evidence tied to the reviewed commit. See [validation](VALIDATION.md) and [Codex commands](CODEX.md).
 

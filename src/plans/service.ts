@@ -2,12 +2,14 @@ import { randomUUID } from 'node:crypto';
 import { parseSuggestedPlan } from '../shared/plans.ts';
 import type { PlanState, SuggestedPlan } from '../shared/plans.ts';
 import type { PlanRepository } from './repository.ts';
+import { PlanInputError } from './approval.ts';
+import type { PlanApprovalService } from './approval.ts';
+export { PlanInputError } from './approval.ts';
 
 export type PlanProgress = 'checking' | 'waiting' | 'responding' | 'retrying';
 export interface PlanGenerator {
   generate(goal: string, signal: AbortSignal, progress: (kind: PlanProgress) => void): Promise<SuggestedPlan>;
 }
-export class PlanInputError extends Error {}
 export class PlanGenerationError extends Error {
   readonly code: string;
   constructor(code: string) { super('AI planning could not complete.'); this.code = code; }
@@ -21,17 +23,28 @@ function failure(error: unknown) {
   if (code === 'RATE_LIMITED' || code === 'CONNECTION_FAILED') return 'AI could not connect or is rate limited. Retry explicitly when ready.';
   return 'AI could not return a valid plan. The previous draft and project tasks are unchanged. Retry explicitly when ready.';
 }
-export function createPlanService(repository: PlanRepository, generator: PlanGenerator) {
+export function createPlanService(repository: PlanRepository, generator: PlanGenerator, approval?: PlanApprovalService) {
   const messages = new Map<string, string>();
   let active: { projectId: string; abort: AbortController; promise: Promise<void> } | null = null;
   let closed = false;
   function status(projectId: string): PlanState {
     const current = active?.projectId === projectId ? active : null;
-    return { draft: repository.read(projectId), busy: !!current, cancelling: current?.abort.signal.aborted ?? false,
+    const draft = repository.read(projectId);
+    return { draft, ...(approval ? { approval: draft ? approval.receipt(draft.id) : null } : {}), busy: !!current, cancelling: current?.abort.signal.aborted ?? false,
       message: messages.get(projectId) ?? 'Draft suggestions are private. Generating a plan does not create project tickets or GitHub Issues.' };
   }
   return {
     status,
+    edit(projectId: string, input: unknown) {
+      if (closed || active || !approval) throw new PlanInputError('Wait for planning to finish before editing a draft.');
+      approval.edit(projectId, input); messages.set(projectId, 'Draft changes saved locally. No project tickets were created.');
+      return status(projectId);
+    },
+    approve(projectId: string, input: unknown) {
+      if (closed || active || !approval) throw new PlanInputError('Wait for planning to finish before approving a draft.');
+      approval.approve(projectId, input); messages.set(projectId, 'Selected plan saved. Nothing started. Coding tasks remain unpublished.');
+      return status(projectId);
+    },
     start(projectId: string, input: unknown) {
       const value = input && typeof input === 'object' ? input as Record<string, unknown> : {};
       if (value.confirmAllowance !== true) throw new PlanInputError('Confirm that generating a plan uses Codex allowance.');

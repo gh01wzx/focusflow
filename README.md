@@ -13,7 +13,7 @@ A Windows desktop task tracker built with TypeScript, React, Electron and SQLite
 - Repeat daily or on selected weekdays, retain missed periods in History and stop future repeats.
 - Switch to Projects, create projects/milestones/manual tickets, write acceptance criteria and change ticket status.
 
-Deletion, AI draft approval, coding execution/review and one-click updates are not implemented.
+Deletion, GitHub publication, coding execution/review and one-click updates are not implemented.
 
 ## Repeating tasks
 
@@ -41,7 +41,7 @@ Use **Add blocker** inside a ticket for waiting on something outside the project
 
 Choose **Work type** when creating or editing an unpublished Backlog ticket. **Manual** keeps the usual status controls. **Coding with Codex** saves a local unpublished coding draft and shows its project repository, if connected. It creates no Issue or coding run. Coding drafts are excluded from next-task recommendations and cannot start or be marked Done. Published coding records show their GitHub Issue number as the task ID and retain their repository identity; work type cannot change after publication or while running. Publication and coding execution are later features.
 
-Existing installed data upgrades only after a verified pre-change backup. Old Ready tickets become Backlog; old Blocked tickets become Backlog with a manual blocker that you must explain or clear. IDs, text and dependency links remain. Named reviews use separate format-9 sample data; previous review formats remain untouched.
+Existing installed data upgrades only after a verified pre-change backup. Old Ready tickets become Backlog; old Blocked tickets become Backlog with a manual blocker that you must explain or clear. IDs, text and dependency links remain. Named reviews use separate format-10 sample data; previous review formats remain untouched.
 
 ## AI connection preview
 
@@ -55,7 +55,11 @@ Open a project and choose **AI plan draft**. Enter a goal, confirm that generati
 
 Progress and **Cancel generation** remain visible while waiting. Closing the dialog requests cancellation too. A request already sent may use allowance. There is no automatic retry after failure, cancellation or reopening. Provider-internal retry progress may appear during an existing request.
 
-A valid result is saved only in this data profile, separately from project milestones and tickets. Reopen the dialog to read it without another model call. Expand suggestions to see descriptions, acceptance criteria, proposed Manual/Coding modes and prerequisite titles. Failed or cancelled replacements keep the previous draft and all existing tasks. Generating creates no approved tasks, GitHub Issues, pull requests or coding runs. Editing and approving drafts belongs to a later change. Live response quality and Windows credential-store behavior still require an owner-triggered trial; automated checks use simulated replies.
+A valid result is saved only in this data profile, separately from project milestones and tickets. Reopen the dialog to read it without another model call. Expand suggestions to see descriptions, acceptance criteria, proposed Manual/Coding modes and prerequisite titles. Failed or cancelled replacements keep the previous draft and all existing tasks. Generating creates no approved tasks, GitHub Issues, pull requests or coding runs. Live response quality and Windows credential-store behavior still require an owner-triggered trial; automated checks use simulated replies.
+
+Choose **Edit draft plan** to correct milestone/task text, acceptance criteria, work types and prerequisite links. Clear **Include task** to exclude an unwanted suggestion. Save draft changes keeps those choices across restarts without creating project tickets. Cancel discards unsaved changes; failed saves retain your input. Save or cancel before closing the editor. A draft changed elsewhere must be reopened before saving or approving.
+
+Choose **Preview selected plan** to inspect exactly which milestones and tasks will be created. Excluded prerequisites must be included or their links removed explicitly. Confirm the checkbox and choose **Approve selected plan**. The selected plan is saved together in Backlog with its dependencies. Nothing starts or publishes to GitHub. Coding tasks remain unpublished and unstartable. Repeated approval, a lost reply or restarting cannot duplicate that plan. A failed write saves none of the plan; reopen to check its approval result before retrying. Approved drafts cannot be edited again; edit their saved tickets or generate a new draft instead.
 
 ## Run on Windows
 
@@ -92,6 +96,8 @@ npm ci
 Use the name given in the PR. The equivalent command is npm run review -- pr-72. The window shows **Sample data - Review pr-72** in its title and a yellow **Sample data** notice above both workspaces.
 
 The first run creates a few Personal examples and **Sample project** with three milestones and 12 manual tickets covering all four statuses. Open the project and choose **Status board** to see them together. Examples include a Backlog ticket waiting for a prerequisite in another milestone, a manual blocker and an active ticket with a completed prerequisite. Descriptions explain what to try; each ticket includes acceptance steps.
+
+Fresh sample profiles also include a saved example under **AI plan draft**. Edit, exclude, preview and approve it without installing Codex, signing in or calling a model. Its three suggestions are separate from the 12 existing sample tickets until you approve them. Existing sample data is never topped up or reset.
 
 Add, complete or change examples freely. Reopen with the same name to keep your changes; a different name starts a separate workspace. Review names use letters, numbers and hyphens. Existing review databases are never topped up or reset. To get newly added examples, use a new review name, such as task-41-four-states.
 

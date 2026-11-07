@@ -20,7 +20,7 @@ export async function exercisePlanUI(page: Page): Promise<void> {
   await dialog.getByRole('button', { name: 'Close AI plan draft', exact: true }).click();
 
   let state: PlanState = { draft: null, busy: false, cancelling: false, message: 'Simulated saved draft check.' };
-  let generations = 0, cancellations = 0;
+  let generations = 0, cancellations = 0, edits = 0, approvals = 0, failSave = true;
   const pattern = '**/api/projects/*/plan-draft**';
   await page.route(pattern, route => {
     const path = new URL(route.request().url()).pathname;
@@ -31,6 +31,19 @@ export async function exercisePlanUI(page: Page): Promise<void> {
       state = { ...state, busy: true, message: 'Waiting for an AI draft.' };
     } else if (path.endsWith('/cancel')) {
       cancellations++; state = { ...state, busy: false, cancelling: false, message: 'Plan request cancelled. The previous draft is unchanged.' };
+    } else if (path.endsWith('/edit')) {
+      edits++;
+      if (failSave) { failSave = false; return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'Simulated failed draft save.' }) }); }
+      const input = route.request().postDataJSON() as { plan: PlanDraft['plan']; selectedTicketKeys: string[] };
+      state = { ...state, draft: { ...state.draft!, plan: input.plan, selectedTicketKeys: input.selectedTicketKeys,
+        revision: '22222222-2222-4222-8222-222222222222' }, message: 'Draft changes saved locally.' };
+    } else if (path.endsWith('/approve')) {
+      approvals++; assert.equal(route.request().postDataJSON().confirm, true);
+      assert.deepEqual(state.draft!.selectedTicketKeys, ['first', 'next']);
+      state = { ...state, approval: { draftId: state.draft!.id, projectId: id, approvedAt: '2026-11-08T00:00:00Z',
+        milestoneIds: ['33333333-3333-4333-8333-333333333333'],
+        ticketIds: ['44444444-4444-4444-8444-444444444444', '55555555-5555-4555-8555-555555555555'],
+        codingTicketIds: ['55555555-5555-4555-8555-555555555555'] }, message: 'Selected plan saved. Nothing started.' };
     }
     if (state.draft) assert.equal(state.draft.projectId, id);
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(state) });
@@ -70,5 +83,35 @@ export async function exercisePlanUI(page: Page): Promise<void> {
     await page.waitForFunction(() => document.querySelector('dialog[open]') === null);
     assert.equal(generations, 3); assert.equal(cancellations, 2);
     assert.deepEqual(await page.evaluate(async () => (await fetch('/api/projects')).json()), before);
+    await page.getByRole('button', { name: 'AI plan draft', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Edit draft plan', exact: true }).click();
+    const editor = dialog.getByRole('form', { name: 'Edit draft plan', exact: true });
+    await editor.getByLabel('Task title', { exact: true }).first().fill('Revised preparation');
+    await page.keyboard.press('Escape'); assert.equal(await dialog.isVisible(), true);
+    assert.equal(await dialog.getByRole('button', { name: 'Close AI plan draft', exact: true }).isDisabled(), true);
+    await editor.getByRole('button', { name: 'Save draft changes', exact: true }).click();
+    await dialog.getByRole('alert').filter({ hasText: 'Simulated failed draft save.' }).waitFor();
+    assert.equal(await editor.getByLabel('Task title', { exact: true }).first().inputValue(), 'Revised preparation');
+    await editor.getByRole('button', { name: 'Save draft changes', exact: true }).click();
+    await region.locator('summary').filter({ hasText: 'Revised preparation' }).waitFor();
+    assert.equal(edits, 2);
+    await dialog.getByRole('button', { name: 'Edit draft plan', exact: true }).click();
+    await editor.getByLabel('Task title', { exact: true }).first().fill('Discard this title');
+    await editor.getByRole('button', { name: 'Cancel draft changes', exact: true }).click();
+    await region.locator('summary').filter({ hasText: 'Revised preparation' }).waitFor();
+    await dialog.getByRole('button', { name: 'Preview selected plan', exact: true }).click();
+    const preview = dialog.getByRole('region', { name: 'Plan approval preview', exact: true });
+    await preview.getByText('Revised preparation', { exact: true }).waitFor();
+    await preview.getByText('Needs: Revised preparation', { exact: true }).waitFor();
+    assert.equal(await preview.getByRole('button', { name: 'Approve selected plan', exact: true }).isDisabled(), true);
+    await preview.getByRole('checkbox').check();
+    await preview.getByRole('button', { name: 'Approve selected plan', exact: true }).click();
+    await dialog.getByRole('status').filter({ hasText: 'Plan approved: 2 saved tasks.' }).waitFor();
+    assert.equal(approvals, 1); assert.equal(await dialog.getByRole('button', { name: 'Edit draft plan', exact: true }).count(), 0);
+    await dialog.getByRole('button', { name: 'Close AI plan draft', exact: true }).click();
+    await page.getByRole('button', { name: 'AI plan draft', exact: true }).click();
+    await dialog.getByRole('status').filter({ hasText: 'Plan approved: 2 saved tasks.' }).waitFor();
+    assert.equal(approvals, 1);
+    await dialog.getByRole('button', { name: 'Close AI plan draft', exact: true }).click();
   } finally { await page.unroute(pattern); }
 }

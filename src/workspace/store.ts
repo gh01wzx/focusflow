@@ -11,7 +11,8 @@ import { createProjectRepository } from '../projects/repository.ts';
 import { createProjectService } from '../projects/service.ts';
 import type { ProjectTransaction } from '../projects/service.ts';
 import { seedSampleData } from './sample-data.ts';
-import { createPlanRepository } from '../plans/repository.ts';
+import { createPlanRepository, createPlanApprovalRepository } from '../plans/repository.ts';
+import { createPlanApprovalService } from '../plans/approval.ts';
 
 export async function openWorkspaceStore(path: string, clock: () => Date = () => new Date(), sampleData = false) {
   const existed = existsSync(path);
@@ -25,10 +26,13 @@ export async function openWorkspaceStore(path: string, clock: () => Date = () =>
       return operation(now);
     });
     const projectTransaction: ProjectTransaction = operation => inTransaction(db, () => operation(clock()));
+    const projectRepository = createProjectRepository(db);
+    const planDrafts = createPlanRepository(db);
     return {
       tasks: createTaskService(repository, taskTransaction, randomUUID),
-      projects: createProjectService(createProjectRepository(db), projectTransaction, randomUUID),
-      planDrafts: createPlanRepository(db),
+      projects: createProjectService(projectRepository, projectTransaction, randomUUID),
+      planDrafts,
+      planApproval: createPlanApprovalService(planDrafts, createPlanApprovalRepository(db), projectRepository, projectTransaction, randomUUID),
       snapshot() {
         taskTransaction(() => {});
         return createSnapshot(db, join(dirname(path), 'backups'));

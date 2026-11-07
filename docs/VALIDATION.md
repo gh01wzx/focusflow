@@ -78,6 +78,10 @@ The AI connection preview has simulated service/HTTP checks for explicit usage c
 ## Installer/update route
 
 The [release-route experiment](RELEASE_ROUTE.md) covers offline full-installer replacement, same-schema task/schedule/project/status/prerequisite preservation and separate snapshot recovery in a disposable hosted Windows environment. Reports are printed in the run log; no artifacts are uploaded. A passing experiment does not prove signing, download verification, a real update feed, SmartScreen trust, cross-schema rollback, credential preservation or an in-app one-click update. Exact results and failures belong in the corresponding PR. Formal distribution remains gated on owner choice and a genuine trusted update trial.
-# Coding intent
+## Coding intent
 
 Local service tests cover unpublished mode changes, missing-mode preservation, blocked coding Start/status writes, atomic rejection, restart, checked response decoding, simulated Issue identity and repository/mode locks. Migration coverage retains format-8 tasks/dependencies and restores its pre-upgrade snapshot. The browser/installed shared scenario creates a coding draft, verifies unavailable progress controls, switches to Manual and back, and retains the final coding record across restart. No Issue is published and no model/account write occurs in these checks. Real publication and coding permission validation remain separate work.
+
+## Local plan approval
+
+Disposable SQLite/HTTP tests cover saved edits/selection, stale revisions, invalid graphs, omitted prerequisites, explicit confirmation, manual/coding Backlog records, cross-milestone links, approval replay/restart, lost replies, atomic rollback after all task writes, durable receipts/snapshots and format-9 backup/recovery/refused-upgrade behavior. The shared browser/installed simulated UI checks cover text escaping, edit dismissal locks, failed-save input, cancellation, exact preview, confirmation and reopening an approved plan. Fresh sample data includes a saved practice draft; everyday and existing sample profiles are never seeded. These checks do not publish Issues, spend model allowance or validate product GitHub write permissions.

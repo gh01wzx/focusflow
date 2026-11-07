@@ -172,7 +172,7 @@ test('HTTP planning persists a private draft across restart, never creates tasks
   const transport: typeof fetch = (path, options) => fetch(server.origin + String(path), { ...options, headers: { ...options?.headers, Origin: server.origin } });
   const projects = createProjectClient(transport), plans = createPlanClient(transport);
   const before = await projects.read(); const id = before.projects[0]!.id;
-  assert.equal((await plans.read(id)).draft, null); assert.equal(calls, 0);
+  assert.match((await plans.read(id)).draft!.goal, /without a model call/); assert.equal(calls, 0);
   await assert.rejects(plans.generate(id, 'Goal', false), /Confirm/);
   assert.equal((await fetch(server.origin + `/api/projects/${id}/plan-draft/generate`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"goal":"Goal","confirmAllowance":true}',
@@ -256,11 +256,12 @@ test('workspace shutdown cancels planning before SQLite closes and cannot save a
   const transport: typeof fetch = (path, options) => fetch(server.origin + String(path), { ...options, headers: { ...options?.headers, Origin: server.origin } });
   const project = await createProjectClient(transport).read();
   const id = project.selectedProjectId!;
+  const initialDraft = (await createPlanClient(transport).read(id)).draft;
   const state = await createPlanClient(transport).generate(id, 'Close this request', true);
   assert.equal(state.busy, true); await server.close(); assert.equal(aborted, true);
   assert.ok(phases.includes('plans:end')); assert.ok(phases.includes('database:begin'));
   assert.ok(phases.indexOf('plans:end') < phases.indexOf('database:begin'));
   const reopened = await openWorkspaceStore(join(root, 'tracker.db'));
-  try { assert.equal(reopened.planDrafts.read(id), null); assert.deepEqual(JSON.parse(JSON.stringify(reopened.projects.view())), project); }
+  try { assert.deepEqual(reopened.planDrafts.read(id), initialDraft); assert.deepEqual(JSON.parse(JSON.stringify(reopened.projects.view())), project); }
   finally { reopened.close(); }
 });

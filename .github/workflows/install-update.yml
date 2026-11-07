@@ -1,0 +1,64 @@
+name: Windows installer replacement experiment
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/install-update.yml'
+      - 'scripts/smoke-install-update.ts'
+      - 'scripts/installer-process.ts'
+      - 'test/installer-process.test.ts'
+      - 'electron-builder.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/database/**'
+      - 'src/runtime/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/install-update.yml'
+      - 'scripts/smoke-install-update.ts'
+      - 'scripts/installer-process.ts'
+      - 'test/installer-process.test.ts'
+      - 'electron-builder.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/database/**'
+      - 'src/runtime/**'
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  disposable-install-update:
+    if: github.event.repository.private == false
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.12.0'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Initialize pinned Electron
+        run: node -e "const fs=require('node:fs');const exe=require('electron');if(!fs.existsSync(exe))throw new Error('Missing runtime')"
+      - run: npm run package:windows
+      - name: Build candidate with the same code and a test-only version
+        run: npm exec -- electron-builder --win --x64 --publish never --config electron-builder.json --config.extraMetadata.version=0.1.0-alpha.4 --config.directories.output=.phase0/update-candidate
+      - name: Install, replace, recover separately and return to baseline
+        timeout-minutes: 8
+        shell: pwsh
+        run: |
+          $baseline = Get-Item -LiteralPath release/FocusFlow-0.1.0-alpha.3-x64.exe
+          $candidate = Get-Item -LiteralPath .phase0/update-candidate/FocusFlow-0.1.0-alpha.4-x64.exe
+          node dist/scripts/smoke-install-update.js $baseline.FullName $candidate.FullName
+          exit $LASTEXITCODE
+      - name: Print replacement results in the run log
+        if: always()
+        shell: pwsh
+        run: |
+          foreach ($name in @('report.json', 'failure.json', 'installer-processes.json')) {
+            $report = Join-Path 'artifacts/install-update' $name
+            if (Test-Path -LiteralPath $report) { Get-Content -LiteralPath $report }
+          }

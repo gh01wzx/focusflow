@@ -124,3 +124,7 @@ After a native crash, stop repeated launches. Preserve user data and directory p
 ## GitHub product connection
 
 See [GitHub connection](GITHUB_CONNECTION.md) for the authorization comparison, owner setup and disposable review steps. Review profile credentials are separate from everyday credentials. Connecting alone performs no repository writes.
+
+## Disposable installer replacement experiment
+
+The [Windows release route](RELEASE_ROUTE.md) describes a dedicated standard GitHub-hosted Windows Actions job in a public repository. It builds two unsigned versions from the same code, replaces binaries, compares sample records and restores a snapshot separately. It prints result/process reports in the run log without artifact uploads or caches. The harness refuses personal and self-hosted execution because installers change per-user registration. It stops on native launch/close failure. It does not publish or implement one-click updates.

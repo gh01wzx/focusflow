@@ -106,3 +106,5 @@ The [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) is the road
 Source, app text and repository documentation use English. User-entered content keeps its original language.
 
 GitHub project connection is under development; see [setup and limits](docs/GITHUB_CONNECTION.md). Manual projects work without a GitHub account.
+
+Formal installer/update decisions and remaining trust gates are described in [Windows release route](docs/RELEASE_ROUTE.md). Current installers are unsigned development builds.

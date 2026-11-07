@@ -7,10 +7,11 @@ import { useProjectsController } from './useProjectsController.ts';
 import { EntityComposer } from './components/EntityComposer.tsx';
 import { TicketComposer } from './components/TicketComposer.tsx';
 import { ManualTicket } from './components/ManualTicket.tsx';
+import { ProjectBoard } from './components/ProjectBoard.tsx';
 import { ProjectNavigation } from './components/ProjectNavigation.tsx';
 import { ProjectDialog } from './components/ProjectDialog.tsx';
 import { DetailsEditor } from './components/DetailsEditor.tsx';
-import type { EntityDraft } from '../../src/shared/projects.ts';
+import type { EntityDraft, ProjectTicket } from '../../src/shared/projects.ts';
 import type { EditKind } from './components/DetailsEditor.tsx';
 
 export function ProjectsApp(props: WorkspaceProps) {
@@ -23,6 +24,7 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
   const [composing, setComposing] = useState<'project' | 'milestone' | 'ticket' | null>(initialProjectId === undefined ? 'project' : null);
   const [openTicketId, setOpenTicketId] = useState<string | null>(null);
   const [editingPrerequisites, setEditingPrerequisites] = useState(false);
+  const [layout, setLayout] = useState<'milestones' | 'board'>('milestones');
   const { view, busy, milestoneId, error, message } = state;
   const locked = busy || editingPrerequisites || !!state.editing || openTicketId !== null || (composing !== null && view !== null);
   const project = view?.projects.find(item => item.id === view.selectedProjectId);
@@ -34,6 +36,19 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
           busy={busy} error={error} onSave={state.saveEdit} onCancel={state.cancelEdit} /> : null;
   }
   function closeComposer() { setComposing(null); state.clearError(); }
+  function renderTicket(ticket: ProjectTicket) {
+    return view && <ManualTicket key={ticket.id} ticket={ticket} view={view}
+      context={layout === 'board' ? view.milestones.find(item => item.id === ticket.milestoneId)?.title : undefined}
+      editingPrerequisites={editingPrerequisites} onEditingChange={setEditingPrerequisites}
+      onPrerequisites={state.setPrerequisites} onVisit={item => {
+        state.clearFeedback(); state.selectMilestone(item.milestoneId); setOpenTicketId(item.id);
+      }} open={openTicketId === ticket.id}
+      busy={busy || (!!state.editing && state.editing.id !== ticket.id) || !!composing || (openTicketId !== null && openTicketId !== ticket.id)}
+      error={error} message={message} onStatus={state.setStatus}
+      onOpen={() => { state.clearFeedback(); setOpenTicketId(ticket.id); }}
+      onClose={() => { setOpenTicketId(null); state.clearFeedback(); }} onEdit={() => state.beginEdit('ticket', ticket.id)}
+      editor={editor('ticket', ticket.id, ticket, ticket.acceptanceCriteria)} />;
+  }
   function openComposer(kind: 'project' | 'milestone' | 'ticket') { state.clearError(); setComposing(kind); }
   return (
     <WorkspaceShell workspace="projects" busy={locked} onWorkspaceChange={onWorkspaceChange} navigation={
@@ -73,7 +88,11 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
               {editor('project', project.id, project)}
               {project.description && <p className="project-description">{project.description}</p>}
               <GitHubConnection key={project.id} projectId={project.id} />
-              {milestone ? (
+              <div className="project-layout-buttons" role="group" aria-label="Project layout">
+                <button type="button" aria-pressed={layout === 'milestones'} disabled={locked} onClick={() => setLayout('milestones')}>Milestones</button>
+                <button type="button" aria-pressed={layout === 'board'} disabled={locked} onClick={() => setLayout('board')}>Status board</button>
+              </div>
+              {layout === 'board' ? <ProjectBoard view={view} renderTicket={renderTicket} /> : milestone ? (
                 <>
                   <div className="milestone-picker">
                     <label htmlFor="selected-milestone">Milestone</label>
@@ -91,15 +110,7 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
                   </div>
                   {tickets.length > 0 ? (
                     <ul className="task-list project-ticket-list">
-                      {tickets.map(ticket => <ManualTicket key={ticket.id} ticket={ticket} view={view} editingPrerequisites={editingPrerequisites} onEditingChange={setEditingPrerequisites}
-                        onPrerequisites={state.setPrerequisites} onVisit={item => {
-                          state.clearFeedback(); state.selectMilestone(item.milestoneId); setOpenTicketId(item.id);
-                        }} open={openTicketId === ticket.id}
-                        busy={busy || (!!state.editing && state.editing.id !== ticket.id) || !!composing || (openTicketId !== null && openTicketId !== ticket.id)}
-                        error={error} message={message} onStatus={state.setStatus}
-                        onOpen={() => { state.clearFeedback(); setOpenTicketId(ticket.id); }}
-                        onClose={() => { setOpenTicketId(null); state.clearFeedback(); }} onEdit={() => state.beginEdit('ticket', ticket.id)}
-                        editor={editor('ticket', ticket.id, ticket, ticket.acceptanceCriteria)} />)}
+                      {tickets.map(renderTicket)}
                     </ul>
                   ) : <p className="project-empty">No tickets yet. Use New ticket to add the first step.</p>}
                 </>

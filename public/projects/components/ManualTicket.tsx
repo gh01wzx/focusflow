@@ -5,7 +5,8 @@ import { unfinishedPrerequisites } from '../../../src/shared/dependencies.ts';
 import { Prerequisites } from './Prerequisites.tsx';
 import { ProjectDialog } from './ProjectDialog.tsx';
 
-export function ManualTicket({ ticket, view, editingPrerequisites, onEditingChange, onPrerequisites, onVisit, open, busy, error, message, onStatus, onEdit, onOpen, onClose, editor }: {
+export function ManualTicket({ ticket, context, view, editingPrerequisites, onEditingChange, onPrerequisites, onVisit, open, busy, error, message, onStatus, onEdit, onOpen, onClose, editor }: {
+  context?: string | undefined;
   view: ProjectView; editingPrerequisites: boolean; onEditingChange(editing: boolean): void;
   onPrerequisites(id: string, ids: string[]): Promise<boolean>; onVisit(ticket: ProjectTicket): void;
   ticket: ProjectTicket; open: boolean; busy: boolean; error: string; message: string;
@@ -20,6 +21,7 @@ export function ManualTicket({ ticket, view, editingPrerequisites, onEditingChan
         <span className="ticket-title">{ticket.title}</span>
         <span className="status-pill" data-status={ticket.status}>{TICKET_STATUS_LABELS[ticket.status]}</span>
       </span>
+      {context && <span className="ticket-milestone">{context}</span>}
       {ticket.description && <span className="ticket-excerpt">{ticket.description}</span>}
       {blockers.length > 0 && <span className="blocker-note">Waiting for {blockers.length} prerequisite{blockers.length === 1 ? '' : 's'}.</span>}
       <span className="ticket-card-hint">Open details <span aria-hidden="true">&rarr;</span></span>

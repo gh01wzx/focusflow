@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { exerciseProjectBoard } from './project-board-ui.ts';
 import type { Page } from 'playwright-core';
 import type { ProjectView, TicketStatus } from '../src/shared/projects.ts';
 import { openTicket, closeTicket, setTicketStatus, exerciseProjectEdits } from './project-edit-ui.ts';
@@ -218,5 +219,6 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string, e
     .getByRole('button', { name: 'Learning project', exact: true }).click();
   await page.getByRole('heading', { name: 'Learning project', exact: true }).waitFor();
   await exerciseProjectEdits(page, PROJECT_SMOKE_TITLE, editScreenshot);
+  await exerciseProjectBoard(page);
   return await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
 }

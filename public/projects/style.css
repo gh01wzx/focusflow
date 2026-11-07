@@ -209,3 +209,22 @@ nav[aria-label="Project list"] .nav-item {
 .github-device strong { font-size: 18px; letter-spacing: 2px; }
 .github-disconnect { display: grid; justify-items: start; gap: 10px; border-top: 1px solid #dfe5d9; padding-top: 16px; }
 .github-connection .github-disconnect-button { border-color: #d5bcb0; color: #8d4e38; background: #fff8f4; }
+
+.project-main { min-width: 0; }
+.project-layout-buttons { display: flex; gap: 8px; margin: 20px 0 12px; }
+.project-layout-buttons button { padding: 10px 16px; border: 1px solid #bacbb0; border-radius: 7px; background: #fff; color: #35543c; }
+.project-layout-buttons button[aria-pressed="true"] { background: #35543c; color: #fff; }
+.board-hint { color: #65745e; font-size: 12px; line-height: 1.6; }
+.project-status-board { display: grid; grid-template-columns: repeat(6, minmax(250px, 1fr)); gap: 14px; overflow-x: auto; padding: 6px 2px 18px; }
+.project-status-board:focus-visible { outline: 3px solid #92b79b; outline-offset: 3px; }
+.status-column { min-width: 0; padding: 16px 12px; border: 1px solid #bdcbb4; border-top-width: 4px; border-radius: 10px; background: #f0f4eb; }
+.status-column[data-status="ready"] { border-color: #91ac80; }
+.status-column[data-status="in_progress"] { border-color: #90a9c1; background: #eef3f8; }
+.status-column[data-status="review"] { border-color: #c8ad74; background: #f8f1e4; }
+.status-column[data-status="done"] { border-color: #8eb69b; background: #eaf3ed; }
+.status-column[data-status="blocked"] { border-color: #c79d91; background: #f8eeeb; }
+.status-column h3 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 18px; font-size: 14px; }
+.status-column ul { list-style: none; margin: 0; padding: 0; }
+.status-column .ticket-card { padding: 14px; }
+.status-column .ticket-card-heading { flex-wrap: wrap; gap: 8px; }
+.ticket-milestone { color: #65745e; font-size: 11px; overflow-wrap: anywhere; }

@@ -278,8 +278,9 @@ try {
       .getByRole('button', { name: 'Projects', exact: true }).click();
     await page.getByRole('navigation', { name: 'Project list', exact: true })
       .getByRole('button', { name: EDITED_PROJECT, exact: true }).click();
-    await page.getByLabel('Status for ' + EDITED_TICKET, { exact: true }).waitFor();
-    assert.equal(await page.getByLabel('Status for ' + EDITED_TICKET, { exact: true }).inputValue(), 'done');
+    const editedCard = page.getByRole('button', { name: 'Open ticket ' + EDITED_TICKET, exact: true });
+    await editedCard.waitFor();
+    assert.equal(await editedCard.locator('.status-pill').innerText(), 'Done');
     const projectsAfterRestart = await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
     assert.deepEqual(projectsAfterRestart, projects);
     mark('weekly-weekday-selection');

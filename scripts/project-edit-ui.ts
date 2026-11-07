@@ -1,9 +1,31 @@
 import assert from 'node:assert/strict';
 import type { Page } from 'playwright-core';
-import type { ProjectView } from '../src/shared/projects.ts';
+import { TICKET_STATUS_LABELS } from '../src/shared/projects.ts';
+import type { ProjectView, TicketStatus } from '../src/shared/projects.ts';
 
 export const EDITED_PROJECT = 'Learning project revised';
 export const EDITED_TICKET = 'Revised \u9879\u76ee <img src=x onerror=alert(1)>';
+
+export async function openTicket(page: Page, title: string) {
+  await page.getByRole('button', { name: 'Open ticket ' + title, exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: title, exact: true });
+  await dialog.waitFor();
+  return dialog;
+}
+export async function closeTicket(page: Page, title: string) {
+  await page.getByRole('dialog', { name: title, exact: true }).getByRole('button', { name: 'Close ' + title, exact: true }).click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  assert.equal(await page.getByRole('button', { name: 'Open ticket ' + title, exact: true }).evaluate(element => element === document.activeElement), true);
+}
+export async function setTicketStatus(page: Page, title: string, status: TicketStatus) {
+  const dialog = await openTicket(page, title);
+  const button = dialog.getByRole('group', { name: 'Change status for ' + title, exact: true })
+    .getByRole('button', { name: TICKET_STATUS_LABELS[status], exact: true });
+  await button.click();
+  await page.getByRole('status').filter({ hasText: 'Ticket updated.' }).waitFor();
+  assert.equal(await button.getAttribute('aria-pressed'), 'true');
+  await closeTicket(page, title);
+}
 
 export async function exerciseProjectEdits(page: Page, originalTitle: string, screenshot?: string) {
   const read = () => page.evaluate(async () => (await fetch('/api/projects')).json()) as Promise<ProjectView>;
@@ -26,6 +48,7 @@ export async function exerciseProjectEdits(page: Page, originalTitle: string, sc
   await page.getByRole('status').filter({ hasText: 'Changes saved.' }).waitFor();
   assert.equal(await page.getByLabel('Milestone', { exact: true }).inputValue(), original.milestoneId);
   const beforeTicketEdit = await read();
+  await openTicket(page, originalTitle);
   const edit = () => page.getByRole('button', { name: 'Edit ticket ' + originalTitle, exact: true }).click();
   await edit();
   let form = page.getByRole('form', { name: 'Edit ticket', exact: true });
@@ -48,8 +71,11 @@ export async function exerciseProjectEdits(page: Page, originalTitle: string, sc
   assert.equal(await form.getByLabel('Edit ticket description', { exact: true }).inputValue(), 'Clarified work\n\u4fdd\u7559 <b>text</b>');
   assert.equal(await form.getByLabel('Edit ticket acceptance criteria', { exact: true }).inputValue(), 'Check the revised result.\nKeep Done status.');
   assert.deepEqual(await read(), beforeTicketEdit);
-  assert.equal(await page.getByRole('navigation', { name: 'Workspaces', exact: true })
-    .getByRole('button', { name: 'Personal', exact: true }).isDisabled(), true);
+  await page.keyboard.press('Escape');
+  assert.equal(await form.isVisible(), true, 'Escape must not discard an edit draft.');
+  assert.equal(await page.getByRole('button', { name: 'Close ' + originalTitle, exact: true }).isDisabled(), true);
+  assert.equal(await page.getByRole('navigation', { name: 'Workspaces', exact: true, includeHidden: true })
+    .getByRole('button', { name: 'Personal', exact: true, includeHidden: true }).isDisabled(), true);
   const refreshed = page.waitForResponse(response => response.url().endsWith('/api/projects?projectId=' + before.selectedProjectId));
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
   await refreshed;
@@ -59,16 +85,20 @@ export async function exerciseProjectEdits(page: Page, originalTitle: string, sc
   await form.getByRole('button', { name: 'Save changes', exact: true }).click();
   await page.getByRole('status').filter({ hasText: 'Changes saved.' }).waitFor();
   await page.getByRole('heading', { name: EDITED_TICKET, exact: true }).waitFor();
-  assert.equal(await page.getByLabel('Status for ' + EDITED_TICKET, { exact: true }).inputValue(), 'done');
+  assert.equal(await page.getByRole('group', { name: 'Change status for ' + EDITED_TICKET, exact: true })
+    .getByRole('button', { name: 'Done', exact: true }).getAttribute('aria-pressed'), 'true');
   assert.equal(await page.locator('img').count(), 0);
   const after = (await read()).tickets.find(ticket => ticket.id === original.id)!;
   assert.equal(after.milestoneId, original.milestoneId);
   assert.equal(after.createdAt, original.createdAt);
   assert.equal(after.title, EDITED_TICKET);
   assert.equal(after.status, original.status);
+  if (screenshot) await page.screenshot({ path: screenshot.replace('.png', '-status.png'), fullPage: true });
+  await closeTicket(page, EDITED_TICKET);
+  if (screenshot) await page.screenshot({ path: screenshot.replace('.png', '-cards.png'), fullPage: true });
   await page.getByRole('button', { name: 'Action center', exact: true }).click();
   await page.getByRole('region', { name: 'Review', exact: true }).getByText(EDITED_PROJECT + ' / Second milestone', { exact: true }).waitFor();
   await page.getByRole('navigation', { name: 'Project list', exact: true })
     .getByRole('button', { name: EDITED_PROJECT, exact: true }).click();
-  await page.getByRole('heading', { name: EDITED_TICKET, exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Open ticket ' + EDITED_TICKET, exact: true }).waitFor();
 }

@@ -78,6 +78,8 @@ export function useProjectsController(initialProjectId?: string) {
   }
   return {
     view, milestoneId, busy, error, message, refresh, editing,
+    clearError: () => { if (!busyRef.current) setError(''); },
+    clearFeedback: () => { if (!busyRef.current) { setError(''); setMessage(''); } },
     beginEdit: (kind: 'project' | 'milestone' | 'ticket', id: string) => {
       if (!busyRef.current && !editing) { setError(''); setMessage(''); setEditing({ kind, id }); }
     },

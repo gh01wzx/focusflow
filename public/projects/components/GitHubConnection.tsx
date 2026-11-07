@@ -53,37 +53,82 @@ export function GitHubConnection({ projectId }: { projectId: string }) {
   }, [status, busy, projectId]);
   return <details className="github-connection">
     <summary>GitHub connection{status?.repository ? ': ' + status.repository.fullName : ''}</summary>
-    <p>Choose where future coding work belongs. Connecting creates no Issues, branches or pull requests.</p>
-    {error && <p role="alert">{error} <button disabled={busy} onClick={() => setRefresh(value => value + 1)}>Retry connection</button></p>}
-    <p role="status">{status?.message ?? 'Loading GitHub connection.'}</p>
-    {status?.available && <fieldset disabled={busy}>
-      <legend>Project repository</legend>
-      <p>Account: {status.account ?? 'Not connected'}</p>
-      {status.repository && <p>Linked: <strong>{status.repository.fullName}</strong> ({status.repository.private ? 'Private' : 'Public'})</p>}
-      <label>GitHub App client ID <input value={clientId} maxLength={100} onChange={event => setClientId(event.target.value)} /></label>
-      <p>Register your own GitHub App with device flow enabled. Start with read-only Repository metadata; select repositories at GitHub. No client secret is needed.</p>
-      <a href="https://github.com/settings/apps" target="_blank" rel="noreferrer">GitHub App settings</a>
-      {!status.userCode && <button onClick={() => void act('start', { clientId })}>Authorize GitHub</button>}
-      {status.userCode && <div><p>Device code: <strong>{status.userCode}</strong></p>
-        <a href="https://github.com/login/device" target="_blank" rel="noreferrer">Enter code at GitHub</a>
-        <p>Review the App name, permissions and repository access before approving.</p>
-        <button onClick={() => void act('cancel')}>Cancel authorization</button></div>}
-      {status.connected && <>
-        <button onClick={() => void act('check')}>Check account and repositories</button>
-        <label>Repository owner/name <input value={name} maxLength={140} onChange={event => {
-          setName(event.target.value); setConfirmed(false);
-          setStatus(current => current ? { ...current, preview: null } : current);
-        }} list={'github-repositories-' + projectId} /></label>
-        <datalist id={'github-repositories-' + projectId}>{status.repositories.map(repo => <option key={repo.id} value={repo.fullName}>{repo.private ? 'Private' : 'Public'}</option>)}</datalist>
-        <button onClick={() => void act('inspect', { name })}>Inspect repository</button>
-        {status.preview && <div className="github-preview">
-          <p><strong>{status.preview.fullName}</strong> - {status.preview.private ? 'Private repository' : 'Public repository'}</p>
-          <label><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />I confirm this repository for this project.</label>
-          <button disabled={!confirmed} onClick={() => void act('connect', { confirmed, repositoryId: status.preview!.id })}>Connect repository</button>
+    <div className="github-body">
+      <p className="github-hint">Link this project to its code repository. Connecting creates no Issues, branches or pull requests.</p>
+      {error && <div className="error" role="alert">{error}
+        <button type="button" className="secondary-button" disabled={busy} onClick={() => setRefresh(value => value + 1)}>Retry connection</button>
+      </div>}
+      <p className="feedback" role="status" aria-live="polite">{status?.message ?? 'Loading GitHub connection.'}</p>
+      {status?.available && <fieldset disabled={busy} aria-busy={busy}>
+        <legend className="sr-only">Project repository</legend>
+        <div className="github-account-row">
+          <p>Account: <strong>{status.account ?? 'Not connected'}</strong></p>
+          <span className="github-badge" data-connected={status.connected}>{status.connected ? 'Connected' : 'Not connected'}</span>
+        </div>
+        {status.repository && <div className="github-linked">
+          <span className="github-field-title">Linked repository</span>
+          <strong>{status.repository.fullName}</strong>
+          <span className="github-visibility">{status.repository.private ? 'Private' : 'Public'}</span>
         </div>}
-      </>}
-      <button onClick={() => void act('disconnect')}>Disconnect this profile</button>
-      <p>Disconnect removes local credentials and all repository links in this data profile. Project tasks remain. To revoke remote authorization, use GitHub App settings.</p>
-    </fieldset>}
+        {status.connected && <section className="github-repository" aria-label="Choose a repository">
+          <div className="github-section-heading">
+            <h3>Project repository</h3>
+            <button type="button" className="secondary-button" onClick={() => void act('check')}>Check account and repositories</button>
+          </div>
+          <label htmlFor={'github-repository-' + projectId}>Repository owner/name</label>
+          <div className="github-input-row">
+            <input id={'github-repository-' + projectId} value={name} maxLength={140} placeholder="owner/repository"
+              autoCapitalize="none" spellCheck={false} onChange={event => {
+                setName(event.target.value); setConfirmed(false);
+                setStatus(current => current ? { ...current, preview: null } : current);
+              }} list={'github-repositories-' + projectId} />
+            <button type="button" className="secondary-button" disabled={!name.trim()} onClick={() => void act('inspect', { name })}>Inspect repository</button>
+          </div>
+          <datalist id={'github-repositories-' + projectId}>{status.repositories.map(repo => <option key={repo.id} value={repo.fullName}>{repo.private ? 'Private' : 'Public'}</option>)}</datalist>
+          {status.preview && <div className="github-preview">
+            <div className="github-section-heading">
+              <strong>{status.preview.fullName}</strong>
+              <span className="github-visibility">{status.preview.private ? 'Private repository' : 'Public repository'}</span>
+            </div>
+            <p className="github-hint">Check the full name and visibility before linking this repository.</p>
+            <button type="button" className="github-confirm" aria-pressed={confirmed}
+              aria-label="I confirm this repository for this project." onClick={() => setConfirmed(value => !value)}>
+              <span>{confirmed ? 'Repository confirmed' : 'Confirm this repository for this project'}</span>
+              <span className="github-choice-state" aria-hidden="true">{confirmed ? 'Confirmed' : 'Confirm'}</span>
+            </button>
+            <div className="github-actions">
+              <button type="button" className="primary" disabled={!confirmed}
+                onClick={() => void act('connect', { confirmed, repositoryId: status.preview!.id })}>Connect repository</button>
+            </div>
+          </div>}
+        </section>}
+        <details className="github-settings" open={!status.connected || !!status.userCode}>
+          <summary>Connection settings</summary>
+          <div className="github-settings-body">
+            <label htmlFor={'github-client-' + projectId}>GitHub App client ID</label>
+            <input id={'github-client-' + projectId} value={clientId} maxLength={100} autoCapitalize="none" spellCheck={false}
+              onChange={event => setClientId(event.target.value)} />
+            <p className="github-hint">Use your own GitHub App with device flow enabled and read-only Repository metadata access. No client secret is needed.</p>
+            <div className="github-actions">
+              {!status.userCode && <button type="button" className="secondary-button" disabled={!clientId.trim()}
+                onClick={() => void act('start', { clientId })}>Authorize GitHub</button>}
+              <a href="https://github.com/settings/apps" target="_blank" rel="noreferrer">GitHub App settings</a>
+            </div>
+            {status.userCode && <div className="github-device">
+              <p>Device code: <strong>{status.userCode}</strong></p>
+              <p className="github-hint">Enter the code at GitHub and review the App name, permissions and repository access.</p>
+              <div className="github-actions">
+                <a className="secondary-button" href="https://github.com/login/device" target="_blank" rel="noreferrer">Enter code at GitHub</a>
+                <button type="button" className="secondary-button" onClick={() => void act('cancel')}>Cancel authorization</button>
+              </div>
+            </div>}
+          </div>
+        </details>
+        <div className="github-disconnect">
+          <button type="button" className="secondary-button github-disconnect-button" onClick={() => void act('disconnect')}>Disconnect this profile</button>
+          <p className="github-hint">Removes saved GitHub access and repository links in this profile. Project tasks stay. Revoke remote authorization separately in GitHub App settings.</p>
+        </div>
+      </fieldset>}
+    </div>
   </details>;
 }

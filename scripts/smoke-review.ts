@@ -1,3 +1,4 @@
+import { exerciseGitHubUI } from './github-ui.ts';
 import { _electron as electron } from 'playwright-core';
 import type { ElectronApplication } from 'playwright-core';
 import assert from 'node:assert/strict';
@@ -98,85 +99,7 @@ try {
     const decrypted = await safeStorage.decryptStringAsync(encrypted);
     return decrypted.result === plain && !encrypted.includes(Buffer.from(plain));
   }), true, 'Real Windows OS-protected credential storage must round-trip.');
-  const sample = { available: true, connected: true, account: 'simulated-account' as string | null, clientId: 'Iv1.fixture',
-    repository: null as { id: number; fullName: string; private: boolean } | null,
-    preview: null as { id: number; fullName: string; private: boolean } | null,
-    repositories: [{ id: 17, fullName: 'sample/public-work', private: false }],
-    userCode: null, nextPollAt: 0, message: 'Simulated GitHub account for UI verification only.' };
-  let confirmedRequests = 0;
-  let failCheck = false;
-  let delayRead = false;
-  let readStarted!: () => void;
-  let releaseRead!: () => void;
-  const staleReadStarted = new Promise<void>(resolve => { readStarted = resolve; });
-  const staleReadReleased = new Promise<void>(resolve => { releaseRead = resolve; });
-  await review.page.route('**/api/projects/*/github**', async route => {
-    const action = new URL(route.request().url()).pathname.split('/').at(-1);
-    if (route.request().method() === 'GET' && delayRead) {
-      const stale = structuredClone(sample);
-      readStarted();
-      await staleReadReleased;
-      await route.fulfill({ json: stale });
-      return;
-    }
-    if (action === 'check' && failCheck) {
-      await route.fulfill({ status: 503, json: { error: 'Simulated connection failure.' } });
-      return;
-    }
-    const body = route.request().method() === 'POST' ? route.request().postDataJSON() as Record<string, unknown> : {};
-    if (action === 'inspect') { sample.preview = sample.repositories[0]!; sample.message = 'Review repository name and visibility.'; }
-    if (action === 'connect') {
-      assert.equal(body.confirmed, true); assert.equal(body.repositoryId, 17);
-      confirmedRequests++; sample.repository = sample.preview; sample.preview = null;
-      sample.message = 'Repository linked locally. No Issue, branch or pull request was created.';
-    }
-    if (action === 'disconnect') { sample.connected = false; sample.account = null; sample.repository = null; sample.message = 'Local access removed; task data unchanged.'; }
-    await route.fulfill({ json: sample });
-  });
-  // Remount so the initial status uses the clearly simulated fixture.
-  await review.page.getByRole('button', { name: 'Action center', exact: true }).click();
-  await review.page.getByRole('navigation', { name: 'Project list', exact: true })
-    .getByRole('button', { name: 'Sample project', exact: true }).click();
-  await review.page.getByText('GitHub connection', { exact: true }).click();
-  await review.page.getByText('Simulated GitHub account for UI verification only.', { exact: true }).waitFor();
-  await review.page.getByLabel('Repository owner/name', { exact: true }).fill('sample/public-work');
-  await review.page.getByRole('button', { name: 'Inspect repository', exact: true }).click();
-  await review.page.getByText('Public repository', { exact: false }).waitFor();
-  assert.equal(await review.page.getByRole('button', { name: 'Connect repository', exact: true }).isDisabled(), true);
-  assert.equal(confirmedRequests, 0);
-  await review.page.getByRole('checkbox', { name: 'I confirm this repository for this project.', exact: true }).check();
-  await review.page.getByLabel('Repository owner/name', { exact: true }).fill('sample/another');
-  assert.equal(await review.page.getByRole('button', { name: 'Connect repository', exact: true }).count(), 0);
-  assert.equal(confirmedRequests, 0);
-  await review.page.getByLabel('Repository owner/name', { exact: true }).fill('sample/public-work');
-  await review.page.getByRole('button', { name: 'Inspect repository', exact: true }).click();
-  await review.page.getByRole('checkbox', { name: 'I confirm this repository for this project.', exact: true }).check();
-  await review.page.getByRole('button', { name: 'Connect repository', exact: true }).click();
-  await review.page.getByText('Repository linked locally. No Issue, branch or pull request was created.', { exact: true }).waitFor();
-  assert.equal(confirmedRequests, 1);
-  await review.page.screenshot({ path: join(artifacts, 'github-connection-simulated.png'), fullPage: true });
-  failCheck = true;
-  await review.page.getByRole('button', { name: 'Check account and repositories', exact: true }).click();
-  await review.page.getByRole('alert').filter({ hasText: 'Simulated connection failure.' }).waitFor();
-  delayRead = true;
-  await review.page.getByRole('button', { name: 'Retry connection', exact: true }).click();
-  let readTimer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    await Promise.race([staleReadStarted, new Promise<never>((_, reject) => {
-      readTimer = setTimeout(() => reject(new Error('Delayed GitHub status request was not reached.')), 10000);
-    })]);
-    await review.page.getByRole('button', { name: 'Disconnect this profile', exact: true }).click();
-    await review.page.getByText('Local access removed; task data unchanged.', { exact: true }).waitFor();
-    const staleResponse = review.page.waitForResponse(response => response.request().method() === 'GET'
-      && new URL(response.url()).pathname.endsWith('/github'));
-    releaseRead();
-    await (await staleResponse).finished();
-  } finally { if (readTimer) clearTimeout(readTimer); releaseRead(); }
-  await review.page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-  await review.page.getByText('Account: Not connected', { exact: true }).waitFor();
-  assert.equal(await review.page.getByRole('button', { name: 'Check account and repositories', exact: true }).count(), 0);
-  await review.page.getByRole('heading', { name: 'Sample project', exact: true }).waitFor();
-  await review.page.unrouteAll({ behavior: 'wait' });
+  await exerciseGitHubUI(review.page, 'Sample project', join(artifacts, 'github-connection-simulated.png'));
   mark('reopen-same-review-data');
   await close(review.application);
   review = await launch(['--review', 'pr-72']);

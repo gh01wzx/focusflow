@@ -13,7 +13,7 @@ A Windows desktop task tracker built with TypeScript, React, Electron and SQLite
 - Repeat daily or on selected weekdays, retain missed periods in History and stop future repeats.
 - Switch to Projects, create projects/milestones/manual tickets, write acceptance criteria and change ticket status.
 
-Dependencies, deletion, Kanban, AI planning, coding/review and one-click updates are not implemented.
+Deletion, Kanban, AI planning, coding/review and one-click updates are not implemented.
 
 ## Repeating tasks
 
@@ -34,6 +34,8 @@ Select a project directly in the sidebar to open its milestones and tickets. **N
 The sidebar selects a project; the milestone selector limits the visible ticket list. Manual tickets have no GitHub/Codex controls. Everything stays in the local database across restarts. Switching workspaces starts their default view; unsaved form drafts are not retained across workspace changes.
 
 Use **Edit project**, **Edit milestone** or **Edit ticket** inside a ticket's details dialog to correct its title and details. Tickets also allow editing acceptance criteria. **Save changes** keeps the same identity, parent and status, including Done; **Cancel** discards the draft without saving. A failed save keeps your input. Save or cancel an edit before switching projects, milestones or workspaces.
+
+Use **Set prerequisites** in a ticket's details to choose work that must finish first. Click task cards to select or remove them; Selected cards show the saved choices when you reopen the picker. Links stay within the same project, including different milestones. Self-links and circular chains are rejected. Unfinished prerequisites appear by title; click one to open its details. A Ready ticket is recommended and startable only when every prerequisite is Done. Blocked tickets are never recommended, and completing a prerequisite never starts another ticket automatically.
 
 ## Run on Windows
 

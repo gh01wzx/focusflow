@@ -1,5 +1,6 @@
 import { isTicketStatus } from './projects.ts';
 import type { Project, Milestone, ProjectTicket, ProjectView } from './projects.ts';
+import { reachesTicket } from './dependencies.ts';
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -38,6 +39,8 @@ export function parseProjectView(value: unknown): ProjectView {
   if (!record(value) || !Array.isArray(value.projects) || !value.projects.every(project)
     || !Array.isArray(value.milestones) || !value.milestones.every(milestone)
     || !Array.isArray(value.tickets) || !value.tickets.every(ticket)
+    || !Array.isArray(value.dependencies)
+    || !value.dependencies.every(link => record(link) && typeof link.ticketId === 'string' && typeof link.prerequisiteId === 'string')
     || (value.selectedProjectId !== null && typeof value.selectedProjectId !== 'string')) throw fail();
   const selected = value.selectedProjectId;
   const milestones = value.milestones;
@@ -45,5 +48,10 @@ export function parseProjectView(value: unknown): ProjectView {
   if (value.milestones.some(item => item.projectId !== selected)
     || value.tickets.some(item => item.projectId !== selected
       || !milestones.some(parent => parent.id === item.milestoneId))) throw fail();
-  return { projects: value.projects, selectedProjectId: selected, milestones: value.milestones, tickets: value.tickets };
+  const dependencies = value.dependencies as ProjectView['dependencies'];
+  const ids = new Set(value.tickets.map(ticket => ticket.id));
+  if (dependencies.some(link => !ids.has(link.ticketId) || !ids.has(link.prerequisiteId)
+    || reachesTicket(link.prerequisiteId, link.ticketId, dependencies))
+    || new Set(dependencies.map(link => link.ticketId + '/' + link.prerequisiteId)).size !== dependencies.length) throw fail();
+  return { projects: value.projects, selectedProjectId: selected, milestones: value.milestones, tickets: value.tickets, dependencies };
 }

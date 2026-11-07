@@ -3,6 +3,7 @@ import type { ProjectService } from './service.ts';
 type ProjectRoute =
   | { kind: 'actions' }
   | { kind: 'start'; id: string }
+  | { kind: 'prerequisites'; id: string }
   | { kind: 'view'; projectId?: string }
   | { kind: 'addProject' | 'addMilestone' | 'addTicket' }
   | { kind: 'editProject' | 'editMilestone' | 'editTicket'; id: string }
@@ -18,6 +19,8 @@ export function matchProjectRoute(method: string | undefined, path: string): Pro
   if (path === '/api/projects') return { kind: 'addProject' };
   if (path === '/api/milestones') return { kind: 'addMilestone' };
   if (path === '/api/project-tickets') return { kind: 'addTicket' };
+  const prerequisites = /^\/api\/project-tickets\/([a-f0-9-]{36})\/prerequisites$/.exec(path);
+  if (prerequisites?.[1]) return { kind: 'prerequisites', id: prerequisites[1] };
   const edit = /^\/api\/(projects|milestones|project-tickets)\/([a-f0-9-]{36})\/details$/.exec(path);
   if (edit?.[2]) return {
     kind: edit[1] === 'projects' ? 'editProject' : edit[1] === 'milestones' ? 'editMilestone' : 'editTicket', id: edit[2],
@@ -29,6 +32,10 @@ export function matchProjectRoute(method: string | undefined, path: string): Pro
 }
 export function dispatchProjectRoute(route: ProjectRoute, input: unknown, service: ProjectService) {
   switch (route.kind) {
+    case 'prerequisites': {
+      const id = service.setPrerequisites(route.id, input);
+      return { status: 200, body: { view: service.view(id) } };
+    }
     case 'editProject':
     case 'editMilestone':
     case 'editTicket': {

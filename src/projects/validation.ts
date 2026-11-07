@@ -1,5 +1,5 @@
 import { isTicketStatus } from '../shared/projects.ts';
-import type { EntityDraft, TicketDraft, TicketStatus } from '../shared/projects.ts';
+import type { EntityDraft, TicketDraft, TicketDetailsDraft, TicketStatus } from '../shared/projects.ts';
 
 export class ProjectInputError extends Error {}
 export class ProjectNotFoundError extends Error {}
@@ -25,7 +25,7 @@ export function parentId(input: unknown, field: 'projectId' | 'milestoneId'): st
   }
   return id;
 }
-export function ticketInput(input: unknown): TicketDraft {
+export function ticketDetailsInput(input: unknown): TicketDetailsDraft {
   const value = record(input);
   if (value.executionMode !== undefined && value.executionMode !== 'manual') {
     throw new ProjectInputError('Only manual tickets are available in this version.');
@@ -34,7 +34,10 @@ export function ticketInput(input: unknown): TicketDraft {
   if (typeof acceptanceCriteria !== 'string' || acceptanceCriteria.length > 2000) {
     throw new ProjectInputError('Keep acceptance criteria within 2000 characters.');
   }
-  return { ...entityInput(input), milestoneId: parentId(input, 'milestoneId'), acceptanceCriteria };
+  return { ...entityInput(input), acceptanceCriteria };
+}
+export function ticketInput(input: unknown): TicketDraft {
+  return { ...ticketDetailsInput(input), milestoneId: parentId(input, 'milestoneId') };
 }
 export function ticketStatus(input: unknown): TicketStatus {
   if (!isTicketStatus(input)) throw new ProjectInputError('Choose a valid ticket status.');

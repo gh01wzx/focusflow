@@ -1,40 +1,51 @@
-import { isTicketStatus, TICKET_STATUSES, TICKET_STATUS_LABELS } from '../../../src/shared/projects.ts';
+import type { ReactNode } from 'react';
+import { TICKET_STATUSES, TICKET_STATUS_LABELS } from '../../../src/shared/projects.ts';
 import type { ProjectTicket, ProjectView, TicketStatus } from '../../../src/shared/projects.ts';
+import { unfinishedPrerequisites } from '../../../src/shared/dependencies.ts';
 import { Prerequisites } from './Prerequisites.tsx';
+import { ProjectDialog } from './ProjectDialog.tsx';
 
-export function ManualTicket({ ticket, view, busy, editingLocked, onEditingChange, onStatus, onPrerequisites, onVisit }: {
-  ticket: ProjectTicket;
-  view: ProjectView;
-  busy: boolean;
-  editingLocked: boolean;
-  onEditingChange(editing: boolean): void;
+export function ManualTicket({ ticket, view, editingPrerequisites, onEditingChange, onPrerequisites, onVisit, open, busy, error, message, onStatus, onEdit, onOpen, onClose, editor }: {
+  view: ProjectView; editingPrerequisites: boolean; onEditingChange(editing: boolean): void;
+  onPrerequisites(id: string, ids: string[]): Promise<boolean>; onVisit(ticket: ProjectTicket): void;
+  ticket: ProjectTicket; open: boolean; busy: boolean; error: string; message: string;
   onStatus(id: string, status: TicketStatus): Promise<boolean>;
-  onPrerequisites(id: string, ids: string[]): Promise<boolean>;
-  onVisit(ticket: ProjectTicket): void;
+  onEdit(): void; onOpen(): void; onClose(): void; editor?: ReactNode;
 }) {
-  return (
-    <li className="manual-ticket" id={'ticket-' + ticket.id} tabIndex={-1}>
-      <h3 className="ticket-title">{ticket.title}</h3>
-      <div className="ticket-status">
-        <label htmlFor={'status-' + ticket.id}>
-          Status<span className="sr-only"> for {ticket.title}</span>
-        </label>
-        <select id={'status-' + ticket.id} value={ticket.status} disabled={busy || editingLocked}
-          onChange={event => {
-            if (isTicketStatus(event.target.value)) void onStatus(ticket.id, event.target.value);
-          }}>
-          {TICKET_STATUSES.map(status => <option key={status} value={status}>{TICKET_STATUS_LABELS[status]}</option>)}
-        </select>
-      </div>
-      {ticket.description && <p className="project-description">{ticket.description}</p>}
-      {ticket.acceptanceCriteria && (
-        <details className="ticket-acceptance">
-          <summary>Acceptance criteria</summary>
-          <p className="project-description">{ticket.acceptanceCriteria}</p>
-        </details>
-      )}
-      <Prerequisites ticket={ticket} view={view} busy={busy} editingLocked={editingLocked}
-        onEditingChange={onEditingChange} onSave={onPrerequisites} onVisit={onVisit} />
-    </li>
-  );
+  const blockers = unfinishedPrerequisites(ticket.id, view.tickets, view.dependencies);
+  return <li className="manual-ticket">
+    <button type="button" id={'ticket-' + ticket.id} className="ticket-card" disabled={busy} aria-haspopup="dialog"
+      aria-label={'Open ticket ' + ticket.title} onClick={onOpen}>
+      <span className="ticket-card-heading">
+        <span className="ticket-title">{ticket.title}</span>
+        <span className="status-pill" data-status={ticket.status}>{TICKET_STATUS_LABELS[ticket.status]}</span>
+      </span>
+      {ticket.description && <span className="ticket-excerpt">{ticket.description}</span>}
+      {blockers.length > 0 && <span className="blocker-note">Waiting for {blockers.length} prerequisite{blockers.length === 1 ? '' : 's'}.</span>}
+      <span className="ticket-card-hint">Open details <span aria-hidden="true">&rarr;</span></span>
+    </button>
+    {open && <ProjectDialog title={ticket.title} returnFocusId={'ticket-' + ticket.id} locked={busy || !!editor || editingPrerequisites} onClose={onClose}>
+      <p className="feedback" role="status" aria-live="polite">{message}</p>
+      {editor || <>
+        <div className="ticket-detail-heading">
+          <span className="status-pill" data-status={ticket.status}>{TICKET_STATUS_LABELS[ticket.status]}</span>
+          <button className="secondary-button" disabled={busy || editingPrerequisites} onClick={onEdit}
+            aria-label={'Edit ticket ' + ticket.title}>Edit ticket</button>
+        </div>
+        <h3>Change status</h3>
+        <div className="ticket-status-buttons" role="group" aria-label={'Change status for ' + ticket.title}>
+          {TICKET_STATUSES.map(status => <button type="button" key={status} data-status={status}
+            aria-pressed={ticket.status === status} disabled={busy || editingPrerequisites || ticket.status === status || (status === 'in_progress' && blockers.length > 0)}
+            onClick={() => void onStatus(ticket.id, status)}>{TICKET_STATUS_LABELS[status]}</button>)}
+        </div>
+        {error && <p className="error" role="alert">{error}</p>}
+        <Prerequisites ticket={ticket} view={view} busy={busy} editingLocked={false}
+          onEditingChange={onEditingChange} onSave={onPrerequisites} onVisit={onVisit} />
+        <h3>Description</h3>
+        <p className="project-description">{ticket.description || 'No description yet.'}</p>
+        <h3>Acceptance criteria</h3>
+        <p className="project-description">{ticket.acceptanceCriteria || 'No acceptance criteria yet.'}</p>
+      </>}
+    </ProjectDialog>}
+  </li>;
 }

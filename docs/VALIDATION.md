@@ -25,6 +25,8 @@ The maintained checks cover the scenarios below. This list describes coverage; e
 
 Exact results, counts and tested commit SHAs belong to each PR and its Checks tab. Earlier runs do not verify a later commit. Renderer bundling in this restricted host has encountered an ancestor-directory read denial; a failed local build does not count as a pass. Use hosted checks for full build evidence when that restriction applies. This does not diagnose an ordinary Windows launch. CI screenshots are in windows-today; artifact presence alone is not a pass. Installed recurrence rollover uses prior-period fixtures and the real app clock; disposable store tests separately advance injected clocks across midnight/DST.
 
+The project-browser job separately runs the project interface in sandboxed Chromium with disposable local data. It reuses the installed project interactions and checks persistence after restarting the browser context and local service. Its project-browser-ui artifact contains screenshots and a result report. This proves browser behavior only; Electron startup, native window close and Windows installation remain separate checks.
+
 ## Retained evidence
 
 | Capability | Evidence | What remains outside that proof |
@@ -53,5 +55,7 @@ GitHub Issues/PRs and Git history are the development record. Old experiment doc
 No personal database, credentials or raw execution logs belong in the repository.
 
 Action-center checks cover cross-project ordering, one Ready recommendation, stale/non-Ready start rejection, persistence, malformed responses, installed detail expansion and failed-start recovery.
+
+Project-edit checks cover text changes at every level, all six statuses, identity/parent retention, unchanged-text timestamps, invalid input, real HTTP boundaries, failed writes and restart persistence. Installed UI checks cover ticket cards and details dialogs, all six status buttons, failed status writes, compact creation dialogs, cancelled creation, focus restoration, edit dismissal locks, failed-save drafts, background refresh during editing, direct navigation and escaped non-English text.
 
 Prerequisite checks cover recommendation/Start agreement, status changes between recommendation and Start, self/cycle/cross-project rejection, SQL constraints, malformed graphs, restart persistence and schema-5 backup/recovery protection. Installed checks link across milestones, navigate to a blocker and finish it before starting the dependent ticket.

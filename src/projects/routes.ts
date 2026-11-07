@@ -6,6 +6,7 @@ type ProjectRoute =
   | { kind: 'prerequisites'; id: string }
   | { kind: 'view'; projectId?: string }
   | { kind: 'addProject' | 'addMilestone' | 'addTicket' }
+  | { kind: 'editProject' | 'editMilestone' | 'editTicket'; id: string }
   | { kind: 'setStatus'; id: string };
 
 export function matchProjectRoute(method: string | undefined, path: string): ProjectRoute | undefined {
@@ -20,6 +21,10 @@ export function matchProjectRoute(method: string | undefined, path: string): Pro
   if (path === '/api/project-tickets') return { kind: 'addTicket' };
   const prerequisites = /^\/api\/project-tickets\/([a-f0-9-]{36})\/prerequisites$/.exec(path);
   if (prerequisites?.[1]) return { kind: 'prerequisites', id: prerequisites[1] };
+  const edit = /^\/api\/(projects|milestones|project-tickets)\/([a-f0-9-]{36})\/details$/.exec(path);
+  if (edit?.[2]) return {
+    kind: edit[1] === 'projects' ? 'editProject' : edit[1] === 'milestones' ? 'editMilestone' : 'editTicket', id: edit[2],
+  };
   const start = /^\/api\/project-tickets\/([a-f0-9-]{36})\/start$/.exec(path);
   if (start?.[1]) return { kind: 'start', id: start[1] };
   const match = /^\/api\/project-tickets\/([a-f0-9-]{36})\/status$/.exec(path);
@@ -30,6 +35,12 @@ export function dispatchProjectRoute(route: ProjectRoute, input: unknown, servic
     case 'prerequisites': {
       const id = service.setPrerequisites(route.id, input);
       return { status: 200, body: { view: service.view(id) } };
+    }
+    case 'editProject':
+    case 'editMilestone':
+    case 'editTicket': {
+      const projectId = service[route.kind](route.id, input);
+      return { status: 200, body: { view: service.view(projectId) } };
     }
     case 'actions': return { status: 200, body: service.actions() };
     case 'start': {

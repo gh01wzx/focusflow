@@ -38,9 +38,11 @@ export interface EntityDraft {
   title: string;
   description: string;
 }
-export interface TicketDraft extends EntityDraft {
-  milestoneId: string;
+export interface TicketDetailsDraft extends EntityDraft {
   acceptanceCriteria: string;
+}
+export interface TicketDraft extends TicketDetailsDraft {
+  milestoneId: string;
 }
 export function isTicketStatus(value: unknown): value is TicketStatus {
   return TICKET_STATUSES.some(status => status === value);

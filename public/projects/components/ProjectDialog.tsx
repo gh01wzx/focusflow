@@ -1,7 +1,8 @@
 import { useLayoutEffect, useId, useRef } from 'react';
 import type { ReactNode } from 'react';
 
-export function ProjectDialog({ title, locked, onClose, children }: {
+export function ProjectDialog({ title, locked, onClose, children, returnFocusId }: {
+  returnFocusId?: string;
   title: string; locked: boolean; onClose(): void; children: ReactNode;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -12,7 +13,8 @@ export function ProjectDialog({ title, locked, onClose, children }: {
     element?.showModal();
     return () => {
       element?.close();
-      if (returnFocus instanceof HTMLElement && returnFocus.isConnected) returnFocus.focus();
+      const target = returnFocusId ? document.getElementById(returnFocusId) : returnFocus;
+      if (target instanceof HTMLElement && target.isConnected) target.focus();
     };
   }, []);
   return <dialog ref={dialog} className="project-dialog" aria-labelledby={heading}

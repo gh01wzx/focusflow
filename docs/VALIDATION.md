@@ -42,7 +42,7 @@ GitHub Issues/PRs and Git history are the development record. Old experiment doc
 
 ## Known limits
 
-- Project dependencies and later MVP phases are unfinished; see the [MVP task index](https://github.com/gh01wzx/focusflow/issues/28).
+- Later MVP phases are unfinished; see the [MVP task index](https://github.com/gh01wzx/focusflow/issues/28).
 - Product schema 1 is a synthetic test baseline, not a shipped older product.
 - Installed checks have seen close/cancellation timeouts. Current smoke requires observed native exit code 0 and bounded stage waits; a retry does not establish a root cause.
 - The historical initial-Today audit recorded 15 moderate affected development packages and no high/critical entries. It is not a current dependency assessment. Use the dependency-audit artifact from the specific Windows run under review; advisories may change.
@@ -57,3 +57,7 @@ No personal database, credentials or raw execution logs belong in the repository
 Action-center checks cover cross-project ordering, one Ready recommendation, stale/non-Ready start rejection, persistence, malformed responses, installed detail expansion and failed-start recovery.
 
 Project-edit checks cover text changes at every level, all six statuses, identity/parent retention, unchanged-text timestamps, invalid input, real HTTP boundaries, failed writes and restart persistence. Installed UI checks cover ticket cards and details dialogs, all six status buttons, failed status writes, compact creation dialogs, cancelled creation, focus restoration, edit dismissal locks, failed-save drafts, background refresh during editing, direct navigation and escaped non-English text.
+
+Prerequisite checks cover recommendation/Start agreement, status changes between recommendation and Start, self/cycle/cross-project rejection, SQL constraints, malformed graphs, restart persistence and schema-5 backup/recovery protection. Installed checks link across milestones, navigate to a blocker and finish it before starting the dependent ticket.
+
+Prerequisite picker UI checks cover empty-choice Save state, styled cancellation, card selection with mouse/Enter/Space, cancelled drafts, failed-save retention and persistence.

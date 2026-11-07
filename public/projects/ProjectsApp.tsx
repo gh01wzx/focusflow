@@ -21,8 +21,9 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
   const state = useProjectsController(initialProjectId);
   const [composing, setComposing] = useState<'project' | 'milestone' | 'ticket' | null>(initialProjectId === undefined ? 'project' : null);
   const [openTicketId, setOpenTicketId] = useState<string | null>(null);
+  const [editingPrerequisites, setEditingPrerequisites] = useState(false);
   const { view, busy, milestoneId, error, message } = state;
-  const locked = busy || !!state.editing || openTicketId !== null || (composing !== null && view !== null);
+  const locked = busy || editingPrerequisites || !!state.editing || openTicketId !== null || (composing !== null && view !== null);
   const project = view?.projects.find(item => item.id === view.selectedProjectId);
   const milestone = view?.milestones.find(item => item.id === milestoneId);
   const tickets = view?.tickets.filter(item => item.milestoneId === milestoneId) ?? [];
@@ -88,7 +89,10 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
                   </div>
                   {tickets.length > 0 ? (
                     <ul className="task-list project-ticket-list">
-                      {tickets.map(ticket => <ManualTicket key={ticket.id} ticket={ticket} open={openTicketId === ticket.id}
+                      {tickets.map(ticket => <ManualTicket key={ticket.id} ticket={ticket} view={view} editingPrerequisites={editingPrerequisites} onEditingChange={setEditingPrerequisites}
+                        onPrerequisites={state.setPrerequisites} onVisit={item => {
+                          state.clearFeedback(); state.selectMilestone(item.milestoneId); setOpenTicketId(item.id);
+                        }} open={openTicketId === ticket.id}
                         busy={busy || (!!state.editing && state.editing.id !== ticket.id) || !!composing || (openTicketId !== null && openTicketId !== ticket.id)}
                         error={error} message={message} onStatus={state.setStatus}
                         onOpen={() => { state.clearFeedback(); setOpenTicketId(ticket.id); }}

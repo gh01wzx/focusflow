@@ -24,6 +24,13 @@ try {
   stage = 'project-interactions';
   const saved = await exerciseProjectUI(page, join(artifacts, 'actions.png'), join(artifacts, 'ticket-edit.png'));
   await page.screenshot({ path: join(artifacts, 'project-cards.png'), fullPage: true });
+  const readAll = () => page.evaluate(async () => {
+    const first = await (await fetch('/api/projects')).json() as ProjectView;
+    return await Promise.all(first.projects.map(async project =>
+      await (await fetch('/api/projects?projectId=' + project.id)).json() as ProjectView));
+  });
+  const savedProjects = await readAll();
+  assert.ok(savedProjects.some(view => view.dependencies.length > 0));
   stage = 'restart-server-and-browser-context';
   await context.close();
   await server.close();
@@ -41,10 +48,11 @@ try {
   assert.equal(await card.locator('.status-pill').innerText(), 'Done');
   const restored = await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
   assert.deepEqual(restored, saved);
+  assert.deepEqual(await readAll(), savedProjects);
   await page.screenshot({ path: join(artifacts, 'after-restart.png'), fullPage: true });
   await writeFile(join(artifacts, 'report.json'), JSON.stringify({
     status: 'verified', commit: process.env.GITHUB_SHA ?? 'unknown',
-    scope: 'Browser project UI, status buttons, error/cancel drafts, focus restoration and local server/browser-context restart with disposable data.',
+    scope: 'Browser project UI, status buttons, error/cancel drafts, focus restoration, cross-milestone prerequisites and local server/browser-context restart with disposable data.',
     limits: 'Does not verify Electron launch, native window close or Windows installation.',
   }, null, 2));
   console.log('PROJECT_BROWSER_VERIFIED');

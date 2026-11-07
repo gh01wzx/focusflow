@@ -91,7 +91,11 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string, e
   const prerequisites = dependent.getByRole('form', { name: 'Prerequisites for Separate project work', exact: true });
   const begin = () => dependent.getByRole('button', { name: 'Set prerequisites for Separate project work', exact: true }).click();
   const choice = () => prerequisites.getByRole('checkbox', { name: 'Prepare input / Preparation', exact: true });
-  const read = () => page.evaluate(async () => (await fetch('/api/projects')).json()) as Promise<ProjectView>;
+  const projectId = await page.evaluate(async () => {
+    const view = await (await fetch('/api/projects')).json() as ProjectView;
+    return view.projects.find(project => project.title === 'Another project')!.id;
+  });
+  const read = () => page.evaluate(async id => (await fetch('/api/projects?projectId=' + id)).json(), projectId) as Promise<ProjectView>;
   const beforeChoices = await read();
   await begin();
   assert.equal(await prerequisites.getByRole('checkbox', { name: /Separate project work|Plan / }).count(), 0);

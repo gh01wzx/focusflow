@@ -57,7 +57,7 @@ async function fixture(t: TestContext) {
 }
 
 test('batch preview excludes private context; approval publishes one canonical Issue per coding task without starting', async t => {
-  const f = await fixture(t); 
+  const f = await fixture(t);
   assert.equal(f.service.state(f.project.id).batch, null);
   const preview = await f.service.preview(f.project.id); assert.equal(f.counts().creates, 0);
   assert.equal(preview.batch!.items.length, 2);
@@ -110,7 +110,7 @@ test('uncertain absent or duplicate markers cannot trigger a second creation, an
 });
 
 test('changed local preview is rejected; failed final title update retains its number and retries only PATCH', async t => {
-  const f = await fixture(t); 
+  const f = await fixture(t);
   let preview = await f.service.preview(f.project.id); const ticket = f.store.projects.view(f.project.id).tickets.find(t => t.executionMode === 'codex')!;
   f.store.projects.editTicket(ticket.id, { title: 'Changed title' });
   assert.throws(() => f.service.start(f.project.id, { batchId: preview.batch!.id, confirm: true }), /changed/);
@@ -175,7 +175,13 @@ test('a definite creation refusal retains pending work for explicit retry withou
   service.start(f.project.id, input);
   for (let i = 0; i < 100 && service.state(f.project.id).busy; i++) await tick();
   assert.equal(service.state(f.project.id).batch!.items[0]!.stage, 'pending'); assert.equal(f.counts().creates, 0);
-  refused = false; service.start(f.project.id, input);
+  assert.throws(() => f.store.projects.editTicket(preview.batch!.items[0]!.content.ticketId, { title: 'Not yet allowed' }), /Reconcile/);
+  service.abandon(f.project.id, { ...input });
+  assert.equal(service.state(f.project.id).batch, null);
+  f.store.projects.editTicket(preview.batch!.items[0]!.content.ticketId, { title: 'Corrected before publication' });
+  const replacement = await service.preview(f.project.id);
+  assert.throws(() => service.start(f.project.id, input));
+  refused = false; service.start(f.project.id, { batchId: replacement.batch!.id, confirm: true });
   for (let i = 0; i < 100 && service.state(f.project.id).busy; i++) await tick();
   assert.equal(f.counts().creates, 2); assert.ok(service.state(f.project.id).batch!.items.every(item => item.stage === 'published')); await service.close();
 });

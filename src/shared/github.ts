@@ -1,4 +1,8 @@
 export interface GitHubRepository { id: number; fullName: string; private: boolean }
+export function isGitHubIssueUrl(value: string): boolean {
+  return /^https:\/\/github\.com\/[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_.-]{1,100}\/issues\/[1-9][0-9]*$/.test(value)
+    && !/^https:\/\/github\.com\/[^/]+\/\.{1,2}\//.test(value);
+}
 export interface GitHubStatus {
   available: boolean; connected: boolean; account: string | null; clientId: string;
   repository: GitHubRepository | null; preview: GitHubRepository | null;

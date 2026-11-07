@@ -11,6 +11,16 @@ import { ticketLabel } from '../src/shared/projects.ts';
 import { parseProjectView } from '../src/shared/project-codec.ts';
 import { ProjectInputError } from '../src/projects/validation.ts';
 import { restoreSnapshot } from '../src/database/backup.ts';
+import { isGitHubIssueUrl } from '../src/shared/github.ts';
+
+test('desktop Issue links allow only exact GitHub issue URLs', () => {
+  assert.equal(isGitHubIssueUrl('https://github.com/fixture/code/issues/123'), true);
+  for (const url of ['http://github.com/fixture/code/issues/1', 'https://github.com.evil.invalid/a/b/issues/1',
+    'https://github.com@evil.invalid/a/b/issues/1', 'file:///a/b/issues/1', 'https://github.com/a/../issues/1',
+    'https://github.com/a/b/issues/1?redirect=elsewhere', 'https://github.com/a/b/issues/0']) {
+    assert.equal(isGitHubIssueUrl(url), false);
+  }
+});
 
 test('coding intent is private, cannot start or fake progress, and survives mode edits and restart', async t => {
   const root = await mkdtemp(join(tmpdir(), 'focusflow-intent-'));

@@ -22,7 +22,7 @@ export async function setTicketStatus(page: Page, title: string, status: TicketS
   const button = dialog.getByRole('group', { name: 'Change status for ' + title, exact: true })
     .getByRole('button', { name: TICKET_STATUS_LABELS[status], exact: true });
   await button.click();
-  await page.getByRole('status').filter({ hasText: 'Ticket updated.' }).waitFor();
+  await dialog.getByRole('status').filter({ hasText: 'Ticket updated.' }).waitFor();
   assert.equal(await button.getAttribute('aria-pressed'), 'true');
   await closeTicket(page, title);
 }

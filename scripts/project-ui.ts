@@ -8,7 +8,14 @@ export const PROJECT_SMOKE_TITLE = 'Plan \u9879\u76ee <img src=x onerror=alert(1
 export async function exerciseProjectUI(page: Page, actionScreenshot?: string, editScreenshot?: string): Promise<ProjectView> {
   await page.getByRole('navigation', { name: 'Workspaces', exact: true })
     .getByRole('button', { name: 'Projects', exact: true }).click();
+  await page.route('**/api/projects', route => route.request().method() === 'GET'
+    ? route.fulfill({ status: 500, json: { error: 'Could not load projects.' } }) : route.continue());
   await page.getByRole('button', { name: 'New project', exact: true }).click();
+  await page.getByRole('alert').filter({ hasText: 'Could not load projects.' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Retry', exact: true }).isEnabled(), true);
+  assert.equal(await page.getByRole('button', { name: 'Action center', exact: true }).isEnabled(), true);
+  await page.unroute('**/api/projects');
+  await page.getByRole('button', { name: 'Retry', exact: true }).click();
   await page.getByRole('dialog', { name: 'New project', exact: true }).waitFor();
   await page.getByLabel('Project title', { exact: true }).waitFor();
 

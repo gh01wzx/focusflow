@@ -20,8 +20,9 @@ export function ProjectsApp(props: WorkspaceProps) {
 function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: WorkspaceProps & { onBack(): void; initialProjectId: string | undefined }) {
   const state = useProjectsController(initialProjectId);
   const [composing, setComposing] = useState<'project' | 'milestone' | 'ticket' | null>(initialProjectId === undefined ? 'project' : null);
+  const [openTicketId, setOpenTicketId] = useState<string | null>(null);
   const { view, busy, milestoneId, error, message } = state;
-  const locked = busy || !!state.editing || composing !== null;
+  const locked = busy || !!state.editing || openTicketId !== null || (composing !== null && view !== null);
   const project = view?.projects.find(item => item.id === view.selectedProjectId);
   const milestone = view?.milestones.find(item => item.id === milestoneId);
   const tickets = view?.tickets.filter(item => item.milestoneId === milestoneId) ?? [];
@@ -47,9 +48,9 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
             <p className="subtitle">Open a ticket to work on it.</p>
           </div>
         </header>
-        {error && !state.editing && !composing && <div className="error" role="alert">{error}
+        {error && !state.editing && !openTicketId && (!composing || !view) && <div className="error" role="alert">{error}
           <button disabled={busy} onClick={() => void state.refresh()}>Retry</button></div>}
-        <p className="feedback" role="status" aria-live="polite">{message || (!view && !error ? 'Loading projects.' : '')}</p>
+        {!openTicketId && <p className="feedback" role="status" aria-live="polite">{message || (!view && !error ? 'Loading projects.' : '')}</p>}
         {state.editing && state.editing.kind !== 'ticket' && <p className="editing-note">Save or cancel your changes before switching views.</p>}
         {view && <>
           {composing && <ProjectDialog title={'New ' + composing} locked={busy} onClose={closeComposer}>
@@ -87,8 +88,11 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId }: Works
                   </div>
                   {tickets.length > 0 ? (
                     <ul className="task-list project-ticket-list">
-                      {tickets.map(ticket => <ManualTicket key={ticket.id} ticket={ticket} busy={busy || (!!state.editing && state.editing.id !== ticket.id) || !!composing}
-                        error={error} message={message} onStatus={state.setStatus} onClearError={state.clearFeedback} onEdit={() => state.beginEdit('ticket', ticket.id)}
+                      {tickets.map(ticket => <ManualTicket key={ticket.id} ticket={ticket} open={openTicketId === ticket.id}
+                        busy={busy || (!!state.editing && state.editing.id !== ticket.id) || !!composing || (openTicketId !== null && openTicketId !== ticket.id)}
+                        error={error} message={message} onStatus={state.setStatus}
+                        onOpen={() => { state.clearFeedback(); setOpenTicketId(ticket.id); }}
+                        onClose={() => { setOpenTicketId(null); state.clearFeedback(); }} onEdit={() => state.beginEdit('ticket', ticket.id)}
                         editor={editor('ticket', ticket.id, ticket, ticket.acceptanceCriteria)} />)}
                     </ul>
                   ) : <p className="project-empty">No tickets yet. Use New ticket to add the first step.</p>}

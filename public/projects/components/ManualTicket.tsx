@@ -1,18 +1,16 @@
-import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { TICKET_STATUSES, TICKET_STATUS_LABELS } from '../../../src/shared/projects.ts';
 import type { ProjectTicket, TicketStatus } from '../../../src/shared/projects.ts';
 import { ProjectDialog } from './ProjectDialog.tsx';
 
-export function ManualTicket({ ticket, busy, error, message, onStatus, onEdit, onClearError, editor }: {
-  ticket: ProjectTicket; busy: boolean; error: string; message: string;
+export function ManualTicket({ ticket, open, busy, error, message, onStatus, onEdit, onOpen, onClose, editor }: {
+  ticket: ProjectTicket; open: boolean; busy: boolean; error: string; message: string;
   onStatus(id: string, status: TicketStatus): Promise<boolean>;
-  onEdit(): void; onClearError(): void; editor?: ReactNode;
+  onEdit(): void; onOpen(): void; onClose(): void; editor?: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
   return <li className="manual-ticket">
     <button type="button" className="ticket-card" disabled={busy} aria-haspopup="dialog"
-      aria-label={'Open ticket ' + ticket.title} onClick={() => { onClearError(); setOpen(true); }}>
+      aria-label={'Open ticket ' + ticket.title} onClick={onOpen}>
       <span className="ticket-card-heading">
         <span className="ticket-title">{ticket.title}</span>
         <span className="status-pill" data-status={ticket.status}>{TICKET_STATUS_LABELS[ticket.status]}</span>
@@ -20,7 +18,7 @@ export function ManualTicket({ ticket, busy, error, message, onStatus, onEdit, o
       {ticket.description && <span className="ticket-excerpt">{ticket.description}</span>}
       <span className="ticket-card-hint">Open details <span aria-hidden="true">&rarr;</span></span>
     </button>
-    {open && <ProjectDialog title={ticket.title} locked={busy || !!editor} onClose={() => { setOpen(false); onClearError(); }}>
+    {open && <ProjectDialog title={ticket.title} locked={busy || !!editor} onClose={onClose}>
       <p className="feedback" role="status" aria-live="polite">{message}</p>
       {editor || <>
         <div className="ticket-detail-heading">

@@ -13,7 +13,7 @@ A Windows desktop task tracker built with TypeScript, React, Electron and SQLite
 - Repeat daily or on selected weekdays, retain missed periods in History and stop future repeats.
 - Switch to Projects, create projects/milestones/manual tickets, write acceptance criteria and change ticket status.
 
-Deletion, AI draft approval, coding/review and one-click updates are not implemented.
+Deletion, AI draft approval, coding execution/review and one-click updates are not implemented.
 
 ## Repeating tasks
 
@@ -39,7 +39,9 @@ Use **Set prerequisites** in a ticket's details to choose work that must finish 
 
 Use **Add blocker** inside a ticket for waiting on something outside the project. Save a reason, edit it later or choose **Clear blocker** explicitly. Manual blockers stay visible until cleared, even after prerequisites finish. A failed save keeps your input; Cancel discards it. Blockers can appear on Backlog, In Progress and Review cards. Done cards keep their saved reason and dependency records without displaying an active blocked notice.
 
-Existing installed data upgrades only after a verified pre-change backup. Old Ready tickets become Backlog; old Blocked tickets become Backlog with a manual blocker that you must explain or clear. IDs, text and dependency links remain. Named reviews use separate format-8 sample data; previous review formats remain untouched.
+Choose **Work type** when creating or editing an unpublished Backlog ticket. **Manual** keeps the usual status controls. **Coding with Codex** saves a local unpublished coding draft and shows its project repository, if connected. It creates no Issue or coding run. Coding drafts are excluded from next-task recommendations and cannot start or be marked Done. Published coding records show their GitHub Issue number as the task ID and retain their repository identity; work type cannot change after publication or while running. Publication and coding execution are later features.
+
+Existing installed data upgrades only after a verified pre-change backup. Old Ready tickets become Backlog; old Blocked tickets become Backlog with a manual blocker that you must explain or clear. IDs, text and dependency links remain. Named reviews use separate format-9 sample data; previous review formats remain untouched.
 
 ## AI connection preview
 

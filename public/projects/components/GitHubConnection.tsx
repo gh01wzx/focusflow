@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import type { GitHubStatus } from '../../../src/shared/github.ts';
+import type { GitHubStatus, GitHubRepository } from '../../../src/shared/github.ts';
 import { createGitHubClient } from '../../../src/client/github.ts';
 
 const client = createGitHubClient();
-export function GitHubConnection({ projectId }: { projectId: string }) {
+export function GitHubConnection({ projectId, onRepository }: { projectId: string; onRepository?(value: GitHubRepository | null): void }) {
   const [status, setStatus] = useState<GitHubStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -14,6 +14,7 @@ export function GitHubConnection({ projectId }: { projectId: string }) {
   const mounted = useRef(true);
   const generation = useRef(0);
   const busyRef = useRef(false);
+  useEffect(() => { onRepository?.(status?.repository ?? null); }, [status, onRepository]);
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; ++generation.current; };

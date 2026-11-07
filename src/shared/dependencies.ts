@@ -5,7 +5,7 @@ export function unfinishedPrerequisites(id: string, tickets: ProjectTicket[], de
   return tickets.filter(ticket => ids.has(ticket.id) && ticket.status !== 'done');
 }
 export function canStartTicket(ticket: ProjectTicket, tickets: ProjectTicket[], dependencies: TicketDependency[]) {
-  return ticket.status === 'backlog' && !isTicketBlocked(ticket, tickets, dependencies);
+  return ticket.executionMode === 'manual' && ticket.status === 'backlog' && !isTicketBlocked(ticket, tickets, dependencies);
 }
 export function isTicketBlocked(ticket: ProjectTicket, tickets: ProjectTicket[], dependencies: TicketDependency[]) {
   return ticket.status !== 'done' && (!!ticket.blockReason || unfinishedPrerequisites(ticket.id, tickets, dependencies).length > 0);

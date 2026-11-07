@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -113,4 +113,12 @@ export const MIGRATIONS = [
     END;
     INSERT INTO ticket_dependencies SELECT ticket_id,prerequisite_id FROM retained_ticket_dependencies;
     DROP TABLE retained_ticket_dependencies;` },
+  { version: 9, sql: `CREATE TABLE coding_tickets (
+      ticket_id TEXT PRIMARY KEY REFERENCES project_tickets(id),
+      repository_json TEXT CHECK(repository_json IS NULL OR json_valid(repository_json)),
+      issue_number INTEGER CHECK(issue_number IS NULL OR (typeof(issue_number)='integer' AND issue_number>0)),
+      CHECK(issue_number IS NULL OR repository_json IS NOT NULL)
+    );
+    CREATE UNIQUE INDEX coding_issue_identity ON coding_tickets(json_extract(repository_json,'$.id'),issue_number)
+      WHERE issue_number IS NOT NULL;` },
 ] as const;

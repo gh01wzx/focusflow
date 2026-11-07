@@ -31,7 +31,9 @@ export interface ProjectView {
   selectedProjectId: string | null;
   milestones: Milestone[];
   tickets: ProjectTicket[];
+  dependencies: TicketDependency[];
 }
+export interface TicketDependency { ticketId: string; prerequisiteId: string }
 export interface EntityDraft {
   title: string;
   description: string;

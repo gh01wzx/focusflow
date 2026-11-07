@@ -154,3 +154,58 @@ nav[aria-label="Project list"] .nav-item {
 .ticket-status-buttons button[aria-pressed="true"] { background: #35543c; color: white; border-color: #35543c; opacity: 1; font-weight: 600; }
 .project-dialog .details-editor { margin-bottom: 0; }
 @media (max-width: 760px) { .project-tools { gap: 6px; } .ticket-card-heading { flex-wrap: wrap; gap: 10px; } .project-dialog { padding: 20px; max-height: calc(100vh - 32px); } .ticket-status-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.prerequisites { margin-top: 18px; border-top: 1px solid #dfe5d9; padding-top: 16px; font-size: 12px; }
+.prerequisite-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.prerequisite-heading h3 { margin: 0; }
+.prerequisite-heading .secondary-button, .prerequisite-buttons button { min-height: 40px; padding: 10px 16px; font-size: 12px; }
+.prerequisite-link { text-align: left; overflow-wrap: anywhere; margin: 4px 0; }
+.blocker-note { display: block; color: #74562a; background: #f8efde; border-left: 3px solid #b89150; padding: 12px; }
+.prerequisites fieldset { min-width: 0; border: 0; padding: 0; margin: 18px 0; }
+.prerequisites legend { padding: 0; margin-bottom: 12px; color: #4e6048; }
+.prerequisite-options { display: grid; gap: 8px; }
+.prerequisite-option { display: flex; justify-content: space-between; align-items: center; gap: 16px; width: 100%; min-width: 0; padding: 14px 16px; border: 1px solid #c8d3c0; border-radius: 8px; background: #fff; color: #31482e; text-align: left; }
+.prerequisite-option:hover:not(:disabled) { background: #f0f5eb; border-color: #8ca783; }
+.prerequisite-option[aria-pressed="true"] { border-color: #527557; background: #e8f1e6; box-shadow: inset 3px 0 #527557; }
+.prerequisite-option-details { display: grid; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.prerequisite-option small { color: #66755d; }
+.prerequisite-choice-state { flex-shrink: 0; border-radius: 999px; padding: 5px 10px; background: #eef2e9; color: #52654b; font-size: 11px; }
+.prerequisite-option[aria-pressed="true"] .prerequisite-choice-state { background: #35543c; color: #fff; }
+.prerequisite-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.prerequisite-buttons .primary { margin-left: 0; }
+
+.github-connection { margin: 18px 0; max-width: 780px; border: 1px solid #cbd7c1; border-radius: 10px; background: #f7faf3; color: #31482e; font-size: 12px; }
+.github-connection summary { padding: 14px 18px; cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+.github-connection summary:focus-visible { outline: 3px solid #92b79b; outline-offset: 3px; border-radius: 7px; }
+.github-body { padding: 0 18px 18px; }
+.github-hint { margin: 0; color: #65745e; line-height: 1.7; }
+.github-body > .feedback { margin: 12px 0; }
+.github-connection fieldset { min-width: 0; display: grid; gap: 18px; border: 0; padding: 0; margin: 0; }
+.github-account-row, .github-section-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.github-account-row p, .github-device p { margin: 0; }
+.github-badge, .github-visibility, .github-choice-state { display: inline-block; border-radius: 999px; padding: 5px 10px; font-size: 11px; background: #e8eee2; color: #52654b; }
+.github-badge[data-connected="true"] { background: #e4f1e8; color: #2f6541; }
+.github-linked { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px; border: 1px solid #b7cdb5; border-radius: 8px; background: #edf5eb; overflow-wrap: anywhere; }
+.github-field-title { width: 100%; color: #65745e; font-size: 11px; }
+.github-repository, .github-settings-body { display: grid; gap: 12px; min-width: 0; }
+.github-section-heading h3 { margin: 0; font-size: 14px; }
+.github-connection label { color: #4e6048; }
+.github-connection input { width: 100%; min-width: 0; box-sizing: border-box; padding: 10px 12px; border: 1px solid #b8c6af; border-radius: 7px; color: #31482e; background: #fff; }
+.github-input-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.github-input-row input { flex: 1 1 220px; }
+.github-connection .secondary-button, .github-connection .primary { min-height: 40px; padding: 10px 14px; font-size: 12px; margin: 0; }
+.github-connection .secondary-button:hover:not(:disabled) { background: #edf3e7; border-color: #8ca783; }
+.github-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.github-connection a { color: #36543c; text-underline-offset: 3px; }
+.github-actions a.secondary-button { display: inline-flex; align-items: center; text-decoration: none; }
+.github-preview { display: grid; gap: 12px; padding: 16px; border: 1px solid #b7c9aa; border-radius: 8px; background: #fff; }
+.github-preview strong { overflow-wrap: anywhere; }
+.github-confirm { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; padding: 14px; border: 1px solid #c8d3c0; border-radius: 7px; background: #f8faf5; color: #31482e; text-align: left; }
+.github-confirm[aria-pressed="true"] { background: #e8f1e6; border-color: #527557; box-shadow: inset 3px 0 #527557; }
+.github-confirm[aria-pressed="true"] .github-choice-state { background: #35543c; color: #fff; }
+.github-settings { border-top: 1px solid #dfe5d9; padding-top: 4px; }
+.github-settings > summary { padding: 10px 0; color: #52684a; }
+.github-device { display: grid; gap: 10px; padding: 14px; border-radius: 8px; background: #eef3e8; }
+.github-device strong { font-size: 18px; letter-spacing: 2px; }
+.github-disconnect { display: grid; justify-items: start; gap: 10px; border-top: 1px solid #dfe5d9; padding-top: 16px; }
+.github-connection .github-disconnect-button { border-color: #d5bcb0; color: #8d4e38; background: #fff8f4; }

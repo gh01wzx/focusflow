@@ -1,3 +1,8 @@
+import { matchAiRoute, dispatchAiRoute } from '../ai/routes.ts';
+import { createAiService } from '../ai/service.ts';
+import type { AiService } from '../ai/service.ts';
+import type { GitHubService } from '../github/service.ts';
+import { matchGitHubRoute, dispatchGitHubRoute } from '../github/routes.ts';
 import { matchProjectRoute, dispatchProjectRoute } from '../projects/routes.ts';
 import { ProjectInputError, ProjectNotFoundError } from '../projects/validation.ts';
 import { readFile } from 'node:fs/promises';
@@ -8,9 +13,6 @@ import { HttpError, readJson, secureRequest, sendJson } from '../http/request.ts
 import { openWorkspaceStore } from './store.ts';
 import { matchTaskRoute, dispatchTaskRoute } from '../tasks/routes.ts';
 import { TaskInputError } from '../tasks/validation.ts';
-import { matchAiRoute, dispatchAiRoute } from '../ai/routes.ts';
-import { createAiService } from '../ai/service.ts';
-import type { AiService } from '../ai/service.ts';
 
 const assets = new Map([
   ['/', ['today/index.html', 'text/html; charset=utf-8']],
@@ -20,7 +22,7 @@ const assets = new Map([
 ]);
 
 export async function startWorkspaceServer(options: {
-  dataDirectory: string; clock?: () => Date; sampleLabel?: string | null; ai?: AiService;
+  dataDirectory: string; clock?: () => Date; sampleLabel?: string | null; github?: GitHubService; ai?: AiService;
 }): Promise<LocalServer> {
   const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock, !!options.sampleLabel);
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
@@ -45,13 +47,20 @@ export async function startWorkspaceServer(options: {
         response.end(content);
         return;
       }
-      const route = matchTaskRoute(request.method, resource);
       const aiRoute = matchAiRoute(request.method, resource);
       if (aiRoute) {
         const input = request.method === 'GET' ? undefined : await readJson(request, origin, 4096);
         sendJson(response, 200, await dispatchAiRoute(aiRoute, input, ai));
         return;
       }
+      const githubRoute = matchGitHubRoute(request.method, resource);
+      if (githubRoute) {
+        store.projects.view(githubRoute.projectId);
+        const input = request.method === 'GET' ? undefined : await readJson(request, origin);
+        sendJson(response, 200, await dispatchGitHubRoute(githubRoute, input, options.github));
+        return;
+      }
+      const route = matchTaskRoute(request.method, resource);
       const projectRoute = matchProjectRoute(request.method, resource);
       if (!route && !projectRoute) {
         sendJson(response, 404, { error: 'Not found' });
@@ -74,5 +83,12 @@ export async function startWorkspaceServer(options: {
       });
     }
   }, store.close);
-  return { origin: local.origin, async close() { await ai.close(); await local.close(); } };
+  let closing: Promise<void> | undefined;
+  return { origin: local.origin, close() {
+    return closing ??= (async () => {
+      await ai.close();
+      await options.github?.close();
+      await local.close();
+    })();
+  } };
 }

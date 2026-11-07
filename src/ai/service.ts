@@ -18,6 +18,7 @@ function failureMessage(error: unknown) {
   if (code === 'USAGE_LIMIT') return 'The Codex allowance is exhausted. Check your ChatGPT plan and try after its limit resets.';
   if (code === 'RATE_LIMITED') return 'Codex is rate limited. Wait before trying again.';
   if (code === 'CONNECTION_FAILED') return 'Codex could not connect. Check your network and try again.';
+  if (code === 'TIMEOUT') return 'Codex did not respond in time. Check your connection and retry Check account or sign-in.';
   if (code === 'CANCELLED') return 'The AI check was stopped. A request already sent may still use allowance.';
   return 'The Codex runtime could not complete this check. Check the pinned installation and OS credential-store access, then retry.';
 }
@@ -34,7 +35,7 @@ function accountStatus(value: unknown): AiStatus {
 export function createAiService(runtime: AiRuntime, probe = readOnlyProbe) {
   let state = { ...initial };
   let pending = false;
-  let login: { client: CodexClient; id: string; finish(): void } | null = null;
+  let login: { client: CodexClient; id: string; cancelled: boolean; finish(): void } | null = null;
   let task: Promise<AiStatus> | null = null;
   let active: Promise<AiStatus> | null = null;
   let probing = false;
@@ -90,13 +91,15 @@ export function createAiService(runtime: AiRuntime, probe = readOnlyProbe) {
         if (typeof reply.loginId !== 'string' || typeof reply.authUrl !== 'string' || !isAiSignInUrl(reply.authUrl)) {
           throw new Error('Invalid sign-in response');
         }
-        login = { client, id: reply.loginId, finish };
+        const owned = { client, id: reply.loginId, cancelled: false, finish };
+        login = owned;
         const completedEarly = early.find(event => event.id === reply.loginId);
         if (completedEarly) { succeeded = completedEarly.success; finish(); }
         state = { ...initial, mode: 'signing-in', signInUrl: reply.authUrl, message: 'Continue in your browser, then Check account.' };
         announced();
         timer = setTimeout(finish, 180_000);
         await completed;
+        if (owned.cancelled) return { ...initial, mode: 'signed-out', message: 'Sign-in cancelled. You can start it again when ready.' };
         if (!succeeded) {
           await client.request('account/login/cancel', { loginId: reply.loginId }).catch(() => {});
           return { ...initial, mode: 'signed-out', message: 'Sign-in ended without completion. Start it again when ready.' };
@@ -112,7 +115,13 @@ export function createAiService(runtime: AiRuntime, probe = readOnlyProbe) {
     status, check, signIn,
     async cancel() {
       const owned = login;
-      if (owned) { await owned.client.request('account/login/cancel', { loginId: owned.id }).catch(() => {}); owned.finish(); }
+      if (owned) {
+        owned.cancelled = true;
+        // Local cancellation must not wait for an unresponsive provider reply.
+        void owned.client.request('account/login/cancel', { loginId: owned.id }).catch(() => {});
+        owned.finish();
+        owned.client.close();
+      }
       if (task) await task;
       return status();
     },

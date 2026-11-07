@@ -8,6 +8,7 @@ import { CodexClient, CodexFailure } from '../src/codex/client.ts';
 import { ProbeFailure } from '../src/codex/read-only-probe.ts';
 import { createAiService } from '../src/ai/service.ts';
 import { createAiRuntime } from '../src/ai/runtime.ts';
+import { resolveCodexCommand } from '../src/codex/runtime.ts';
 import type { AiRuntime } from '../src/ai/service.ts';
 import { CODEX_VERSION, parseAiStatus, isAiSignInUrl } from '../src/shared/ai.ts';
 
@@ -69,7 +70,7 @@ test('separate app profiles pass separate credential homes to the shared pinned 
   ].join('\n'));
   for (const name of ['everyday', 'review']) {
     const selected = join(directory, name);
-    const runtime = createAiRuntime(directory, false, selected);
+    const runtime = createAiRuntime(directory, false, selected, path => resolveCodexCommand(path, 'linux'));
     assert.equal(await runtime.installed(), true);
     await runtime.run(async client => {
       await client.initialize();
@@ -81,7 +82,7 @@ test('separate app profiles pass separate credential homes to the shared pinned 
 import { startWorkspaceServer } from '../src/workspace/server.ts';
 import { createAiClient } from '../src/client/ai.ts';
 
-function fakeRuntime(options: { installed?: boolean; auth?: string; earlyLogin?: boolean; badUrl?: boolean } = {}) {
+function fakeRuntime(options: { installed?: boolean; auth?: string; earlyLogin?: boolean; badUrl?: boolean; stalledCancel?: boolean } = {}) {
   const methods: string[] = [];
   let notify: (method: string, params: unknown) => void = () => {};
   const runtime: AiRuntime = {
@@ -89,13 +90,14 @@ function fakeRuntime(options: { installed?: boolean; auth?: string; earlyLogin?:
     async run(operation) {
       const input = new PassThrough();
       const output = new PassThrough();
-      const client = new CodexClient(input, output, 1000);
+      const client = new CodexClient(input, output, options.stalledCancel ? 5000 : 1000);
       notify = (method, params) => { input.write(JSON.stringify({ method, params }) + '\n'); };
       output.on('data', (chunk: Buffer) => {
         for (const line of chunk.toString().trim().split('\n')) {
           const request = JSON.parse(line) as { id?: number; method: string };
           if (request.id === undefined) continue;
           methods.push(request.method);
+          if (options.stalledCancel && request.method === 'account/login/cancel') continue;
           let result: unknown = {};
           if (request.method === 'account/read') result = { account: options.auth === 'none' ? null : {
             type: options.auth ?? 'chatgpt', email: 'test@example.invalid', planType: 'plus', accessToken: 'never-expose-this',
@@ -150,6 +152,7 @@ test('missing runtime and simulated structured failures produce readable bounded
   await service.close();
   for (const [error, message] of [[new CodexFailure('AUTH_REQUIRED'), /Sign in/],
     [new ProbeFailure('USAGE_LIMIT'), /allowance is exhausted/], [new CodexFailure('RATE_LIMITED'), /rate limited/],
+    [new CodexFailure('TIMEOUT'), /did not respond in time/],
     [new Error('secret-provider-payload'), /runtime could not/]] as const) {
     const failed = createAiService(fakeRuntime().runtime, async () => { throw error; });
     try {
@@ -159,6 +162,25 @@ test('missing runtime and simulated structured failures produce readable bounded
       assert.equal(JSON.stringify(state).includes('secret-provider-payload'), false);
     } finally { await failed.close(); }
   }
+});
+
+test('sign-in cancellation releases a stalled provider and allows a fresh account check', async () => {
+  const fake = fakeRuntime({ stalledCancel: true });
+  const service = createAiService(fake.runtime);
+  try {
+    assert.equal((await service.signIn()).mode, 'signing-in');
+    const started = Date.now();
+    const cancelled = await service.cancel();
+    assert.ok(Date.now() - started < 1000, 'Cancellation must not wait for the five-second provider timeout.');
+    assert.equal(cancelled.mode, 'signed-out');
+    assert.equal(cancelled.signInUrl, null);
+    assert.equal(cancelled.verified, false);
+    assert.equal(fake.methods.filter(method => method === 'account/login/cancel').length, 1);
+    fake.notify('account/login/completed', { loginId: 'one', success: true });
+    assert.equal(service.status().mode, 'signed-out');
+    assert.equal((await service.check()).mode, 'chatgpt');
+    assert.equal(fake.methods.some(method => method.startsWith('turn/')), false);
+  } finally { await service.close(); }
 });
 
 test('managed sign-in handles early completion, cancellation and untrusted URLs without leaking responses', async () => {

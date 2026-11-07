@@ -195,7 +195,7 @@ test('project client uses the real API, keeps project selection and enforces req
   const client = createProjectClient((path, options) => fetch(server.origin + String(path), {
     ...options, headers: { ...options?.headers, Origin: server.origin },
   }));
-  assert.deepEqual(await client.read(), { projects: [], selectedProjectId: null, milestones: [], tickets: [] });
+  assert.deepEqual(await client.read(), { projects: [], selectedProjectId: null, milestones: [], tickets: [], dependencies: [] });
   await client.addProject({ title: 'First', description: '' });
   const second = await client.addProject({ title: 'Second', description: '\u9879'.repeat(2000) });
   const projectId = second.selectedProjectId!;
@@ -226,7 +226,7 @@ test('project client rejects invalid nested data, foreign parents and unsupporte
   const milestone = { ...project, id: 'm', projectId: 'a' };
   const ticket = { id: 't', projectId: 'a', milestoneId: 'm', title: 'Ticket', description: '', acceptanceCriteria: '',
     status: 'backlog', executionMode: 'manual', createdAt: project.createdAt, updatedAt: project.createdAt };
-  const valid = { projects: [project], selectedProjectId: 'a', milestones: [milestone], tickets: [ticket] };
+  const valid = { projects: [project], selectedProjectId: 'a', milestones: [milestone], tickets: [ticket], dependencies: [] };
   for (const payload of [null, { ...valid, selectedProjectId: 'missing' },
     { ...valid, milestones: [{ ...milestone, projectId: 'other' }] },
     { ...valid, tickets: [{ ...ticket, milestoneId: 'missing' }] },

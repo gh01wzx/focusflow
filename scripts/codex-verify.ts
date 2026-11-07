@@ -8,6 +8,7 @@ import { CodexFailure, record } from '../src/codex/client.ts';
 import { readOnlyProbe, cancelReadOnlyProbe, ProbeFailure } from '../src/codex/read-only-probe.ts';
 import { withCodexProcess, CodexProcessFailure } from '../src/codex/process.ts';
 import { CODEX_VERSION } from '../src/shared/ai.ts';
+import { resolveCodexCommand } from '../src/codex/runtime.ts';
 
 const VERSION = CODEX_VERSION;
 const mode = process.argv[2];
@@ -60,11 +61,13 @@ async function verify(): Promise<void> {
   }
 
   const controller = new AbortController();
+  const command = await resolveCodexCommand(runtime);
+  Object.assign(environment, command.environment);
   const cancel = () => controller.abort();
   process.on('SIGINT', cancel);
   try {
-    const lifecycle = await withCodexProcess(process.execPath,
-      [cli, ...config, 'app-server', '--listen', 'stdio://'], environment, async (client, cwd) => {
+    const lifecycle = await withCodexProcess(command.executable,
+      [...command.args, ...config, 'app-server', '--listen', 'stdio://'], environment, async (client, cwd) => {
         await client.initialize();
         const account = record(record(await client.request('account/read', { refreshToken: false })).account);
         const auth = account.type === 'chatgpt' ? 'chatgpt' : account.type === 'apiKey' ? 'apiKey' : 'none';

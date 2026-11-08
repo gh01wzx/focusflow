@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -150,4 +150,10 @@ export const MIGRATIONS = [
       ticket_id TEXT PRIMARY KEY REFERENCES coding_tickets(ticket_id),
       workspace_json TEXT NOT NULL CHECK(json_valid(workspace_json))
     );` },
+  { version: 14, sql: `CREATE TABLE coding_runs (
+      id TEXT PRIMARY KEY, ticket_id TEXT NOT NULL REFERENCES coding_tickets(ticket_id),
+      stage TEXT NOT NULL, run_json TEXT NOT NULL CHECK(json_valid(run_json))
+    );
+    CREATE UNIQUE INDEX coding_single_active ON coding_runs((1))
+      WHERE stage IN ('starting','coding','permission','cancelling','publishing','uncertain');` },
 ] as const;

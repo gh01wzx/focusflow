@@ -72,7 +72,7 @@ Source launches and named reviews use separate sample data. Reopening never rese
 
 Existing databases change format only after a verified pre-change snapshot. A failed migration rolls back. Do not open newer data with an older app or overwrite the only current copy during recovery; restore a compatible snapshot to a separate target first. These protections do not implement installer rollback or a trusted updater. [Recovery commands](docs/DEVELOPMENT.md#backup-and-recovery).
 
-Personal/manual task actions stay local. Optional AI generation sends the goal you explicitly submit to OpenAI and uses ChatGPT Codex allowance. Optional approved publication sends previewed coding-ticket content to the selected GitHub repository. API-key billing is refused. Automated provider tests use simulations without spending live-model allowance. Credentials and personal databases never belong in public source. [GitHub setup and limits](docs/GITHUB_CONNECTION.md) � [AI setup](docs/DEVELOPMENT.md#ai-account-setup-and-validation).
+Personal/manual task actions stay local. Optional AI generation sends the goal you explicitly submit to OpenAI and uses ChatGPT Codex allowance. Optional approved publication sends previewed coding-ticket content to the selected GitHub repository. API-key billing is refused. Automated provider tests use simulations without spending live-model allowance. Credentials and personal databases never belong in public source. [GitHub setup and limits](docs/GITHUB_CONNECTION.md) | [AI setup](docs/DEVELOPMENT.md#ai-account-setup-and-validation).
 
 ## Architecture and evidence
 
@@ -89,4 +89,4 @@ Required code checks: npm run check:language, npm run typecheck, npm run build a
 
 For startup problems, record **Build information** when possible. Preserve data and run npm run diagnose:desktop for one data-free runtime attempt. Stop after a native failure and report the result before another controlled experiment. [Developer guidance](docs/DEVELOPMENT.md).
 
-The [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) tracks remaining work. [Product baseline](docs/PRODUCT_BASELINE.md) � [Windows release route](docs/RELEASE_ROUTE.md).
+The [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) tracks remaining work. [Product baseline](docs/PRODUCT_BASELINE.md) | [Windows release route](docs/RELEASE_ROUTE.md).

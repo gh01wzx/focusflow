@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import type { Page } from 'playwright-core';
 
 export async function exerciseAiUI(page: Page, screenshot?: string): Promise<void> {
+  await exerciseBuildInformation(page);
   await page.getByRole('button', { name: 'AI connection', exact: true }).click();
   const ai = page.getByRole('dialog', { name: 'AI connection', exact: true });
   assert.equal(await ai.getByRole('button', { name: 'Run read-only AI check', exact: true }).isDisabled(), true);
@@ -32,4 +33,16 @@ export async function exerciseAiUI(page: Page, screenshot?: string): Promise<voi
   await ai.getByRole('button', { name: 'Close', exact: true }).click();
   await page.unroute('**/api/ai/check');
   await page.unroute('**/api/ai/verify');
+}
+
+async function exerciseBuildInformation(page: Page): Promise<void> {
+  const expected = await page.evaluate(async () => (await fetch('/api/build')).json()) as { version: string; commit: string; tree: string };
+  const entry = page.getByRole('button', { name: 'Build information', exact: true });
+  await entry.click(); const dialog = page.getByRole('dialog', { name: 'Build information', exact: true });
+  await dialog.getByText(expected.version, { exact: true }).waitFor();
+  await dialog.getByText(expected.commit, { exact: true }).waitFor();
+  await dialog.getByText(expected.tree, { exact: true }).waitFor();
+  assert.doesNotMatch(await dialog.innerText(), /C:\\Users|LOCALAPPDATA|tracker\.db/);
+  await dialog.getByRole('button', { name: 'Close Build information', exact: true }).click();
+  assert.equal(await entry.evaluate(element => element === document.activeElement), true);
 }

@@ -86,6 +86,10 @@ npm ci
 
 Run npm ci again when dependencies change. After setup, double-click Start-FocusFlow.cmd. The source launcher builds the app and keeps its console open. Source runs open separate development data, marked **Sample data**. Electron downloads its pinned runtime on first use.
 
+Open **Build information** in the sidebar to see the actual app version, source commit/tree, uncommitted-change warning, database format and sample/everyday profile. Support details exclude task text, credentials and local paths. The desktop waits for a successfully rendered task view before showing the main window; window creation alone is not accepted as startup success. A missing interface reports a bounded 15-second diagnostic. Window-loading, database-upgrade and newer-data errors have separate guidance. These checks do not establish the cause of every historical native crash.
+
+After building this version, run **npm run diagnose:desktop** for one runtime-only attempt. It bypasses task/profile setup and reports a ready marker, missing runtime, native exit code or timeout without raw process output. A disposable guard profile detects accidental task-profile access. For an installed build, use `npm run diagnose:desktop -- "C:\\path\\to\\FocusFlow.exe"`. Stop after a failure and record its result before another controlled experiment; do not repeatedly launch unchanged or delete everyday data.
+
 To build an unsigned installer locally, run npm run package:windows. The output is in release. CI checks packaging but does not retain downloadable installers, screenshots or caches. The installer bundles Node/Electron; it does not provide automatic updates.
 
 ## Local data

@@ -31,6 +31,7 @@ After GitHub creates an Issue, add its actual number to the title; do not guess 
 | npm run review -- pr-72 | Clean/build and open named review sample data |
 | npm run start:web | Open development sample data in a browser |
 | npm run check:language | Check maintained source/docs for accidental Han-script text |
+| npm run diagnose:desktop | Try the built Windows runtime once, without opening task data; report bounded startup evidence |
 | npm run typecheck | Dependency boundaries plus strict Node, browser, desktop and tooling checks |
 | npm run check:boundaries | Static module boundaries, unresolved imports and runtime cycles |
 | npm run build | Clean ignored dist output, compile TypeScript and bundle assets |

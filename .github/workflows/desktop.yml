@@ -67,11 +67,18 @@ jobs:
           $installation = Join-Path $env:RUNNER_TEMP 'focusflow-today-installed'
           node dist/scripts/smoke-today.js (Join-Path $installation 'FocusFlow.exe') --recovery
           exit $LASTEXITCODE
+      - name: Complete a manual project and reopen it
+        timeout-minutes: 3
+        shell: pwsh
+        run: |
+          $installation = Join-Path $env:RUNNER_TEMP 'focusflow-today-installed'
+          node dist/scripts/smoke-today.js (Join-Path $installation 'FocusFlow.exe') --manual-completion
+          exit $LASTEXITCODE
       - name: Print desktop results in the run log
         if: always()
         shell: pwsh
         run: |
-          foreach ($area in @('today', 'review', 'product-recovery')) {
+          foreach ($area in @('today', 'review', 'product-recovery', 'manual-project')) {
             foreach ($name in @('report.json', 'failure.json')) {
               $report = Join-Path (Join-Path 'artifacts' $area) $name
               if (Test-Path -LiteralPath $report) { Get-Content -LiteralPath $report }

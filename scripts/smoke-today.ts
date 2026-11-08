@@ -16,15 +16,17 @@ import { exerciseProjectUI } from './project-ui.ts';
 import { EDITED_PROJECT, EDITED_TICKET } from './project-edit-ui.ts';
 import { exerciseWeekdayUI } from './weekday-ui.ts';
 import { WEEKDAYS } from '../src/shared/weekdays.ts';
+import { completeManualProject, verifyCompletedManualProject } from './manual-project-ui.ts';
 
 const argument = process.argv[2];
 assert.ok(argument, 'Provide the installed FocusFlow executable.');
 const executable = resolve(argument);
 const recovery = process.argv.includes('--recovery');
+const manualCompletion = process.argv.includes('--manual-completion');
 const root = await mkdtemp(join(tmpdir(), 'focusflow-today-smoke-'));
 const profile = join(root, 'product');
 const data = join(profile, 'data');
-const artifacts = resolve('artifacts', recovery ? 'product-recovery' : 'today');
+const artifacts = resolve('artifacts', recovery ? 'product-recovery' : manualCompletion ? 'manual-project' : 'today');
 await mkdir(artifacts, { recursive: true });
 const environment: Record<string, string> = {};
 for (const key of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH', 'LOCALAPPDATA', 'APPDATA', 'COMSPEC']) {
@@ -137,6 +139,12 @@ try {
     mark('relaunch-after-migration'); page = await launch();
     await page.getByText('Retained through product migration', { exact: true }).waitFor();
     await page.screenshot({ path: join(artifacts, 'product-recovery.png'), fullPage: true });
+  } else if (manualCompletion) {
+    mark('complete-manual-project');
+    const saved = await completeManualProject(page);
+    await page.screenshot({ path: join(artifacts, 'completed-project.png'), fullPage: true });
+    mark('restart-completed-manual-project'); await closeApp(); page = await launch();
+    await verifyCompletedManualProject(page, saved);
   } else {
     await page.getByRole('heading', { name: "You're clear for today" }).waitFor();
     const today = await page.getByLabel('Planned date').inputValue();
@@ -296,8 +304,9 @@ try {
   mark('final-close'); await closeApp();
   assert.deepEqual(await readFile(join(root, 'phase0.db')), sentinelBytes);
   assert.ok(!resolve(profile).startsWith(dirname(executable)), 'Product data is outside installation output.');
-  await writeFile(join(artifacts, 'report.json'), JSON.stringify({ status: 'verified',
+  await writeFile(join(artifacts, 'report.json'), JSON.stringify({ status: 'verified', commit: process.env.GITHUB_SHA ?? 'unknown',
     scope: recovery ? 'Schema 3 Personal/repeating data migration and separate snapshot recovery.'
+      : manualCompletion ? 'Complete a manual project through planning, prerequisites, explicit Start, Review, Done, board and installed restart without model/GitHub writes.'
       : 'Installed Personal and manual projects, weekday selection/save-failure retention, recurrence rollover, restart and request guards.',
     productDataSeparate: true, spikeUnchanged: true, rendererNodeAccess: false }, null, 2));
   console.log('TODAY_SMOKE_VERIFIED');

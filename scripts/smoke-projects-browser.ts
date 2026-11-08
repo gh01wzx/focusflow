@@ -9,6 +9,7 @@ import { exerciseGitHubUI } from './github-ui.ts';
 import { exerciseProjectUI } from './project-ui.ts';
 import { EDITED_PROJECT, EDITED_TICKET } from './project-edit-ui.ts';
 import type { ProjectView } from '../src/shared/projects.ts';
+import { completeManualProject, verifyCompletedManualProject } from './manual-project-ui.ts';
 
 const root = await mkdtemp(join(tmpdir(), 'focusflow-project-browser-'));
 const artifacts = resolve('artifacts', 'project-browser');
@@ -56,12 +57,25 @@ try {
   assert.deepEqual(restored, saved);
   assert.deepEqual(await readAll(), savedProjects);
   await page.screenshot({ path: join(artifacts, 'after-restart.png'), fullPage: true });
+  stage = 'complete-a-manual-project';
+  await context.close(); await server.close();
+  server = await startWorkspaceServer({ dataDirectory: join(root, 'manual-completion') });
+  context = await browser.newContext({ viewport: { width: 1280, height: 900 } }); page = await context.newPage(); page.setDefaultTimeout(10000);
+  await page.goto(server.origin, { waitUntil: 'domcontentloaded' });
+  const completed = await completeManualProject(page);
+  stage = 'restart-completed-manual-project';
+  await context.close(); await server.close();
+  server = await startWorkspaceServer({ dataDirectory: join(root, 'manual-completion') });
+  context = await browser.newContext({ viewport: { width: 1280, height: 900 } }); page = await context.newPage(); page.setDefaultTimeout(10000);
+  await page.goto(server.origin, { waitUntil: 'domcontentloaded' });
+  await verifyCompletedManualProject(page, completed);
   await writeFile(join(artifacts, 'report.json'), JSON.stringify({
     status: 'verified', commit: process.env.GITHUB_SHA ?? 'unknown',
     scope: 'Browser project UI, status buttons, error/cancel drafts, focus restoration, cross-milestone prerequisites and local server/browser-context restart with disposable data.',
     ai: 'Missing runtime and simulated account/consent UI; no live provider requests or model.',
     github: 'Simulated account/repository UI, explicit confirmation and late-read protection; no live provider requests.',
     limits: 'Does not verify Electron launch, native window close or Windows installation.',
+    manualCompletion: 'Three manual tickets, two milestones, two prerequisites, explicit Start/Review/Done, edited summary, unchanged Personal data and exact restart persistence.',
   }, null, 2));
   console.log('PROJECT_BROWSER_VERIFIED');
 } catch (error) {

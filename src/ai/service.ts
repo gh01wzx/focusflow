@@ -137,7 +137,7 @@ export function createAiService(runtime: AiRuntime, probe = readOnlyProbe) {
     return status();
   }
   return {
-    status, check, signIn, runWithChatGPT,
+    status, check, signIn, runWithChatGPT, busy:()=>pending,
     async cancel() {
       const owned = login;
       if (owned) {

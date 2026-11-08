@@ -13,11 +13,13 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-if not exist node_modules\typescript\bin\tsc (
+node -e "for(const p of ['typescript','electron','esbuild','react','react-dom'])require.resolve(p)" >nul 2>nul
+if errorlevel 1 (
   call npm ci --no-audit --no-fund
   if errorlevel 1 goto failed
 )
-if not exist "%LOCALAPPDATA%\FocusFlow\codex-product\runtime\node_modules\@openai\codex\package.json" (
+node --input-type=module -e "import {resolveCodexCommand} from './src/codex/runtime.ts';import {join} from 'node:path';await resolveCodexCommand(join(process.env.LOCALAPPDATA,'FocusFlow','codex-product','runtime'))" >nul 2>nul
+if errorlevel 1 (
   echo Preparing the official AI runtime. No sign-in or model request is started.
   call npm run ai:install
   if errorlevel 1 echo AI setup was not completed. You can still use local tasks.

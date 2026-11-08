@@ -1,6 +1,6 @@
 # Using FocusFlow
 
-Personal and manual Projects work locally without a GitHub or AI account. See the [README](../README.md) for launch and installation. Optional integrations retain their separate live acceptance checks.
+Personal and manual Projects work locally without a GitHub or AI account. Double-click Start-FocusFlow.cmd for the source acceptance build; see the [README](../README.md). Coding and review have new, untested implementations. Installation, release and updating are deferred.
 
 ## Repeating tasks
 
@@ -26,15 +26,15 @@ Use **Set prerequisites** in a ticket's details to choose work that must finish 
 
 Use **Add blocker** inside a ticket for waiting on something outside the project. Save a reason, edit it later or choose **Clear blocker** explicitly. Manual blockers stay visible until cleared, even after prerequisites finish. A failed save keeps your input; Cancel discards it. Blockers can appear on Backlog, In Progress and Review cards. Done cards keep their saved reason and dependency records without displaying an active blocked notice.
 
-Choose **Work type** when creating or editing an unpublished Backlog ticket. **Manual** keeps the usual status controls. **Coding with Codex** saves a local unpublished coding draft and shows its project repository, if connected. It creates no Issue or coding run. Coding drafts are excluded from next-task recommendations and cannot start or be marked Done. Published coding records show their GitHub Issue number as the task ID and retain their repository identity; work type cannot change after publication or while running. Publication requires explicit approval; coding execution remains unavailable.
+Choose **Work type** when creating or editing an unpublished Backlog ticket. **Manual** keeps the usual status controls. **Coding with Codex** saves an unpublished draft without an Issue or run. Unpublished drafts cannot start. Published eligible coding tickets appear in the action center; their Start control opens details for explicit workspace and allowance confirmation. Their GitHub Issue number is the task ID; repository identity and work type remain fixed after publication. Coding progress uses dedicated controls and an observed merged PR is required for Done.
 
-Existing installed data upgrades only after a verified pre-change backup. Old Ready tickets become Backlog; old Blocked tickets become Backlog with a manual blocker that you must explain or clear. IDs, text and dependency links remain. Named reviews use separate format-12 sample data; previous review formats remain untouched.
+Existing data upgrades only after a verified pre-change backup. Old Ready tickets become Backlog; old Blocked tickets become Backlog with a manual blocker that you must explain or clear. IDs, text and dependency links remain. Named reviews use sample data separated by the current database format; previous formats remain untouched.
 
 ## AI connection preview
 
 Open **AI connection** in the sidebar to check the separate FocusFlow Codex account. Install the pinned official runtime explicitly with npm run ai:install from a source checkout, then choose **Sign in with ChatGPT** and follow the browser link. The shared runtime stays under %LOCALAPPDATA%\FocusFlow\codex-product\runtime. Each app profile supplies its own codex-profile directory for sign-in settings. Live Windows credential-store separation still needs verification. Credentials use the OS credential store; no plaintext fallback is configured and existing Codex App sessions are not copied.
 
-**Check account** does not request a model response. **Run read-only AI check** requires the allowance checkbox and a ChatGPT-authenticated account. It consumes Codex allowance; API-key and other auth modes are refused. Code-writing remains later work. The new product login/keyring/live path still needs an owner-triggered Windows trial; ordinary tests use simulated accounts/results and never call a live model.
+**Check account** does not request a model response. **Run read-only AI check** requires the allowance checkbox and a ChatGPT-authenticated account. It consumes Codex allowance; API-key and other auth modes are refused. Coding uses a separate explicit Start decision. The product login/keyring/live path still needs owner-led Windows acceptance; launching the app never starts a model request.
 
 ## AI plan drafts
 
@@ -50,7 +50,7 @@ Choose **Preview selected plan** to inspect exactly which milestones and tasks w
 
 ## Publish approved coding work
 
-Open **Publish approved work** in a project, then **Preview publication**. The Windows GitHub connection must already have an owner-authorized App installation with Issues read/write access. This feature cannot grant that permission. Inspect the repository name, visibility and public Issue content, confirm the checkbox, then approve the whole batch. Only coding tasks from approved plans are published. Personal data, goals, project notes and manual task text are excluded. One publication approval covers the batch; no per-task approval or automatic coding Start follows.
+Open **Publish approved work**, then **Preview publication**. Connect GitHub with Issues write access through your App or fine-grained token. Inspect repository visibility and each public Issue, then approve the batch. The preview includes coding tickets you saved directly or approved from a plan. Unapproved AI suggestions, Personal data, goals, project notes and manual task text are excluded. Publication never starts coding or grants account permissions.
 
 GitHub assigns each Issue number after creation; the final title uses [ID] and coding prerequisite references use assigned numbers. The preview explains these substitutions and shows the public recovery marker. Results are saved per task. Reopen after restart or **Resume approved publication** to recover missing links, without duplicating successful creations. A definite refusal retains uncreated work for an explicit retry. An uncertain creation is searched by its marker; absence does not permit another creation. Conflicting/duplicate markers or remote edits require reconciliation. A wholly unstarted batch can be cancelled before revising its preview. Approved publication content and repository are locked; linked requirement changes use the explicit comparison flow. No product live-write trial is claimed by simulated tests.
 
@@ -60,7 +60,23 @@ Open a published coding ticket and choose **Compare linked work**, then **Refres
 
 Use **Edit local requirements** to confirm a local proposal, or confirm **Use GitHub fields locally** to copy recognized public fields deliberately. Both retain Issue/task identity, prerequisites, mode and progress. The remote version is checked again before adopting it; changed/stale comparisons are refused. Unknown or ambiguous Issue formats cannot be imported silently. FocusFlow never overwrites the Issue during comparison: use **Open Issue on GitHub** for a deliberate public edit, then refresh. Save or cancel local edits before closing; a failed save retains the draft.
 
-If an existing PR belongs to this ticket, enter its number and explicitly choose **Inspect and link this PR**. It must explicitly close this Issue in the same repository; an existing PR identity cannot be replaced silently. Refresh retains its actual head, state and merge commit across restart. Issue closure, a closed unmerged PR and an observed merge are displayed separately. This comparison feature does not change task status or start another task; coding completion/review remains later work.
+If an existing PR belongs to this ticket, enter its number and explicitly choose **Inspect and link this PR**. It must explicitly close this Issue in the same repository; an existing PR identity cannot be replaced silently. Refresh retains its actual head, state and merge commit across restart. Issue closure and a closed unmerged PR do not mean Done. The coding review panel reconciles an actual merged PR separately.
+
+## Code and review one ticket
+
+This is the implemented acceptance path, not a report of successful live testing.
+
+1. Connect the project repository, publish its coding Issue and finish its prerequisites. Clear any manual blocker.
+2. Open the ticket, enter the absolute path of its local Git repository and inspect it. Confirm the displayed base commit and prepare a worktree. Uncommitted source-folder edits stay in that folder and are excluded. The separate worktree is retained inside the app profile.
+3. Inspect the ticket/workspace scope, confirm ChatGPT allowance and choose Start. Checks are off by default. One coding run is allowed globally; there is no automatic next task or model retry.
+4. Follow saved progress and distinguish the developer's summary from runtime-reported command results. Allow once or deny a specific pending permission. Unknown/out-of-worktree requests are refused by the adapter; actual Windows sandbox enforcement still needs validation.
+5. Stop requests interruption and owned-process cleanup. Reopening never restarts a model. An interrupted run retains its files, identities and history. Uncertain process/publication state blocks another run until explicitly reconciled; a stale PID is never killed or reattached automatically.
+6. Preview source publication. Confirm repository visibility, base and exact changed-file list before creating a branch/PR. This sends the approved snapshot to GitHub. A lost PR-create reply only searches for the existing recovery marker; it does not create a duplicate. External branch changes are preserved and block silent replacement.
+7. Refresh PR review to read actual head-bound diff and check results. Missing, truncated or failed evidence remains visible. Explicit allowance consent enables a plain-English summary, a separate read-only AI assessment or a code/library question. These use bounded supplied evidence and do not run tests. AI answers are inferences, not proof of correctness.
+8. Enter revision feedback, preview its scope and explicitly resume a fresh coding context in the same worktree. Publish the revision to the same PR. Changed head or requirements invalidates earlier answers/approval.
+9. Record a local approval only after inspecting current evidence. Missing check/source/review evidence needs acknowledgement. Open the PR on GitHub and merge there when satisfied. Refresh/observe its result: only an actual matching PR merge makes the coding ticket Done. If GitHub did not close the linked Issue, explicitly close it after the observed merge. No next task, installation or update starts.
+
+File/secret screening is bounded and cannot guarantee every sensitive value is recognized. Inspect publication content and permissions yourself. All files, process state, GitHub permissions, cancellation and recovery behavior in this new path await local acceptance.
 
 ## Try a proposed change
 

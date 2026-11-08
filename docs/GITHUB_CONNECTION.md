@@ -1,6 +1,6 @@
 # GitHub project connection
 
-This product-owned connection is separate from the ChatGPT GitHub connector. Connection setup reads account/repository metadata and saves a local project link. Only a separately previewed and explicitly approved coding publication creates remote Issues.
+This product-owned connection is separate from the ChatGPT GitHub connector. Setup reads metadata and saves a local project link. Separate explicit decisions publish coding Issues/source/PRs or close the linked Issue after an observed merge. New live authorization and writes remain unverified.
 
 ## Authorization decision
 
@@ -8,14 +8,14 @@ This product-owned connection is separate from the ChatGPT GitHub connector. Con
 | --- | --- | --- | --- |
 | GitHub App device flow | Client ID only; no embedded secret or callback server | Fine-grained permissions and selected installations; user reviews the App at GitHub | Implemented for review |
 | OAuth App device flow | Also avoids a client secret | Broad repository scopes for private work; less precise than a GitHub App | Not selected |
-| Personal access token | Manual setup | User creates, copies, rotates and revokes a secret | Not selected |
+| Fine-grained personal access token | Optional manual setup | User selects repositories/permissions, copies, rotates and revokes the secret | Implemented alternative; explicit encrypted-storage consent |
 | ChatGPT connector credentials | Belong to the connector | Not available to the installed product | Not reusable |
 
-Repository metadata read access is sufficient for the connection step. Seeing metadata does not prove permission to create Issues, branches or PRs. Issue publication requires Issues read/write permission on the selected repository. The owner must grant that permission at GitHub and authorize again as required; the app never grants scopes automatically. Repository contents/PR writes and coding remain separate work.
+Repository metadata read access is sufficient for connection. Issue publication needs Issues read/write; source branches/PRs need Contents and Pull requests read/write. Check evidence may need Checks/Commit statuses read access; missing evidence remains unknown. The owner grants access at GitHub explicitly; the app never broadens scopes. Creating workflow files can require further provider permission and may be refused.
 
 ## Try with your own App
 
-1. Use the Windows desktop build and a separate review profile: `.\Review-FocusFlow.cmd task-45`.
+1. Use the source desktop build and a separate review profile: `.\Start-FocusFlow.cmd --review github-connection`.
 2. At GitHub App settings, register an App you control, enable Device Flow, and select read-only Repository metadata. Do not add repository content or Issue write permissions for this step. Install it on selected repositories you intend to inspect.
 3. In Projects, open a project, expand **GitHub connection**, expand **Connection settings**, paste the App client ID and choose **Authorize GitHub**.
 4. Open the official device page and enter the displayed code. Inspect the App name, permissions and repository selection before approving. Return to FocusFlow.
@@ -24,6 +24,8 @@ Repository metadata read access is sufficient for the connection step. Seeing me
 7. Restart the same profile and check its link. Disconnect this profile; project tasks must remain.
 
 Registering an App and live account authorization are owner actions, not automated test steps. No live authorization was performed during implementation.
+
+Alternatively, expand Connection settings, follow the official fine-grained token link, choose only the intended repository and permissions, paste the token into the password field and confirm encrypted local storage. Submit clears the input; the token is not returned in status responses or attached to coding/review prompts. A refused new token does not invalidate a different existing saved connection. Keep token creation/revocation under your own account control.
 
 ## Storage and failures
 

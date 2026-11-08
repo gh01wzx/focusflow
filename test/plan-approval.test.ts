@@ -73,7 +73,7 @@ test('approval requires confirmation and selected prerequisites, then saves once
     assert.deepEqual(coding.coding, { repository: null, issueNumber: null });
     assert.deepEqual(view.dependencies, [{ ticketId: coding.id, prerequisiteId: manual.id }]);
     assert.deepEqual(receipt.codingTicketIds, [coding.id]);
-    assert.throws(() => store.projects.start(coding.id), /verified coding runner/);
+    assert.throws(() => store.projects.start(coding.id), /workspace and coding controls/);
     assert.throws(() => store.planApproval.edit(project.id, edit(current)), /already approved/);
     const snapshot = await store.snapshot();
     store.close(); store = await openWorkspaceStore(path);

@@ -10,7 +10,7 @@ export function CodingNotice({ ticket, repository }: { ticket: ProjectTicket; re
     <p>{(linked ?? repository)?.fullName ?? 'No repository connected. Connect one in GitHub connection.'}</p>
     {issue && linked && <a href={'https://github.com/' + linked.fullName + '/issues/' + issue}
       target="_blank" rel="noreferrer">Open GitHub Issue #{issue}</a>}
-    <p>{issue ? 'Work type and repository are fixed. Coding Start is not available yet.'
+    <p>{issue ? 'Work type and repository are fixed. Prepare the local worktree, then explicitly start this ticket below.'
       : 'Saved locally. No GitHub Issue or coding run exists. Start and Done stay unavailable.'}</p>
   </div>;
 }

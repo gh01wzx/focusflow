@@ -2,7 +2,7 @@
 
 A Windows desktop app for daily tasks and personal projects. Built with TypeScript, React, Electron and SQLite. Single user, local data, no FocusFlow account.
 
-**Development preview.** Personal and manual Projects are available. AI/GitHub integrations have preview implementations; live coding, AI review and trusted one-click updates remain unfinished. There is no official signed release.
+**Development preview.** Personal, manual Projects and the AI planning/coding/review workflow have source implementations. The new AI workflow needs owner-led Windows acceptance; compiled code is not live integration evidence. Installation, releases and one-click updates are deferred.
 
 **Local acceptance workflow:** double-click Start-FocusFlow.cmd. It prepares missing source dependencies and the pinned AI runtime, builds the source and opens the app. It does not run tests, sign in or request a model response. This implementation batch is unverified until the owner performs local acceptance. Automated verification workflows are manual-only. Installation, release and updates are deferred.
 
@@ -25,7 +25,7 @@ After setup, double-click **Start-FocusFlow.cmd**. Run npm ci again when depende
 
 For a proposed change, check out its exact PR commit and run **Start-FocusFlow.cmd --review** with the review name supplied in that PR. Reopen the same name to retain changes; use a new name for fresh examples. Source, named reviews and installed everyday data stay separate.
 
-The packaging target is Windows x64. Installed automation runs on GitHub's Windows runner; other Windows configurations have not been separately certified. Build an unsigned development installer with npm run package:windows, open the versioned installer in release, then open **FocusFlow** from the Desktop or Start menu. It bundles Electron/Node, installs per user and needs no Node/npm on the destination computer. Windows may show unknown-publisher or SmartScreen prompts; verify the source and candidate before deciding whether to run one. No downloadable official release or automatic updater is provided.
+Use the source launcher for current acceptance. Existing packaging and recovery tools are retained for later work; no installation or release is part of this delivery.
 
 ## What works now
 
@@ -38,9 +38,14 @@ The packaging target is Windows x64. Installed automation runs on GitHub's Windo
 | Status board | Browse Backlog, In Progress, Review and Done across milestones |
 | Blockers | Link prerequisites, open the exact blocker and add/clear a manual reason |
 | Data protection | Retain records after restart; verify snapshots before migration; restore separately |
-| Optional previews | Connect GitHub, edit/approve saved plan drafts, publish approved coding Issues and explicitly compare linked work; live acceptance remains separate |
+| AI planning | Generate, edit, select and explicitly approve local task drafts |
+| GitHub | Connect through an App or a fine-grained token; preview coding Issues before publishing; compare linked requirements |
+| Coding | Prepare a separate Git worktree, explicitly start one task, answer permission requests, stop and recover retained work |
+| PR delivery | Preview the exact changed files and create/update the same linked PR; reconcile uncertain writes |
+| Review | Read actual diff/check evidence, request a separate AI assessment, ask code questions and explicitly resume with feedback |
+| Completion | Open the PR on GitHub to merge; refresh its actual merged state to mark the coding ticket Done |
 
-Task deletion, coding execution/recovery, AI PR review and official one-click updates are unavailable. Coding drafts cannot start or be marked Done through manual controls.
+Task deletion and official one-click updates are outside this delivery. Unpublished coding drafts cannot start. Coding progress uses its dedicated controls; Done requires an observed linked PR merge. All new coding/review behavior is untested pending local acceptance.
 
 ## Complete a small project
 
@@ -74,7 +79,7 @@ Source launches and named reviews use separate sample data. Reopening never rese
 
 Existing databases change format only after a verified pre-change snapshot. A failed migration rolls back. Do not open newer data with an older app or overwrite the only current copy during recovery; restore a compatible snapshot to a separate target first. These protections do not implement installer rollback or a trusted updater. [Recovery commands](docs/DEVELOPMENT.md#backup-and-recovery).
 
-Personal/manual task actions stay local. Optional AI generation sends the goal you explicitly submit to OpenAI and uses ChatGPT Codex allowance. Optional approved publication sends previewed coding-ticket content to the selected GitHub repository. API-key billing is refused. Automated provider tests use simulations without spending live-model allowance. Credentials and personal databases never belong in public source. [GitHub setup and limits](docs/GITHUB_CONNECTION.md) | [AI setup](docs/DEVELOPMENT.md#ai-account-setup-and-validation).
+Personal/manual actions stay local. Optional AI uses ChatGPT Codex allowance: planning sends the entered goal, coding operates on the selected ticket worktree, and review sends bounded PR code/diff/check evidence and the question. Each model request requires explicit consent; API-key billing is refused. Approved publication sends previewed ticket or source content to the selected GitHub repository. Credentials and personal databases never belong in public source. [GitHub setup and limits](docs/GITHUB_CONNECTION.md) | [AI setup](docs/DEVELOPMENT.md#ai-account-setup-and-validation) | [Coding and review](docs/USAGE.md#code-and-review-one-ticket).
 
 ## Architecture and evidence
 
@@ -87,7 +92,7 @@ React components render controls, controllers coordinate state, checked clients 
 | Installed entry and data preservation | [Task #63 / PR #96](https://github.com/gh01wzx/focusflow/pull/96): exact tested source, shortcut targets, duplicate handoff, replacement and separate recovery; unsigned development builds |
 | AI self-improvement and official update | [Task #68](https://github.com/gh01wzx/focusflow/issues/68): unfinished; no end-to-end MVP claim |
 
-Required code checks: npm run check:language, npm run typecheck, npm run build and npm test. Public standard-runner CI also exercises browser/installed workflows. Each PR records its tested commit and failures. Passing hosted checks do not diagnose an earlier native crash on another machine. Persistent CI artifact uploads and caches are disabled. [Coverage and limitations](docs/VALIDATION.md).
+The owner requested code implementation followed by unified local acceptance. This batch runs no test suite, native app, model or installer. Static compiler/language results, where executed, are recorded against the PR commit. Workflows are manual-only; historical checks below do not verify new features. Persistent CI artifact uploads and caches stay disabled. [Coverage and limitations](docs/VALIDATION.md).
 
 For startup problems, record **Build information** when possible. Preserve data and run npm run diagnose:desktop for one data-free runtime attempt. Stop after a native failure and report the result before another controlled experiment. [Developer guidance](docs/DEVELOPMENT.md).
 

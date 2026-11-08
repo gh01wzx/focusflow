@@ -1,6 +1,6 @@
 # Architecture
 
-FocusFlow is one local Windows desktop application. It supports dated Personal tasks, daily/weekly repeats and a manual Project / Milestone / Ticket hierarchy.
+FocusFlow is one local Windows desktop application. It supports Personal tasks, a Project / Milestone / Ticket hierarchy and explicitly started AI planning, coding and review. New coding/review integration awaits local acceptance.
 
 ## Start with one feature
 
@@ -13,7 +13,7 @@ Read [README](../README.md) for what the app does, then follow Add task below. T
 | scripts | Commands used to build, verify, package or recover the app | Bundle React; exercise an installed app |
 | test | Automated scenarios using disposable data | Check that tasks survive a restart |
 | docs | Product scope, architecture, development and evidence | This reading guide |
-| .github/workflows | Checks run by GitHub when code is pushed or a PR changes | Windows/Linux tests and installed-app checks |
+| .github/workflows | Retained manual verification workflows | Windows/Linux tests and installed-app checks; not triggered in this batch |
 | package.json | Dependencies and named development commands | npm run build and npm test |
 
 Files ending in .tsx contain React interface code; .ts files contain TypeScript logic; .css controls appearance. The ignored dist directory contains generated runnable output. Edit the source files listed here.
@@ -61,7 +61,7 @@ Build copies stamp version/commit/tree and a dirty-source flag into ignored runt
 
 ## Data and repeating periods
 
-Schema **12** appends linked Issue/PR evidence and comparison baselines. Schema 11 added publication batches and per-ticket results. Schema 10 added durable plan approval receipts and approved snapshots. Schema 9 appended coding intent/publication identity beside existing tickets. Schema 8 added four statuses and independent blocker reasons, 7 added private AI drafts and 6 added prerequisite links. Schema 5 added optional weekday masks to repeating rules; null retains existing schedules. Applied migrations retain their SQL behavior. Product data stays outside source/install directories. Foreign/newer databases are refused; upgrades require verified pre-change snapshots.
+Schema **16** adds saved PR review evidence, answers and head-bound approval. Schema 15 added source-publication journals, 14 durable coding runs and 13 isolated workspaces. Schema 12 added linked Issue/PR evidence, 11 publication batches, 10 plan approval receipts, 9 coding intent, 8 four statuses/blockers, 7 AI drafts and 6 dependencies. Schema 5 retains old weekly periods alongside selected weekdays. Applied migrations retain their SQL behavior. Product data stays outside source/install directories. Foreign/newer databases are refused; existing-data upgrades require verified pre-change snapshots.
 
 Each rule records its frequency, start date and next unmaterialized date. New weekly rules also record selected weekdays; SQL mask conversion stays in the repository, while shared calendar helpers and domain rules use weekday arrays. Occurrences have unique rule/date pairs and independent statuses. Daily and selected-weekday occurrences span one local day. Existing weekly rules without weekday selections retain their seven-day periods. Date-only arithmetic avoids DST-hour assumptions.
 
@@ -83,13 +83,33 @@ The controller allows one details editor at a time. It blocks view navigation du
 
 The controller displays only the selected milestone's tickets. Write requests allow up to 32 KiB for multiline text; Personal keeps its 4 KiB limit. Runtime codecs check records, parent associations and manual execution mode. Manual ticket actions do not call GitHub or Codex; the optional project connection is separate.
 
-Deletion and AI draft approval remain later Tickets.
+Deletion is outside the current delivery. AI drafts use separate storage until explicit approval creates local milestones, tickets and dependencies atomically.
 
 ## Keep the boundaries
 
 TicketBlockerNotice renders a separate card notice, never a nested link inside the ticket's button. It lists unfinished prerequisites with direct ticket links and milestone context. ProjectHierarchy reuses its existing cross-milestone dialog navigation; ActionCenter can open that exact ticket through the same hierarchy. TicketBlockerEditor edits a separate manual reason through the checked client, controller, POST /api/project-tickets/:id/blocker, service validation and SQL repository. Editing blocks navigation/dismissal until Save or Cancel; failures retain the draft. Shared blocker rules exclude blocked Backlog tickets from recommendations and the final Start check. Blocker changes never change status. Done cards retain their records without displaying an active blocked notice.
 
-Schema 8 rebuilds the ticket table with four status values and a bounded manual block_reason. It retains IDs, text, timestamps, execution mode and every prerequisite link, and restores foreign keys, indexes and same-project/cycle triggers in the same transaction. Old Ready maps to Backlog; old Blocked maps to Backlog with a retained manual notice. A verified snapshot is required before an existing database changes. Schema 7 retains the exact published draft-storage table for compatibility with draft review data; it does not enable AI planning in this build.
+Schema 8 rebuilds the ticket table with four status values and a bounded manual block_reason. It retains IDs, text, timestamps, execution mode and every prerequisite link, and restores foreign keys, indexes and same-project/cycle triggers in the same transaction. Old Ready maps to Backlog; old Blocked maps to Backlog with a retained manual notice. A verified snapshot is required before an existing database changes. Schema 7 retains the exact published draft-storage table for compatibility.
+
+## Coding and review
+
+| Layer | Responsibility |
+| --- | --- |
+| public/projects/components/Coding*.tsx | Workspace, run, approval, delivery and review controls |
+| src/client and src/shared | Checked HTTP calls and execution/review contracts |
+| src/execution/routes.ts | Route matching and dispatch |
+| src/execution/workspaces.ts | Inspect a matching local repository and prepare one retained worktree |
+| src/execution/service.ts | Scope eligibility, one active run, cancellation and explicit recovery |
+| src/execution/approvals.ts | Expiring single-request decisions; pending requests are memory-only |
+| src/codex/coding-turn.ts | Owned app-server coding turn and runtime events |
+| src/execution/delivery.ts | Snapshot preview, durable publication intent and uncertain-write reconciliation |
+| src/execution/review.ts | Head-bound read-only AI answers, owner decisions and observed merge completion |
+| src/execution/repository.ts | Workspace/run/publication/review SQL persistence |
+| src/github/coding.ts and review.ts | Checked repository reads/writes, diff/check evidence and actual merge/Issue state |
+
+The workspace server composes these with existing AI account, GitHub vault and linked-work services. Codex receives an owned workspace, ticket scope and check preference, not a GitHub token. Publication is an explicit server-side operation after preview. Reviews use fresh read-only text contexts with actual bounded source/diff evidence. They do not inherit the developer's conversation. A changed commit or requirement invalidates approval; a closed Issue or unmerged PR never completes coding work. No model call, next task or merge is automatic.
+
+Startup marks interrupted runs using saved process identity without killing or reattaching stale PIDs. Uncertain process/remote publication state blocks another coding run. Shutdown cancels and awaits owned work before closing storage. These code paths await Windows integration acceptance; they are not demonstrated sandbox/recovery guarantees.
 
 - Components render controls; the controller coordinates state; the client handles HTTP.
 - Shared contracts/calendar code have no Node, React or feature dependencies.

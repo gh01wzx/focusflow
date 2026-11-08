@@ -14,7 +14,7 @@ export function PublicationPanel({ projectId, disabled, onOpenChange, onChanged 
   return <>
     <button id={buttonId} className="secondary-button" disabled={disabled} onClick={() => { setOpen(true); onOpenChange(true); }}>Publish approved work</button>
     {open && <ProjectDialog title="Publish approved work" locked={state.busy} onClose={close} returnFocusId={buttonId}>
-      <p>Only coding tasks from approved local plans are included. Manual task text, project notes, goals and credentials stay private. Publication never starts Codex.</p>
+      <p>This preview includes saved coding tickets, created by you or approved from a plan. Unapproved AI suggestions, manual task text, project notes, goals and credentials stay private. Publication never starts Codex.</p>
       <p>GitHub assigns Issue numbers after creation. The final title adds [ID] and prerequisite links use those assigned numbers. The recovery marker below is also public.</p>
       <p>Closing this dialog does not undo a publication already approved. Reopen it to inspect results.</p>
       <p role="status" className="feedback">{state.state?.message}</p>

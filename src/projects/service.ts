@@ -51,7 +51,7 @@ export function createProjectService(repository: ProjectRepository, transaction:
       const ticket = repository.findTicket(id);
       if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
       if (ticket.status !== 'backlog') throw new ProjectInputError('This ticket is no longer in Backlog. Refresh before choosing another task.');
-      if (ticket.executionMode === 'codex') throw new ProjectInputError('Coding work needs an approved published Issue and a verified coding runner before Start is available.');
+      if (ticket.executionMode === 'codex') throw new ProjectInputError('Publish this coding ticket, then use its workspace and coding controls to start it.');
       if (ticket.blockReason) throw new ProjectInputError('Clear this ticket\'s blocker before starting it.');
       if (!canStartTicket(ticket, repository.listTickets(ticket.projectId), repository.listDependencies(ticket.projectId))) {
         throw new ProjectInputError('Finish this ticket\'s prerequisites before starting it.');

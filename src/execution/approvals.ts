@@ -24,7 +24,8 @@ export function createApprovalBroker() {
       if (!within(directory) || typeof params.grantRoot === 'string' && !within(params.grantRoot)) return 'decline';
       const kind=method==='item/commandExecution/requestApproval' ? 'command' : method==='item/fileChange/requestApproval' ? 'file' : null;
       if (!kind) return 'decline';
-      const paths=Array.isArray(params.paths) ? params.paths.filter((p): p is string => typeof p==='string').slice(0,30) : [];
+      const paths=Array.isArray(params.paths) ? params.paths.filter((p): p is string => typeof p==='string') : [];
+      if(kind==='file'&&(!paths.length||paths.length>100||paths.length!==(params.paths as unknown[]).length))return 'decline';
       if (paths.some(path=>!within(resolve(directory,path)))) return 'decline';
       const command=display(Array.isArray(params.command) ? params.command.join(' ') : params.command,4000);
       if (kind==='command' && !command.trim()) return 'decline';

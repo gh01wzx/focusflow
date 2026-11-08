@@ -62,6 +62,7 @@ export function createLinkedWorkService(repository: LinkedWorkRepository, projec
       return state(id);
     },
     edit(id: string, input: unknown) {
+      if(projects.codingBusy(id))throw new LinkedWorkError('Stop or reconcile the active coding operation before changing its requirements.');
       const value = consent(id, input), source = record(value.fields);
       const fields = ticketDetailsInput({ title: source.title, description: source.description, acceptanceCriteria: source.acceptanceCriteria });
       transaction(now => { consent(id, input); invalidate(id); projects.editTicket(id, fields, now.toISOString()); });
@@ -76,7 +77,7 @@ export function createLinkedWorkService(repository: LinkedWorkRepository, projec
       if (!same(remote, before.remote)) throw new LinkedWorkError('GitHub changed after the comparison. Refresh before choosing its fields.');
       const fields = issueFields(remote, id);
       if (!fields) throw new LinkedWorkError('This Issue does not use the recognized FocusFlow fields. Keep local text or correct the Issue on GitHub first.');
-      transaction(now => { consent(id, input); invalidate(id); projects.editTicket(id, fields, now.toISOString()); repository.baseline(id, fields); });
+      transaction(now => { if(projects.codingBusy(id))throw new LinkedWorkError('A coding operation started during comparison. Stop it before replacing requirements.');consent(id, input); invalidate(id); projects.editTicket(id, fields, now.toISOString()); repository.baseline(id, fields); });
       return state(id);
     },
     async linkPull(id: string, input: unknown) {

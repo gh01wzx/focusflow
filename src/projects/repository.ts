@@ -43,6 +43,7 @@ export function createProjectRepository(db: DatabaseSync) {
     else db.prepare('DELETE FROM coding_tickets WHERE ticket_id=?').run(id);
   }
   return {
+    codingBusy:(id:string)=>!!db.prepare("SELECT 1 FROM coding_runs WHERE ticket_id=? AND stage IN ('starting','coding','permission','cancelling','publishing','uncertain')").get(id),
     publicationLocked: (id: string) => !!db.prepare(`SELECT 1 FROM issue_publications i JOIN publication_batches b ON b.id=i.batch_id
       WHERE i.ticket_id=? AND b.approved_at IS NOT NULL`).get(id),
     publicationRepositoryChanged: (projectId: string, repositoryId: unknown) => !!db.prepare(`SELECT 1 FROM publication_batches

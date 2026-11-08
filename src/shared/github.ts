@@ -1,4 +1,9 @@
 export interface GitHubRepository { id: number; fullName: string; private: boolean }
+export function isGitHubEvidenceUrl(value:string):boolean {
+  try{const url=new URL(value);return url.protocol==='https:'&&url.hostname==='github.com'&&!url.username&&!url.password&&!url.port
+    &&/^\/[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_.-]{1,100}\/(?:actions\/runs\/[1-9][0-9]*(?:\/job\/[1-9][0-9]*)?|runs\/[1-9][0-9]*|commit\/[a-f0-9]{40}\/checks)$/.test(url.pathname)
+    &&(!url.search||/^\?(?:check_suite_focus=true|check_suite_id=[0-9]+)$/.test(url.search));}catch{return false;}
+}
 export function isGitHubPullUrl(value: string): boolean {
   return /^https:\/\/github\.com\/[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_.-]{1,100}\/pull\/[1-9][0-9]*$/.test(value)
     && !/^https:\/\/github\.com\/[^/]+\/\.{1,2}\//.test(value);

@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process';
 
 export class ExecutionFailure extends Error {
-  constructor(readonly code: string, message: string) { super(message); }
+  readonly code:string;
+  constructor(code: string, message: string) { super(message);this.code=code; }
 }
 export function gitEnvironment(): NodeJS.ProcessEnv {
   const result: NodeJS.ProcessEnv = { GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never' };
@@ -10,7 +11,7 @@ export function gitEnvironment(): NodeJS.ProcessEnv {
   }
   return result;
 }
-export function git(cwd: string, args: string[], signal?: AbortSignal): Promise<string> {
+export function git(cwd: string, args: string[], signal?: AbortSignal,trim=true): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn('git', ['-c', 'core.hooksPath=NUL', ...args], {
       cwd, env: gitEnvironment(), windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
@@ -33,7 +34,7 @@ export function git(cwd: string, args: string[], signal?: AbortSignal): Promise<
       clearTimeout(timer); signal?.removeEventListener('abort', stop);
       if (failed || code !== 0) reject(new ExecutionFailure(signal?.aborted ? 'CANCELLED' : 'GIT_FAILED',
         signal?.aborted ? 'The repository operation was stopped. Existing files are retained.' : 'Git could not complete this operation. Check the folder, branch and repository access. No reset or cleanup was performed.'));
-      else resolve(output.trim());
+      else resolve(trim?output.trim():output);
     });
   });
 }

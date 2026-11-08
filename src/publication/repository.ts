@@ -12,10 +12,6 @@ export function createPublicationRepository(db: DatabaseSync) {
         approvedAt: batch.approved_at, items: items.map(row => ({ content: JSON.parse(String(row.content_json)) as unknown,
           stage: row.stage, issueNumber: row.issue_number, message: row.message })) } }).batch;
     },
-    approvedTicketIds(projectId: string): Set<string> {
-      return new Set(db.prepare('SELECT receipt_json FROM plan_approvals WHERE project_id=?').all(projectId)
-        .flatMap(row => (JSON.parse(String(row.receipt_json)) as { codingTicketIds: string[] }).codingTicketIds));
-    },
     insert(batch: PublicationBatch) {
       db.prepare('INSERT INTO publication_batches VALUES(?,?,?,NULL)').run(batch.id, batch.projectId, JSON.stringify(batch.repository));
       for (const item of batch.items) db.prepare('INSERT INTO issue_publications(ticket_id,batch_id,content_json,stage) VALUES(?,?,?,?)')

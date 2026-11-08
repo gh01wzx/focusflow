@@ -76,7 +76,7 @@ test('batch preview excludes private context; approval publishes one canonical I
   assert.throws(() => f.store.projects.editTicket(coding[0]!.id, { title: 'Unapproved change' }), /Reconcile/);
   assert.throws(() => f.store.projects.setPrerequisites(coding[0]!.id, { prerequisiteIds: [] }), /Reconcile/);
   assert.throws(() => f.store.projects.assertRepositoryChange(f.project.id, 8), /repository/);
-  assert.throws(() => f.store.projects.start(coding[0]!.id), /verified coding runner/);
+  assert.throws(() => f.store.projects.start(coding[0]!.id), /workspace and coding controls/);
   assert.deepEqual(parsePublicationState(result), result); await f.service.close();
 });
 

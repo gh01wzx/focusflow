@@ -135,6 +135,8 @@ Start with [Architecture](docs/ARCHITECTURE.md): it follows one Add task action 
 
 The [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) is the roadmap. Feature labels group the user stories; the owner selects one task at a time.
 
+The [complete manual-project scenario](https://github.com/gh01wzx/focusflow/issues/67) checks a small reading project through planning, prerequisites, explicit Start, Review, Done and restart in separate browser/installed profiles. [Validation](docs/VALIDATION.md#complete-manual-project) explains its coverage. Live self-improvement through coding/review and a trusted update is a separate acceptance scenario; manual-flow evidence does not complete that gate.
+
 | Document | Purpose |
 | --- | --- |
 | [Architecture](docs/ARCHITECTURE.md) | Components, request flow and code-reading order |

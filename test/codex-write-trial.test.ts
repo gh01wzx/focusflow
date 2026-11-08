@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PassThrough } from 'node:stream';
-import { mkdtemp, rm, writeFile, symlink, readdir } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile, symlink, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -161,8 +161,16 @@ test('outside sentinel and network observations are independent of model reports
   await assert.rejects(verifyGuard(guard, 1), { code: 'NETWORK_ACCESS_OBSERVED' });
   await writeFile(guard, 'changed');
   await assert.rejects(verifyGuard(guard, 0), { code: 'OUTSIDE_WRITE_OBSERVED' });
-  await rm(guard); const target = join(cwd, 'target'); await writeFile(target, GUARD);
-  await symlink(target, guard, 'file');
+  await rm(guard);
+  const target = join(cwd, 'target');
+  if (process.platform === 'win32') {
+    await mkdir(target);
+    await writeFile(join(target, 'sentinel'), GUARD);
+    await symlink(target, guard, 'junction');
+  } else {
+    await writeFile(target, GUARD);
+    await symlink(target, guard, 'file');
+  }
   await assert.rejects(verifyGuard(guard, 0), { code: 'OUTSIDE_WRITE_OBSERVED' });
 });
 
@@ -175,5 +183,29 @@ test('default trial command prints scope without runtime, profile, files or mode
     env: { ...process.env, LOCALAPPDATA: join(cwd, 'missing-runtime') } });
   const report = record(JSON.parse(result.stdout));
   assert.equal(report.status, 'scope-only'); assert.equal(report.live, false); assert.equal(report.maximumTurns, 2);
+  assert.deepEqual(await readdir(cwd), []);
+});
+
+test('diagnostic setup failure is phased and cannot fall through to model work or profile creation', async t => {
+  const cwd = await mkdtemp(join(tmpdir(), 'focusflow-diagnostic-scope-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const extension = import.meta.url.endsWith('.ts') ? '.ts' : '.js';
+  const script = fileURLToPath(new URL('../scripts/codex-write-trial' + extension, import.meta.url));
+  let output = '';
+  try {
+    await promisify(execFile)(process.execPath, [script, '--diagnose'], { cwd,
+      env: { ...process.env, LOCALAPPDATA: join(cwd, 'missing-runtime') } });
+    assert.fail('Missing runtime must block diagnostics');
+  } catch (error) {
+    assert.equal(record(error).code, 1);
+    output = String(record(error).stderr);
+  }
+  const report = record(JSON.parse(output.trim()));
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.modelPhaseReached, false);
+  assert.equal(report.executionGate, 'unverified');
+  assert.equal(report.reason, process.platform === 'win32' ? 'PINNED_RUNTIME_UNAVAILABLE' : 'WINDOWS_REQUIRED');
+  assert.equal(report.phase, process.platform === 'win32' ? 'runtime-check' : 'setup');
+  assert.equal(report.process, undefined);
   assert.deepEqual(await readdir(cwd), []);
 });

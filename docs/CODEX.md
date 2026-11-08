@@ -50,3 +50,15 @@ The three exact PowerShell commands must each complete with a matching exit code
 These are observations, not a security boundary. Tool notifications arrive after execution. They cannot establish all possible file/command restrictions; workspace-write is not private-file read isolation. A loopback probe does not establish internet, Git permission or approval behavior, nor production recovery. A denied request alone is not successful sandbox enforcement. Unrecognized permission errors or a provider wrapping/changing an exact check command leave evidence incomplete. Even an observations-complete result requires owner review and a separate decision in #49; this command never enables execution features.
 
 Ordinary tests use fake protocol messages and disposable fixture files, with no live model or authenticated GitHub writes. CI does not run --live. The real Windows write/permission/cancellation gate remains open.
+
+### Diagnose a trial that stops before coding
+
+~~~powershell
+npm run codex:write-trial -- --diagnose
+~~~
+
+This command performs one owned runtime initialization and cleanup using the existing dedicated Phase 0 profile. It does not read account status, start a thread, call a model, install, sign in or create a new profile. A successful initialization does not verify authentication or coding permissions.
+
+Blocked trial output now names the phase and whether the model phase was reached. After successful owned-process cleanup it also includes the numeric exit code, signal and an allowlisted spawn-error code. No raw stderr, user paths or account details are printed. A CLOSED transport result alone does not diagnose its cause. A runtime exiting before initialization with access problems needs inspection of the existing profile/configuration and host permissions in the normal Windows environment.
+
+Do not copy credentials into another profile, disable the sandbox, widen writable roots or repeatedly retry an unchanged failing live run. Record the exact commit, result and one next experiment in #49. A successful empty-profile initialization is only diagnostic comparison; it is not an authorized replacement login or live-write validation.

@@ -52,13 +52,15 @@ export class CodexClient extends EventEmitter {
   private readonly output: Writable;
   private readonly timeoutMs: number;
   private readonly maxLineBytes: number;
+  readonly processId: number | null;
 
-  constructor(input: Readable, output: Writable, timeoutMs = 15_000, maxLineBytes = 1_048_576) {
+  constructor(input: Readable, output: Writable, timeoutMs = 15_000, maxLineBytes = 1_048_576, processId: number | null = null) {
     super();
     this.input = input;
     this.output = output;
     this.timeoutMs = timeoutMs;
     this.maxLineBytes = maxLineBytes;
+    this.processId = processId;
     input.setEncoding('utf8');
     input.on('data', this.onData);
     input.once('end', this.onEnd);

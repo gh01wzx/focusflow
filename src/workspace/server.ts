@@ -26,6 +26,7 @@ import { createWorkspaceService } from '../execution/workspaces.ts';
 import { matchCodingRoute, dispatchWorkspaceRoute } from '../execution/routes.ts';
 import { ExecutionFailure } from '../execution/git.ts';
 import { createApprovalBroker } from '../execution/approvals.ts';
+import { createCodingService } from '../execution/service.ts';
 
 const assets = new Map([
   ['/', ['today/index.html', 'text/html; charset=utf-8']],
@@ -48,6 +49,7 @@ export async function startWorkspaceServer(options: {
   const workspaces = createWorkspaceService(store.execution, store.projectRepository, join(options.dataDirectory, '..', 'coding-workspaces'));
   const approvals = createApprovalBroker();
   const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });
+  const coding = createCodingService(store.execution,store.projectRepository,store.projectTransaction,ai,approvals);
   const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai), store.planApproval);
   const publications = createPublicationService(store.publications, store.projects, store.projectTransaction, options.github?.issues);
   const linkedWork = createLinkedWorkService(store.linkedWork, store.projectRepository, store.projectTransaction, options.github?.issues);
@@ -56,6 +58,12 @@ export async function startWorkspaceServer(options: {
     try {
       secureRequest(request, response, origin);
       const resource = request.url ?? '';
+      const runRoute=/^\/api\/project-tickets\/([a-f0-9-]{36})\/coding\/run(?:\/(cancel|recover))?$/.exec(resource);
+      if(runRoute&&(runRoute[2]?request.method==='POST':request.method==='GET')){
+        const id=runRoute[1]!;
+        if(runRoute[2]){await readJson(request,origin,4096);if(runRoute[2]==='cancel')coding.cancel(id);else coding.recover(id);}
+        sendJson(response,200,coding.state(id));return;
+      }
       const approvalRoute = /^\/api\/project-tickets\/([a-f0-9-]{36})\/coding\/approval$/.exec(resource);
       if (approvalRoute && (request.method === 'GET' || request.method === 'POST')) {
         const id=approvalRoute[1]!; workspaces.read(id);
@@ -154,6 +162,7 @@ export async function startWorkspaceServer(options: {
     workspaces.close();
     approvals.close();
     const results = await Promise.allSettled([
+      coding.close(),
       (async () => { trace('plans:begin'); await plans.close(); trace('plans:end'); })(),
       publications.close(),
       (async () => { trace('ai:begin'); await ai.close(); trace('ai:end'); })(),

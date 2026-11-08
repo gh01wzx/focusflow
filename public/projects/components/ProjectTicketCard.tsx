@@ -11,6 +11,7 @@ import { TicketBlockerNotice, TicketBlockerEditor } from './TicketBlockers.tsx';
 import { LinkedWorkPanel } from './LinkedWorkPanel.tsx';
 import { CodingWorkspacePanel } from './CodingWorkspacePanel.tsx';
 import { CodingApprovalPanel } from './CodingApprovalPanel.tsx';
+import { CodingRunPanel } from './CodingRunPanel.tsx';
 
 export function ProjectTicketCard({ ticket, repository, context, view, editingPrerequisites, onEditingChange, onPrerequisites, onBlocker, onVisit, open, busy, error, message, onStatus, onEdit, onOpen, onClose, onChanged, editor }: {
   repository?: GitHubRepository | null | undefined;
@@ -52,6 +53,7 @@ export function ProjectTicketCard({ ticket, repository, context, view, editingPr
         {ticket.coding?.issueNumber && <>
           <CodingWorkspacePanel ticketId={ticket.id} disabled={busy || editingPrerequisites || syncLocked} onLock={setCodingLocked} />
           <CodingApprovalPanel ticketId={ticket.id} disabled={busy || editingPrerequisites || syncLocked || codingLocked} />
+          <CodingRunPanel ticketId={ticket.id} disabled={busy || editingPrerequisites || syncLocked || codingLocked} onChanged={onChanged} />
           <LinkedWorkPanel ticketId={ticket.id} disabled={busy || editingPrerequisites || codingLocked}
             onLock={setSyncLocked} onChanged={onChanged} />
         </>}

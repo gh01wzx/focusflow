@@ -32,7 +32,7 @@ export async function withCodexProcess<T>(
   const cwd = await mkdtemp(join(tmpdir(), 'focusflow-codex-turn-'));
   const child = spawn(executable, args, { cwd, env: environment, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
   child.stderr.resume();
-  const client = new CodexClient(child.stdout, child.stdin);
+  const client = new CodexClient(child.stdout, child.stdin, 15_000, 1_048_576, child.pid ?? null);
   let spawnError: CodexProcessObservation['spawnError'] = null;
   child.on('error', (error: NodeJS.ErrnoException) => {
     spawnError = error.code === 'ENOENT' || error.code === 'EACCES' || error.code === 'EPERM' ? error.code : 'OTHER';

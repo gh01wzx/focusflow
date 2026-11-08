@@ -8,6 +8,7 @@ Prerequisite: Node 24.12.x or later 24.x. Install exact dependencies with npm ci
 | --- | --- |
 | Planned work and task status | GitHub Issues, starting at the [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) |
 | Current use and launch instructions | [README](../README.md) |
+| Detailed task, project and optional integration instructions | [Usage](USAGE.md) |
 | Current code layout and reading path | [Architecture](ARCHITECTURE.md) |
 | Developer commands, data profiles and recovery | This document |
 | Approved product scope | [Product baseline](PRODUCT_BASELINE.md) |
@@ -84,7 +85,7 @@ For a verified snapshot, run restore-snapshot.ts below with a new destination at
 
 ## Backup and recovery
 
-Format 9 appends coding intent and optional immutable publication identity in a separate table without rebuilding existing tasks. Existing tickets remain Manual. Format 8 added four ticket statuses with independent blocker notices. Old Ready becomes Backlog; old Blocked becomes Backlog with a manual reason that remains until explicitly cleared. Upgrades retain prerequisite links and take the normal verified pre-change snapshot. Published draft-storage format 7 remains compatible. Named review/development profiles open separate format-9 sample directories without copying, resetting or deleting earlier format data. Use Review-FocusFlow.cmd task-46 for a fresh sample board; reopen the same name to retain edits.
+Format 9 appends coding intent and optional immutable publication identity in a separate table without rebuilding existing tasks. Existing tickets remain Manual. Format 8 added four ticket statuses with independent blocker notices. Old Ready becomes Backlog; old Blocked becomes Backlog with a manual reason that remains until explicitly cleared. Upgrades retain prerequisite links and take the normal verified pre-change snapshot. Published draft-storage format 7 remains compatible. Named review/development profiles use separate directories for the running database format, without copying, resetting or deleting earlier sample data. Use a new review name for fresh examples; reopen the same name and format to retain edits.
 
 Existing product schema changes take a verified snapshot before transactional migration. Schema 5 adds weekday selection while retaining Personal/project data and existing weekly periods. Append migrations; do not rewrite an applied migration. A fresh database needs no pre-upgrade snapshot.
 

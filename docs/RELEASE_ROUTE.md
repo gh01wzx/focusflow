@@ -62,3 +62,11 @@ The harness is scripts/smoke-install-update.ts; the job is .github/workflows/ins
 - Record exact build identity, installed-user behavior without developer tooling, and remaining SmartScreen/policy restrictions.
 
 No current PR silently buys signing, registers an account, creates a public release or changes the approved MVP update requirement.
+
+## Prepare an unpublished candidate
+
+The maintained NSIS build now has a repeatable candidate command. Use a clean committed Windows checkout, npm ci and `npm run release:candidate`. It executes language/type/package/test checks, compares built version/commit/tree against unchanged source, hashes the regular versioned x64 installer and atomically writes release/candidate.json. Verify the result again with `npm run release:verify`. A failed check or invalid identity does not replace the previous manifest.
+
+The manifest distinguishes a locally prepared candidate from the hosted candidate whose ordinary installed, separate review, migration recovery and full manual-flow reports all passed at that exact commit. Windows CI emits and verifies this metadata only after those stages. Reports and installers remain ephemeral on the standard public runner: persistent upload/cache policy is unchanged. A local candidate can be reproduced with the same pinned dependencies; CI logs record exact provenance and checksum, not a downloadable official release.
+
+Publication remains an explicit owner action. First choose and verify the publisher identity/trusted distribution route described above; inspect this candidate's exact-commit checks and real installed evidence, sign through the selected controlled process and reverify the final distributed bytes. Require separate publication approval before making a release/feed public. There is no automatic publish step or updater in this change. Unsigned/untrusted candidates must never be presented as trusted official updates or used to close the genuine upgrade/recovery acceptance gate. SHA-256 is an integrity check, not signature authentication.

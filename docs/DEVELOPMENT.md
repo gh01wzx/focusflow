@@ -133,3 +133,7 @@ See [GitHub connection](GITHUB_CONNECTION.md) for the authorization comparison, 
 ## Disposable installer replacement experiment
 
 The [Windows release route](RELEASE_ROUTE.md) describes a dedicated standard GitHub-hosted Windows Actions job in a public repository. It builds two unsigned versions from the same code, replaces binaries, compares sample records and restores a snapshot separately. It prints result/process reports in the run log without artifact uploads or caches. The harness refuses personal and self-hosted execution because installers change per-user registration. It stops on native launch/close failure. It does not publish or implement one-click updates.
+
+## Development candidate commands
+
+`npm run release:candidate` requires a clean committed Windows source tree and matching built metadata. It runs the required checks/package command, stops on the first failure, verifies the source did not change and records the regular installer SHA-256 in ignored release/candidate.json. Local candidates say installed evidence is not verified. `npm run release:verify` checks metadata and actual bytes without publishing/installing anything. Hosted Windows preparation runs after all four installed scenarios; every report must be verified at the current commit. Manifest/report hashes contain no task text or credential data. The candidate remains untrusted for official release until the owner-controlled signing/distribution gate is accepted.

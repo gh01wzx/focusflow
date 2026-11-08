@@ -13,6 +13,7 @@ export interface CodingTurnOptions {
 }
 export async function codingTurn(client:CodexClient,cwd:string,prompt:string,options:CodingTurnOptions):Promise<string> {
   let threadId:string|null=null,turnId:string|null=null,summary='',terminalStatus:string|null=null;
+  const filePaths=new Map<string,string[]>();
   let stop!:(code:string)=>void,finish!:()=>void,stoppedCode:string|null=null;
   const stopped=new Promise<never>((_,reject)=>{stop=code=>{if(!stoppedCode){stoppedCode=code;reject(new CodingTurnFailure(code));}};});void stopped.catch(()=>{});
   const terminal=new Promise<void>(resolve=>{finish=resolve;});
@@ -28,7 +29,13 @@ export async function codingTurn(client:CodexClient,cwd:string,prompt:string,opt
     if(method==='item/started'||method==='item/completed'){
       const item=record(p.item),kind=String(item.type);
       if(!['agentMessage','userMessage','reasoning','plan','fileChange','commandExecution','contextCompaction'].includes(kind)){stop('UNSUPPORTED_TOOL');return;}
-      if(kind==='fileChange')options.activity(method==='item/completed'?'File changes recorded in the coding workspace.':'Codex is preparing file changes.');
+      if(kind==='fileChange'){
+        if(typeof item.id==='string'&&Array.isArray(item.changes))filePaths.set(item.id,item.changes.flatMap(raw=>{
+          const change=record(raw),move=record(change.kind).move_path;
+          return [change.path,move].filter((path):path is string=>typeof path==='string');
+        }));
+        options.activity(method==='item/completed'?'File changes recorded in the coding workspace.':'Codex is preparing file changes.');
+      }
       if(kind==='commandExecution'&&method==='item/started')options.activity('Codex is running a command in the coding workspace.');
       if(kind==='commandExecution'&&method==='item/completed'){
         options.command(typeof item.command==='string'?item.command.slice(0,8000):'[command unavailable]',
@@ -51,6 +58,11 @@ export async function codingTurn(client:CodexClient,cwd:string,prompt:string,opt
   };
   client.setApprovalHandler(async(method,params)=>{
     if(!threadId||params.threadId!==threadId||turnId&&params.turnId!==turnId||options.signal.aborted)return'cancel';
+    if(method==='item/fileChange/requestApproval'){
+      const paths=Array.isArray(params.paths)?params.paths:typeof params.itemId==='string'?filePaths.get(params.itemId):undefined;
+      if(!paths?.length)return'decline';
+      return options.permission(method,{...params,paths});
+    }
     return options.permission(method,params);
   });
   client.on('notification',notify);client.on('closed',closed);client.on('approvalDenied',unsupported);

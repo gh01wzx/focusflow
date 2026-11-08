@@ -51,7 +51,7 @@ export function CodingRunPanel({ticketId,disabled,onChanged}:{ticketId:string;di
       <details><summary>Saved runs and revision history ({state.history.length})</summary>
         <p>Earlier summaries and feedback remain attached to their original run and commit. Recovery starts a fresh context only after an explicit action.</p>
         {state.history.map(old=><article key={old.id}><p><code>{old.id}</code> / {old.stage} / {new Date(old.updatedAt).toLocaleString()}</p>
-          {old.headSha&&<p>Head: <code>{old.headSha}</code></p>}{old.feedback&&<pre>{old.feedback}</pre>}{old.summary&&<pre>{old.summary}</pre>}</article>)}
+          {old.headSha&&<p>Result head: <code>{old.headSha}</code></p>}{old.feedbackHeadSha&&<p>Feedback on head: <code>{old.feedbackHeadSha}</code></p>}{old.feedback&&<pre>{old.feedback}</pre>}{old.summary&&<pre>{old.summary}</pre>}</article>)}
       </details>
       <CodingDeliveryPanel ticketId={ticketId} disabled={busy||disabled} canPreview={['ready','review','interrupted'].includes(state.run.stage)} onChanged={onChanged} />
     </>}

@@ -32,7 +32,7 @@ test('coding intent is private, cannot start or fake progress, and survives mode
     const milestone = store.projects.addMilestone({ title: 'Goal', projectId: project.id });
     const coding = store.projects.addTicket({ title: 'Change', milestoneId: milestone.id, executionMode: 'codex' });
     assert.deepEqual(coding.coding, { repository: null, issueNumber: null });
-    assert.throws(() => store.projects.start(coding.id), /verified coding runner/);
+    assert.throws(() => store.projects.start(coding.id), /workspace and coding controls/);
     for (const status of ['in_progress', 'review', 'done']) assert.throws(() => store.projects.setStatus(coding.id, status), /observed pull request merge/);
     assert.equal(projectActions(store.projects.actions()).next, null);
     store.projects.editTicket(coding.id, { title: 'Manual change', executionMode: 'manual' });

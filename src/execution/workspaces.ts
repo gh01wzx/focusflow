@@ -63,7 +63,9 @@ export function createWorkspaceService(repository: ExecutionRepository, projects
         if (exists && !saved) throw new ExecutionFailure('UNKNOWN_FOLDER', 'A folder already occupies this workspace path. It was left untouched.');
         if (!exists) await runGit(checked.sourcePath, ['worktree', 'add', '-b', branch, workspacePath, checked.headSha]);
         const actual = await realpath(await runGit(workspacePath, ['rev-parse', '--show-toplevel']));
-        if (actual.toLowerCase() !== workspacePath.toLowerCase() || await runGit(workspacePath, ['branch', '--show-current']) !== branch) {
+        const sourceCommon=await realpath(await runGit(checked.sourcePath,['rev-parse','--path-format=absolute','--git-common-dir']));
+        const worktreeCommon=await realpath(await runGit(workspacePath,['rev-parse','--path-format=absolute','--git-common-dir']));
+        if (actual.toLowerCase() !== workspacePath.toLowerCase() || sourceCommon.toLowerCase()!==worktreeCommon.toLowerCase() || await runGit(workspacePath, ['branch', '--show-current']) !== branch) {
           throw new ExecutionFailure('WORKSPACE_CHANGED', 'The existing folder is not this ticket\'s worktree. It was left untouched.');
         }
         const result: CodingWorkspace = { ...workspace, state: 'ready', message: 'Workspace ready. No model or coding run has started.' };

@@ -12,7 +12,7 @@ import { AI_SETUP_URL, isAiSignInUrl } from '../shared/ai.ts';
 
 import { createGitHubVault } from '../github/vault.ts';
 import { createGitHubService } from '../github/service.ts';
-import { isGitHubIssueUrl, isGitHubPullUrl } from '../shared/github.ts';
+import { isGitHubIssueUrl, isGitHubPullUrl, isGitHubEvidenceUrl } from '../shared/github.ts';
 import { awaitInterfaceReady, StartupFailure } from '../runtime/startup.ts';
 import { RUNTIME_MARKER } from '../runtime/diagnostic.ts';
 
@@ -96,8 +96,8 @@ async function startDesktop(): Promise<void> {
       });
       window.removeMenu();
       window.webContents.setWindowOpenHandler(({ url }) => {
-        if (url === AI_SETUP_URL || isAiSignInUrl(url) || isGitHubIssueUrl(url) || isGitHubPullUrl(url) ||
-            ['https://github.com/login/device', 'https://github.com/settings/apps'].includes(url)) {
+        if (url === AI_SETUP_URL || isAiSignInUrl(url) || isGitHubIssueUrl(url) || isGitHubPullUrl(url) || isGitHubEvidenceUrl(url) ||
+            ['https://github.com/login/device', 'https://github.com/settings/apps', 'https://github.com/settings/personal-access-tokens/new'].includes(url)) {
           void shell.openExternal(url).catch(() => {});
         }
         return { action: 'deny' };

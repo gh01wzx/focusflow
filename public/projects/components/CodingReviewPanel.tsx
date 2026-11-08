@@ -43,7 +43,8 @@ export function CodingReviewPanel({ticketId,disabled,onChanged}:{ticketId:string
         {state?.busy&&<><p role="status">Read-only AI request in progress. It does not edit code or merge.</p><button disabled={busy} onClick={()=>void act('cancel')}>Cancel AI review</button></>}
       </div>
       {state?.answers.map(answer=><details key={answer.id} open={answer.id===state.answers.at(-1)?.id}><summary>{answer.kind} / {answer.headSha===head&&answer.scope===state.scope?'This head and requirements':'Stale head or requirements'}</summary>
-        {answer.question&&<p>{answer.question}</p>}<pre>{answer.text}</pre><p>AI inference from attached evidence; not independent human verification. Head: <code>{answer.headSha}</code></p></details>)}
+        {answer.question&&<p>{answer.question}</p>}<pre>{answer.text}</pre><p>AI inference from attached evidence; not independent human verification. Head: <code>{answer.headSha}</code></p>
+        {answer.evidenceAt&&<p>Check/code evidence read: {new Date(answer.evidenceAt).toLocaleString()}. A later check result at the same head can differ.</p>}</details>)}
       <div><label><input type="checkbox" checked={confirm} disabled={busy||disabled||state?.stale} onChange={event=>setConfirm(event.target.checked)} />Record my local review decision for this exact head and requirements.</label>
         <label><input type="checkbox" checked={unverified} disabled={busy||disabled} onChange={event=>setUnverified(event.target.checked)} />I acknowledge any missing checks, incomplete source or missing separate review.</label>
         <button disabled={busy||disabled||state?.busy||state?.stale||!confirm} onClick={()=>void act('approve')}>Record approval for this head</button>

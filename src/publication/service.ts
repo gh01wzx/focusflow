@@ -19,8 +19,9 @@ export function createPublicationService(repository: PublicationRepository, proj
   let closing = false;
   const messages = new Map<string, string>();
   function contents(projectId: string): IssueContent[] {
-    const view = projects.view(projectId), approved = repository.approvedTicketIds(projectId);
-    const coding = view.tickets.filter(ticket => ticket.executionMode === 'codex' && approved.has(ticket.id));
+    const view = projects.view(projectId);
+    // Draft suggestions are separate records. Formal tickets were saved by the owner or approved from a plan.
+    const coding = view.tickets.filter(ticket => ticket.executionMode === 'codex');
     return coding.filter(ticket => !ticket.coding?.issueNumber).map(ticket => {
       const prerequisites = view.dependencies.filter(link => link.ticketId === ticket.id).map(link => view.tickets.find(item => item.id === link.prerequisiteId)!);
       return { ticketId: ticket.id, title: ticket.title, description: ticket.description, acceptanceCriteria: ticket.acceptanceCriteria,
@@ -97,7 +98,7 @@ export function createPublicationService(repository: PublicationRepository, proj
       try { linked = await provider.inspect(projectId); } catch { throw new PublicationError('Connect and inspect GitHub first. Check the App repository access; no permission is granted automatically.'); }
       if (closing || active) throw new PublicationError('Publication changed. Reopen before previewing.');
       const items = contents(projectId);
-      if (!items.length) throw new PublicationError('Approve a local plan with unpublished coding tasks first.');
+      if (!items.length) throw new PublicationError('Create coding tickets or approve coding tasks from a plan first.');
       if (items.some(item => item.title.length > 200)) throw new PublicationError('Keep coding task titles within 200 characters before publication.');
       if (items.length > 200) throw new PublicationError('Publish a smaller approved plan first.');
       const view = projects.view(projectId);

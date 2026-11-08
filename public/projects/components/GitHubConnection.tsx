@@ -126,6 +126,8 @@ export function GitHubConnection({ projectId, onRepository }: { projectId: strin
               </div>
             </div>}
             <details><summary>Use a fine-grained GitHub token instead</summary>
+              <p>Create a token for only the selected repository. Reading needs Metadata; coding publication needs Issues, Contents and Pull requests write access. This app never grants permissions.</p>
+              <p><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Create a fine-grained token at GitHub</a></p>
               <p>Choose only the intended repositories in GitHub. Reading needs metadata; code publication needs Contents, Issues and Pull requests access. No permission is added automatically.</p>
               <label>Fine-grained token<input type="password" value={personalToken} autoComplete="off" maxLength={1100} spellCheck={false} onChange={event=>setPersonalToken(event.target.value)} /></label>
               <label><input type="checkbox" checked={tokenConsent} onChange={event=>setTokenConsent(event.target.checked)} />Store this token locally using Windows-protected encryption.</label>

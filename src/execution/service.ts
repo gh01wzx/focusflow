@@ -29,7 +29,7 @@ function message(code:string):string {
   if(code==='USAGE_LIMIT')return'The provider reported exhausted Codex allowance. Resume only after it resets.';
   if(code==='RATE_LIMITED')return'The provider reported a rate limit. Wait before explicitly resuming.';
   if(code==='CANCELLED')return'The owned coding process stopped. Earlier file changes remain in its worktree.';
-  if(code==='CLI_MISSING')return'The pinned AI runtime is missing. Close the app and use Start-FocusFlow.cmd to prepare it.';
+  if(code==='CLI_MISSING'||code==='MISSING')return'The pinned AI runtime is missing. Close the app and use Start-FocusFlow.cmd to prepare it.';
   if(code==='BUSY')return'Another AI operation owns the runtime. Finish or cancel it before explicitly resuming.';
   if(code==='CONNECTION_FAILED'||code==='CONNECTION_CLOSED')return'The runtime connection ended. Check the network and inspect saved work before resuming.';
   if(code==='UNSUPPORTED_REQUEST'||code==='UNSUPPORTED_TOOL')return'Codex requested an unsupported interaction. No permission was granted; clarify the task before resuming.';
@@ -53,7 +53,7 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
     const delivery=repository.delivery(id),publicationPending=!!delivery&&['committing','creating-pr','uncertain'].includes(delivery.stage);
     const linked=linkedWork?.read(id),pullNumber=delivery?.pullNumber??linked?.pullNumber??null,linkedHeadSha=linked?.pull?.headSha??delivery?.commitSha??null;
     const remoteAligned=!delivery?.pullNumber||linkedHeadSha===delivery.commitSha;
-    const history=repository.runs().filter(r=>r.ticketId===id).slice(-20).reverse().map(r=>({id:r.id,stage:r.stage,createdAt:r.createdAt,updatedAt:r.updatedAt,headSha:r.headSha,feedback:r.feedback,summary:r.summary.slice(0,4000)}));
+    const history=repository.runs().filter(r=>r.ticketId===id).slice(-20).reverse().map(r=>({id:r.id,stage:r.stage,createdAt:r.createdAt,updatedAt:r.updatedAt,headSha:r.headSha,feedbackHeadSha:r.feedbackHeadSha??null,feedback:r.feedback,summary:r.summary.slice(0,4000)}));
     return {ticketId:id,run,activeTicketId:owner?.ticketId??null,requirementsToken:token(id),history,pullNumber,linkedHeadSha,
       canStart:!closing&&!active&&!owner&&!ai.busy()&&!publicationPending&&eligible(id)&&repository.workspace(id)?.state==='ready',
       canResume:!closing&&!active&&!owner&&!ai.busy()&&!publicationPending&&remoteAligned&&!!run&&['failed','stopped','interrupted','ready','review'].includes(run.stage)&&t.status!=='done'&&unblocked(id)&&repository.workspace(id)?.state==='ready'};
@@ -71,6 +71,9 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
       const delivery=repository.delivery(id);
       if(delivery?.pullNumber){const pull=await provider.pull(linked.projectId,expectedRepository,delivery.pullNumber);if(pull.merged||pull.state!=='open'||pull.headSha!==delivery.commitSha)throw new ExecutionFailure('REMOTE_HEAD_CHANGED','The PR changed or closed. Refresh review evidence before revising this worktree.');}
       const actual=await realpath(await git(workspace.workspacePath,['rev-parse','--show-toplevel'],abort.signal));
+      const sourceCommon=await realpath(await git(workspace.sourcePath,['rev-parse','--path-format=absolute','--git-common-dir'],abort.signal));
+      const worktreeCommon=await realpath(await git(workspace.workspacePath,['rev-parse','--path-format=absolute','--git-common-dir'],abort.signal));
+      if(sourceCommon.toLowerCase()!==worktreeCommon.toLowerCase())throw new ExecutionFailure('WORKSPACE_CHANGED','The saved coding folder is no longer a worktree of its selected source repository.');
       if(actual.toLowerCase()!==(await realpath(workspace.workspacePath)).toLowerCase()||await git(workspace.workspacePath,['branch','--show-current'],abort.signal)!==workspace.branch)throw new ExecutionFailure('WORKSPACE_CHANGED','The ticket worktree or branch changed. Inspect it before resuming.');
       const summary=await ai.runWithChatGPT(async(client,_cwd,signal)=>{
         if(expected!==token(id))throw new ExecutionFailure('REQUIREMENTS_CHANGED','Ticket requirements changed before coding started.');
@@ -104,7 +107,7 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
     if(!workspace)throw new ExecutionFailure('NO_WORKSPACE','Prepare the ticket workspace first.');
     const now=new Date().toISOString(),run:CodingRun={id:randomUUID(),ticketId:id,stage:'starting',createdAt:now,updatedAt:now,
       processId:null,threadId:null,turnId:null,headSha:null,summary:'',errorCode:'',message:'Checking ChatGPT account and the retained worktree.',commands:[],events:[],
-      feedback,previousRunId:before.run?.id??null,allowChecks:request.allowChecks===true,requirementsToken:before.requirementsToken};
+      feedback,feedbackHeadSha:resume?before.linkedHeadSha:null,previousRunId:before.run?.id??null,allowChecks:request.allowChecks===true,requirementsToken:before.requirementsToken};
     transaction(()=>{if(token(id)!==before.requirementsToken)throw new ExecutionFailure('STALE_REQUEST','The ticket changed. Refresh it first.');repository.saveRun(run);projects.setStatus(id,'in_progress',now);});
     const prompt=['Implement only this approved coding ticket. Do not publish, push, merge or deploy.',
       'Ticket #'+t.coding!.issueNumber+': '+t.title,t.description,'Acceptance criteria:',t.acceptanceCriteria,

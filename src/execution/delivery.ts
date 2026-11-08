@@ -85,7 +85,8 @@ export function createDeliveryService(repository:ExecutionRepository,projects:Pr
         pullNumber:previous?.pullNumber??null,digest:prepared.preview.token,stage:'committing',message:'Preparing the approved source snapshot.',updatedAt:new Date().toISOString()};
       transaction(()=>{
         if(repository.runs().some(r=>activeCodingStage(r.stage))||repository.latestRun(id)?.id!==c.run.id)throw new ExecutionFailure('BUSY','A coding run started after this preview. Nothing was published.');
-        if(c.run.requirementsToken!==codingScope(c.ticket,projects.listDependencies(c.ticket.projectId),c.workspace))throw new ExecutionFailure('SCOPE_CHANGED','Requirements changed after preview.');
+        const currentTicket=projects.findTicket(id),currentWorkspace=repository.workspace(id);
+        if(!currentTicket||!currentWorkspace||currentTicket.status==='done'||c.run.requirementsToken!==codingScope(currentTicket,projects.listDependencies(currentTicket.projectId),currentWorkspace))throw new ExecutionFailure('SCOPE_CHANGED','Requirements changed after preview.');
         repository.saveDelivery(delivery);repository.saveRun({...c.run,stage:'publishing',message:'Publishing the explicitly approved snapshot.',updatedAt:new Date().toISOString()});attempted=true;
       });
       const tree=await provider.baseTree(c.ticket.projectId,c.repository,c.workspace.baseSha);

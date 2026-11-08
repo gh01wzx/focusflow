@@ -1,5 +1,11 @@
 # Validation and limits
 
+## Current implementation acceptance
+
+The owner requested completion of source features before unified local testing. New worktree preparation, coding permissions/runs/recovery, source/PR publication, review/questions/revisions, merge completion and fine-grained-token connection are implemented but untested. No tests, native launch, live model, authenticated product write, installer or release were run for this batch. Static compiler/language results belong to their exact PR commit. Workflows are manual-only; no checks is not passing checks.
+
+Use Start-FocusFlow.cmd, optionally --review NAME, for owner acceptance. It builds source and opens separate sample data; it does not run tests or call a model. Follow [the coding/review path](USAGE.md#code-and-review-one-ticket) when choosing to exercise live integrations. Earlier evidence below applies to its recorded commits and does not verify the new implementation. Historical scripts/tests remain available but need current scenarios before future automated acceptance.
+
 Review evidence belongs to a commit, not a branch name. Check the current PR head and Checks tab; a new commit invalidates earlier approval.
 
 ## Verification coverage

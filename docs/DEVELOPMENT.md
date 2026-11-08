@@ -61,6 +61,8 @@ The build removes only the validated project dist directory before compiling. De
 
 Each directory contains data\tracker.db. N is the running build's database format; CHECKOUT_ID is a stable hash of the source directory. Reopening the same directory/name and format keeps changes. Named reviews can be reopened from another checkout; use a distinct name for each PR or independent trial. A schema change opens a separate sample workspace. No automatic import, reset or deletion occurs.
 
+Coding worktrees are retained in coding-workspaces\TICKET_ID beside data in the selected profile. Runs, publication journals and review decisions stay in that profile's database. Pending permission requests are memory-only and never automatically approved on restart. Schema 13-16 append these tables without rewriting applied migrations. Reopening only reconciles saved state; another model turn or remote write requires its own explicit action.
+
 Development/review windows show a sample-data notice and title. Examples are added only when creating a database; reopening an existing database, including a deliberate migration copy, does not add examples. First-time examples are written in one transaction. A failed initial seed fails startup without partial examples; it does not delete the new database. Use a new review name for a fresh trial after investigating that failure.
 
 Explicit developer overrides remain available for existing tools: FOCUSFLOW_TEST_PROFILE selects a desktop-test directory, and FOCUSFLOW_DATA_DIR selects browser-service data directly. Neither seeds examples. Clear FOCUSFLOW_TEST_PROFILE before using --review; a conflict is refused. Browser review mode ignores FOCUSFLOW_DATA_DIR and uses the named review. These overrides are not everyday/review launch instructions.
@@ -104,12 +106,12 @@ This is developer recovery tooling, not an automatic updater or user recovery UI
 ## Checks before review
 
 - Remove superseded code and update its callers, tests, commands and docs. Keep migrations, compatibility behavior and tools that are still used; check references before deleting them.
-- For code changes, run npm run check:language, npm run typecheck, npm run build and npm test. For documentation-only changes, run the language check, check Markdown links and read the templates as an owner would. Documentation review does not require a local Electron launch.
+- During this owner-authorized implementation batch, do not run automated tests, the native app, live models or packaging. Static language/compiler inspection may be recorded separately. The owner builds and tests through Start-FocusFlow.cmd. Retained verification commands are available for later acceptance.
 - Give an exact build or launch command and data profile for app changes. State any missing review setup rather than claiming data isolation that has not been implemented. For documentation changes, link the changed documents and explain what to inspect.
 - Record executed checks, failures, unverified behavior and the tested commit in the PR. Label owner-reported results, code observations and inference separately. Keep implementation details in the PR's expandable notes.
 - After the owner merges, confirm the merge and update affected Issues/overviews. Leave temporary PR status out of stable documents.
 
-CI runs once per workflow for a PR update and again for a push to main. New commits cancel superseded runs for that PR. Standard hosted Windows/Linux jobs require a public repository; private-repository jobs are skipped. Cross-platform language/type/build/tests still run for documentation changes. Native desktop checks skip Markdown-only changes.
+Verification workflows are currently workflow_dispatch only. No PR/main push starts tests or packaging. If manually enabled later, standard hosted Windows/Linux jobs require a public repository; private-repository jobs are skipped. Existing concurrency rules, real failure reporting and no persistent uploads/caches are retained.
 
 Installed task, review and synthetic prior-schema recovery checks use the same disposable installation in one job. Recovery still requires earlier steps to pass. This avoids transferring an installer through artifact storage. Real failures still fail the job; existing native-close failures are not suppressed.
 

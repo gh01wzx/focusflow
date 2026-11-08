@@ -50,7 +50,8 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
   function state(id:string):CodingState {
     const t=current(id),run=repository.latestRun(id),owner=repository.runs().find(r=>activeCodingStage(r.stage));
     const delivery=repository.delivery(id),publicationPending=!!delivery&&['committing','creating-pr','uncertain'].includes(delivery.stage);
-    return {ticketId:id,run,activeTicketId:owner?.ticketId??null,requirementsToken:token(id),
+    const history=repository.runs().filter(r=>r.ticketId===id).slice(-20).reverse().map(r=>({id:r.id,stage:r.stage,createdAt:r.createdAt,updatedAt:r.updatedAt,headSha:r.headSha,feedback:r.feedback,summary:r.summary.slice(0,4000)}));
+    return {ticketId:id,run,activeTicketId:owner?.ticketId??null,requirementsToken:token(id),history,
       canStart:!closing&&!active&&!owner&&!publicationPending&&eligible(id)&&repository.workspace(id)?.state==='ready',
       canResume:!closing&&!active&&!owner&&!publicationPending&&!!run&&['failed','stopped','interrupted','ready','review'].includes(run.stage)&&t.status!=='done'&&unblocked(id)&&repository.workspace(id)?.state==='ready'};
   }

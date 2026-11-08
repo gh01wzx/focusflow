@@ -4,6 +4,7 @@ import { createTaskClient } from '../../src/client/tasks.ts';
 import type { Frequency, TaskResolution, TaskView, Weekday } from '../../src/shared/tasks.ts';
 import { firstSelectedDate } from '../../src/shared/weekdays.ts';
 import type { Tab } from './view-options.ts';
+import { reportInterfaceReady } from '../../src/client/build.ts';
 
 const client = createTaskClient();
 
@@ -23,6 +24,11 @@ export function useTodayController() {
   const generation = useRef(0);
   const mounted = useRef(true);
   const focusAfterSave = useRef(false);
+  const readyReported = useRef(false);
+  useEffect(() => {
+    if (!view || readyReported.current) return;
+    readyReported.current = true; void reportInterfaceReady().catch(() => { readyReported.current = false; });
+  }, [view]);
 
   useEffect(() => {
     if (!busy && focusAfterSave.current) {

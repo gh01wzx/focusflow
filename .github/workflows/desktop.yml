@@ -39,6 +39,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run package:windows
       - run: npm test
+      - name: Check the runtime once without opening task data
+        run: node dist/scripts/diagnose-desktop.js
       - name: Install and exercise Today
         timeout-minutes: 4
         shell: pwsh

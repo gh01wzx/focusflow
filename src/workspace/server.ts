@@ -9,6 +9,7 @@ import { createPublicationService, PublicationError } from '../publication/servi
 import { matchPublicationRoute, dispatchPublicationRoute } from '../publication/routes.ts';
 import { createLinkedWorkService, LinkedWorkError } from '../sync/service.ts';
 import { matchLinkedWorkRoute, dispatchLinkedWorkRoute } from '../sync/routes.ts';
+import { readBuildInfo } from '../runtime/build-info.ts';
 import type { GitHubService } from '../github/service.ts';
 import { matchGitHubRoute, dispatchGitHubRoute } from '../github/routes.ts';
 import { matchProjectRoute, dispatchProjectRoute } from '../projects/routes.ts';
@@ -34,6 +35,8 @@ export type ShutdownStage = 'transport:begin' | 'transport:stopped' | 'ai:begin'
 export async function startWorkspaceServer(options: {
   dataDirectory: string; clock?: () => Date; sampleLabel?: string | null; github?: GitHubService; ai?: AiService; planGenerator?: PlanGenerator;
   onShutdown?: (stage: ShutdownStage) => void;
+  onInterfaceReady?: () => void;
+  appVersion?: string;
 }): Promise<LocalServer> {
   const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock, !!options.sampleLabel);
   const trace = (stage: ShutdownStage) => { options.onShutdown?.(stage); };
@@ -42,10 +45,18 @@ export async function startWorkspaceServer(options: {
   const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai), store.planApproval);
   const publications = createPublicationService(store.publications, store.projects, store.projectTransaction, options.github?.issues);
   const linkedWork = createLinkedWorkService(store.linkedWork, store.projectRepository, store.projectTransaction, options.github?.issues);
+  let ready = false;
   const local = await listenLocal(async (request, response, origin) => {
     try {
       secureRequest(request, response, origin);
       const resource = request.url ?? '';
+      if (request.method === 'GET' && resource === '/api/build') { sendJson(response, 200, await readBuildInfo(!!options.sampleLabel, options.appVersion)); return; }
+      if (request.method === 'POST' && resource === '/api/runtime/ready') {
+        const value = await readJson(request, origin, 256);
+        if (!value || typeof value !== 'object' || !('ready' in value) || value.ready !== true) throw new HttpError(400, 'Confirm interface readiness.');
+        if (!ready) { ready = true; options.onInterfaceReady?.(); }
+        sendJson(response, 200, { ready: true }); return;
+      }
       const asset = assets.get(resource);
       if (request.method === 'GET' && asset) {
         const [name, type] = asset;

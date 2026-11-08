@@ -13,9 +13,14 @@ import { AI_SETUP_URL, isAiSignInUrl } from '../shared/ai.ts';
 import { createGitHubVault } from '../github/vault.ts';
 import { createGitHubService } from '../github/service.ts';
 import { isGitHubIssueUrl, isGitHubPullUrl } from '../shared/github.ts';
+import { awaitInterfaceReady, StartupFailure } from '../runtime/startup.ts';
+import { RUNTIME_MARKER } from '../runtime/diagnostic.ts';
 
 app.setName('FocusFlow');
 app.setAppUserModelId('dev.focusflow.desktop');
+if (process.argv.includes('--runtime-diagnostic')) {
+  void app.whenReady().then(() => { console.log(RUNTIME_MARKER); app.exit(0); }, () => app.exit(1));
+} else {
 const profile = selectProfile({ packaged: app.isPackaged, args: process.argv,
   localDataDirectory: process.env.LOCALAPPDATA ?? app.getPath('appData'),
   checkoutDirectory: app.getAppPath(), schemaVersion: SCHEMA_VERSION,
@@ -53,6 +58,8 @@ if (!app.requestSingleInstanceLock()) {
   app.on('window-all-closed', () => { if (!closing) app.quit(); });
 
   void app.whenReady().then(async () => {
+    let confirmReady!: () => void;
+    const ready = new Promise<void>(resolve => { confirmReady = resolve; });
     const ai = createAiService(createAiRuntime(process.env.LOCALAPPDATA ?? app.getPath('appData'), true, profileDirectory));
     const github = createGitHubService(createGitHubVault(join(profileDirectory, 'github'), {
       available: async () => process.platform === 'win32' && await safeStorage.isAsyncEncryptionAvailable(),
@@ -60,7 +67,7 @@ if (!app.requestSingleInstanceLock()) {
       decrypt: async value => (await safeStorage.decryptStringAsync(value)).result,
     }));
     service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), sampleLabel: profile.sampleLabel,
-      github, ai, onShutdown: traceShutdown });
+      github, ai, onShutdown: traceShutdown, onInterfaceReady: confirmReady, appVersion: app.getVersion() });
     const origin = service.origin;
     window = new BrowserWindow({
       width: 1120,
@@ -91,17 +98,24 @@ if (!app.requestSingleInstanceLock()) {
     window.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
     window.webContents.session.setPermissionCheckHandler(() => false);
     window.webContents.session.on('will-download', event => event.preventDefault());
-    window.once('ready-to-show', () => window?.show());
     window.on('closed', () => { window = null; });
-    await window.loadURL(origin);
-  }).catch((error: unknown) => {
+    await awaitInterfaceReady(() => window!.loadURL(origin), ready);
+    window?.show();
+  }).catch(async (error: unknown) => {
     const message = error instanceof NewerDatabaseError
       ? 'This data belongs to a newer app version. Reinstall that version, or restore a verified backup to a separate location before using an older version.'
       : error instanceof MigrationError
       ? 'The database upgrade failed and was rolled back. Keep the data directory and its backups. Use a compatible previous version or follow the recovery guide.'
+      : error instanceof StartupFailure && error.code === 'WINDOW_LOAD_FAILED'
+      ? 'The desktop window could not load the local interface. Keep your data and report this build. Run the single-attempt desktop diagnostic before another launch.'
+      : error instanceof StartupFailure
+      ? 'The interface did not confirm usable task data within 15 seconds. A blank window is not a successful start. Keep your data and report this build; do not repeatedly relaunch unchanged.'
       : 'FocusFlow could not open your local data. Keep the data directory and backups, check available disk space, and try again.';
     if (process.env.FOCUSFLOW_TEST_PROFILE) console.error(message);
     else dialog.showErrorBox('FocusFlow could not start', message);
+    window?.destroy();
+    await service?.close().catch(() => {});
     app.exit(1);
   });
+}
 }

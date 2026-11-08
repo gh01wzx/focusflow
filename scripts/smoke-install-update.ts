@@ -14,6 +14,7 @@ import { localDay } from '../src/shared/calendar.ts';
 import type { TaskView } from '../src/shared/tasks.ts';
 import type { ProjectView } from '../src/shared/projects.ts';
 import { installerEnvironment, runInstallerProcess } from './installer-process.ts';
+import { checkInstalledEntry, checkInvalidLaunch } from './installed-entry.ts';
 
 assert.equal(process.platform, 'win32', 'Run only on the disposable Windows Actions runner.');
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Installer registration and shortcuts require a disposable Actions runner.');
@@ -72,6 +73,7 @@ async function launch(version: string) {
   page.setDefaultTimeout(10000);
   await page.getByRole('heading', { name: 'Today.', exact: true }).waitFor();
   await page.waitForFunction(() => !(document.getElementById('task-title') as HTMLInputElement).disabled);
+  await checkInstalledEntry(application, installation, environment);
   return page;
 }
 async function close() {
@@ -118,6 +120,10 @@ async function views(page: Page, projectId: string) {
 try {
   mark('install-baseline');
   await install(baseline);
+  mark('reject-invalid-launch');
+  await checkInvalidLaunch(join(installation, 'FocusFlow.exe'), environment);
+  assert.equal(existsSync(profile), false, 'Invalid launch must not create task data.');
+  mark('launch-baseline');
   let page = await launch('0.1.0-alpha.3');
   const today = localDay(new Date());
   await post(page, '/api/tasks', { title: 'Retain through installer replacement', plannedDate: today });
@@ -171,7 +177,7 @@ try {
     status: 'verified', commit: process.env.GITHUB_SHA ?? 'unknown', schema: SCHEMA_VERSION,
     baseline: { version: '0.1.0-alpha.3', sha256: await digest(baseline) },
     candidate: { version: '0.1.0-alpha.4', sha256: await digest(candidate) },
-    scope: 'Unsigned offline full-installer replacement of the same code/schema, exact Personal/repeat/project/prerequisite/status data preservation, separate snapshot recovery and same-schema binary rollback.',
+    scope: 'Unsigned offline full-installer replacement of the same code/schema, installed shortcuts and duplicate-launch handoff, exact Personal/repeat/project/prerequisite/status data preservation, separate snapshot recovery and same-schema binary rollback.',
     unverified: 'No signed update feed, download/signature verification, SmartScreen acceptance, in-app one-click updater or cross-schema downgrade proof.',
   }, null, 2));
   console.log('INSTALL_UPDATE_VERIFIED');

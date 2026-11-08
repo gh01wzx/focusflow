@@ -92,6 +92,8 @@ After building this version, run **npm run diagnose:desktop** for one runtime-on
 
 To build an unsigned installer locally, run npm run package:windows. The output is in release. CI checks packaging but does not retain downloadable installers, screenshots or caches. The installer bundles Node/Electron; it does not provide automatic updates.
 
+For an explicitly reviewed development installer, open the versioned FocusFlow installer in `release`, then open **FocusFlow** from the Desktop or Start menu. Installation is per user and requires no separate Node/npm setup. Current installers are unsigned: Windows may show an unknown publisher or SmartScreen prompt. Verify the build and its source before choosing whether to run it. This is a development route, not an official signed release. Reopening the same data profile restores its existing window. Review profiles remain separate.
+
 ## Local data
 
 The Windows product database is at:

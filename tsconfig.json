@@ -17,6 +17,7 @@
   ],
   "exclude": [
     "src/desktop/**",
+    "scripts/installed-entry.ts",
     "scripts/build-renderer.ts",
     "scripts/smoke-today.ts",
     "scripts/smoke-review.ts",

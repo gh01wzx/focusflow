@@ -31,7 +31,8 @@
     "codex:probe": "node scripts/codex-verify.ts live",
     "codex:cancel": "node scripts/codex-verify.ts cancel",
     "release:candidate": "node scripts/release-candidate.ts",
-    "release:verify": "node scripts/release-candidate.ts --verify"
+    "release:verify": "node scripts/release-candidate.ts --verify",
+    "codex:write-trial": "node scripts/codex-write-trial.ts"
   },
   "devDependencies": {
     "@types/node": "24.10.0",

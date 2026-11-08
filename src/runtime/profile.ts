@@ -16,6 +16,10 @@ export function selectProfile(options: {
 }): LaunchProfile {
   const root = join(options.localDataDirectory, 'FocusFlow');
   const reviewIndex = options.args.indexOf('--review');
+  const personal = options.args.includes('--personal');
+  if (personal && (reviewIndex !== -1 || options.testProfile)) {
+    throw new Error('Clear --review and FOCUSFLOW_TEST_PROFILE before opening personal data.');
+  }
   if (reviewIndex !== -1) {
     if (options.testProfile) throw new Error('Clear FOCUSFLOW_TEST_PROFILE before opening review data.');
     const name = options.args[reviewIndex + 1] ?? 'local';
@@ -28,7 +32,7 @@ export function selectProfile(options: {
     };
   }
   if (options.testProfile) return { directory: resolve(options.testProfile), sampleLabel: null };
-  if (options.packaged) return { directory: join(root, 'desktop'), sampleLabel: null };
+  if (options.packaged || personal) return { directory: join(root, 'desktop'), sampleLabel: null };
   const checkout = resolve(options.checkoutDirectory);
   const identity = createHash('sha256').update(process.platform === 'win32' ? checkout.toLowerCase() : checkout)
     .digest('hex').slice(0, 16);

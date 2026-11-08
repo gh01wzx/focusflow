@@ -3,7 +3,7 @@
 ## Product and authorization
 
 - Follow [the product baseline](docs/PRODUCT_BASELINE.md). Keep Windows-first, single-user, local-first scope.
-- Implement the local Personal, Projects and AI workflow for owner-led local acceptance. Live integration, account permissions and sandbox enforcement remain unverified until observed; missing live evidence does not block writing the feature code. Formal installation, release, signing and updating are deferred.
+- Implement the local Personal, Projects and AI workflow for owner-led local acceptance. Live integration, account permissions and sandbox enforcement remain unverified until observed; missing live evidence does not block writing the feature code. The product is for personal local use through Start-FocusFlow.cmd. Formal installation, signing, release, distribution and updating are outside scope, not pending deliverables.
 - The owner authorized public gh01wzx/focusflow and desktop development on 2026-11-03. Do not repeat that authorization request. New account scopes and external actions stay within the approved workflow.
 
 ## Work with the owner
@@ -37,4 +37,4 @@
 - Tests use disposable directories. Ordinary tests never use a live model or authenticated GitHub writes. Review instructions must identify the build and data profile.
 - Never commit databases, credentials, personal configuration, execution logs or installer output. Installed user data stays outside source/install directories.
 - Preserve existing weekly schedules and applied database migrations. New schema changes append migrations and retain verified backup/recovery protection.
-- Validate maintained desktop/signing tooling before considering a custom installer/updater. SQLite driver and interface choices remain reviewable engineering decisions.
+- Keep personal task storage stable across source checkouts and schema versions. Preserve separate optional sample/review profiles; never move or reset existing data automatically. SQLite driver and interface choices remain reviewable engineering decisions.

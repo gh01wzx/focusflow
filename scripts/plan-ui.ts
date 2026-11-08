@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import type { Page } from 'playwright-core';
 import type { PlanDraft, PlanState } from '../src/shared/plans.ts';
 import type { PublicationState } from '../src/shared/publication.ts';
+import type { LinkedWorkState } from '../src/shared/linked-work.ts';
+import type { ProjectView } from '../src/shared/projects.ts';
 
 /** UI replies are simulated; persistence is checked separately against real SQLite/HTTP. */
 export async function exercisePlanUI(page: Page): Promise<void> {
@@ -159,4 +161,59 @@ export async function exercisePublicationUI(page: Page): Promise<void> {
     await entry.click(); await preview.getByRole('link', { name: 'Open Issue #123', exact: true }).waitFor();
     assert.equal(publications, 1); await dialog.getByRole('button', { name: 'Close Publish approved work', exact: true }).click();
   } finally { await page.unroute(pattern); }
+}
+
+export async function exerciseLinkedWorkUI(page: Page): Promise<void> {
+  const projectId = (await page.getByRole('button', { name: 'AI plan draft', exact: true }).getAttribute('id'))!.slice('plan-draft-'.length);
+  const original = await page.evaluate(async id => (await fetch('/api/projects?projectId=' + id)).json(), projectId) as ProjectView;
+  const ticket = original.tickets.find(item => item.title === 'Unpublished coding example')!;
+  const title = original.projects.find(item => item.id === projectId)!.title;
+  const local = { title: ticket.title, description: ticket.description, acceptanceCriteria: ticket.acceptanceCriteria };
+  const repository = { id: 7, fullName: 'sample/work', private: false };
+  const fakeView = { ...original, tickets: original.tickets.map(item => item.id === ticket.id ? { ...item, coding: { repository, issueNumber: 10 } } : item) };
+  let state: LinkedWorkState = { ticketId: ticket.id, repository, issueNumber: 10, local, remote: null, pullNumber: null, pull: null,
+    lastSuccess: null, error: '', token: 'a'.repeat(64), localChanged: false, remoteChanged: null, matches: false, remoteFields: null };
+  let edits = 0;
+  const viewPattern = '**/api/projects?projectId=' + projectId, syncPattern = '**/api/project-tickets/' + ticket.id + '/linked-work**';
+  await page.route(viewPattern, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeView) }));
+  await page.route(syncPattern, route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/refresh')) state = { ...state, remote: { number: 10, title: '[10] ' + local.title,
+      body: 'Public Issue text <script>escaped</script>', state: 'closed', updatedAt: '2026-11-08T00:00:00Z' },
+      lastSuccess: '2026-11-08T00:00:00Z', remoteFields: local, remoteChanged: false, matches: true };
+    if (path.endsWith('/edit')) {
+      edits++; if (edits === 1) return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'Simulated local requirements failure.' }) });
+      const value = route.request().postDataJSON() as { fields: LinkedWorkState['local']; confirm: boolean };
+      assert.equal(value.confirm, true); state = { ...state, local: value.fields, localChanged: true, matches: false, token: 'b'.repeat(64) };
+    }
+    if (path.endsWith('/accept-remote')) state = { ...state, local, localChanged: false, matches: true, token: 'c'.repeat(64) };
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(state) });
+  });
+  try {
+    await page.getByRole('navigation', { name: 'Project list', exact: true }).getByRole('button', { name: title, exact: true }).click();
+    await page.getByRole('button', { name: 'Open ticket ' + ticket.title, exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: ticket.title, exact: true });
+    await dialog.getByRole('button', { name: 'Compare linked work', exact: true }).click();
+    const region = dialog.getByRole('region', { name: 'Linked work comparison', exact: true });
+    await region.getByText('Last successful refresh: Never', { exact: true }).waitFor();
+    await region.getByRole('button', { name: 'Refresh linked work', exact: true }).click();
+    await region.getByRole('status').filter({ hasText: 'Local and GitHub fields match.' }).waitFor();
+    assert.equal(await region.locator('script').count(), 0);
+    await region.getByRole('button', { name: 'Edit local requirements', exact: true }).click();
+    await region.getByLabel('Local title', { exact: true }).fill('A deliberate local proposal');
+    await page.keyboard.press('Escape'); assert.equal(await dialog.isVisible(), true);
+    assert.equal(await dialog.getByRole('button', { name: 'Close ' + ticket.title, exact: true }).isDisabled(), true);
+    await region.getByRole('checkbox').check(); await region.getByRole('button', { name: 'Save local requirements', exact: true }).click();
+    await region.getByRole('alert').filter({ hasText: 'Simulated local requirements failure.' }).waitFor();
+    assert.equal(await region.getByLabel('Local title', { exact: true }).inputValue(), 'A deliberate local proposal');
+    await region.getByRole('checkbox').check(); await region.getByRole('button', { name: 'Save local requirements', exact: true }).click();
+    await region.getByText('A deliberate local proposal', { exact: true }).waitFor();
+    assert.equal(await region.getByRole('button', { name: 'Use GitHub fields locally', exact: true }).isDisabled(), true);
+    await region.getByRole('checkbox').check(); await region.getByRole('button', { name: 'Use GitHub fields locally', exact: true }).click();
+    await region.getByRole('status').filter({ hasText: 'Local and GitHub fields match.' }).waitFor();
+    await dialog.getByRole('button', { name: 'Close ' + ticket.title, exact: true }).click();
+  } finally {
+    await page.unroute(viewPattern); await page.unroute(syncPattern);
+    await page.getByRole('navigation', { name: 'Project list', exact: true }).getByRole('button', { name: title, exact: true }).click();
+  }
 }

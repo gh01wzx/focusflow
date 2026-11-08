@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { exerciseProjectBoard } from './project-board-ui.ts';
-import { exercisePlanUI, exercisePublicationUI } from './plan-ui.ts';
+import { exercisePlanUI, exercisePublicationUI, exerciseLinkedWorkUI } from './plan-ui.ts';
 import type { Page } from 'playwright-core';
 import type { ProjectView, TicketStatus } from '../src/shared/projects.ts';
 import { openTicket, closeTicket, setTicketStatus, exerciseProjectEdits } from './project-edit-ui.ts';
@@ -225,6 +225,7 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string, e
   await exercisePlanUI(page);
   await exercisePublicationUI(page);
   await exerciseCodingIntent(page);
+  await exerciseLinkedWorkUI(page);
   return await page.evaluate(async () => (await fetch('/api/projects')).json()) as ProjectView;
 }
 

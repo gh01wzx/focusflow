@@ -14,6 +14,7 @@ import { seedSampleData } from './sample-data.ts';
 import { createPlanRepository, createPlanApprovalRepository } from '../plans/repository.ts';
 import { createPlanApprovalService } from '../plans/approval.ts';
 import { createPublicationRepository } from '../publication/repository.ts';
+import { createLinkedWorkRepository } from '../sync/repository.ts';
 
 export async function openWorkspaceStore(path: string, clock: () => Date = () => new Date(), sampleData = false) {
   const existed = existsSync(path);
@@ -34,6 +35,8 @@ export async function openWorkspaceStore(path: string, clock: () => Date = () =>
       projects: createProjectService(projectRepository, projectTransaction, randomUUID),
       planDrafts,
       publications: createPublicationRepository(db),
+      linkedWork: createLinkedWorkRepository(db),
+      projectRepository,
       projectTransaction,
       planApproval: createPlanApprovalService(planDrafts, createPlanApprovalRepository(db), projectRepository, projectTransaction, randomUUID),
       snapshot() {

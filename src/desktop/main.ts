@@ -12,7 +12,7 @@ import { AI_SETUP_URL, isAiSignInUrl } from '../shared/ai.ts';
 
 import { createGitHubVault } from '../github/vault.ts';
 import { createGitHubService } from '../github/service.ts';
-import { isGitHubIssueUrl } from '../shared/github.ts';
+import { isGitHubIssueUrl, isGitHubPullUrl } from '../shared/github.ts';
 
 app.setName('FocusFlow');
 app.setAppUserModelId('dev.focusflow.desktop');
@@ -79,7 +79,7 @@ if (!app.requestSingleInstanceLock()) {
     });
     window.removeMenu();
     window.webContents.setWindowOpenHandler(({ url }) => {
-      if (url === AI_SETUP_URL || isAiSignInUrl(url) || isGitHubIssueUrl(url) ||
+      if (url === AI_SETUP_URL || isAiSignInUrl(url) || isGitHubIssueUrl(url) || isGitHubPullUrl(url) ||
           ['https://github.com/login/device', 'https://github.com/settings/apps'].includes(url)) {
         void shell.openExternal(url).catch(() => {});
       }

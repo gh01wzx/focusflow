@@ -4,7 +4,7 @@ This is a validation proposal for #61, not a formal release approval. The app re
 
 ## What to review now
 
-Review the option comparison and the disposable experiment's run log. Check whether sample tasks, weekly schedules, ticket statuses and prerequisite links survive replacement and separate recovery. A local source review can use Review-FocusFlow.cmd task-61, which opens separate sample data; it does not perform an installer replacement.
+Review the option comparison and the disposable experiment's run log. Check whether sample tasks, weekly schedules, ticket statuses and prerequisite links survive replacement and separate recovery. A local source review can use Start-FocusFlow.cmd --review task-61, which opens separate sample data; it does not perform an installer replacement.
 
 No paid signing, account registration or distribution route is approved by this PR. Under the current no-paid-services requirement, keep unsigned builds for development review. Choosing a formal route and proving its trust/data behavior remain separate work.
 

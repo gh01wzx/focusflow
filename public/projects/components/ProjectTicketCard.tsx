@@ -9,6 +9,7 @@ import { Prerequisites } from './Prerequisites.tsx';
 import { ProjectDialog } from './ProjectDialog.tsx';
 import { TicketBlockerNotice, TicketBlockerEditor } from './TicketBlockers.tsx';
 import { LinkedWorkPanel } from './LinkedWorkPanel.tsx';
+import { CodingWorkspacePanel } from './CodingWorkspacePanel.tsx';
 
 export function ProjectTicketCard({ ticket, repository, context, view, editingPrerequisites, onEditingChange, onPrerequisites, onBlocker, onVisit, open, busy, error, message, onStatus, onEdit, onOpen, onClose, onChanged, editor }: {
   repository?: GitHubRepository | null | undefined;
@@ -24,6 +25,7 @@ export function ProjectTicketCard({ ticket, repository, context, view, editingPr
   const blockers = unfinishedPrerequisites(ticket.id, view.tickets, view.dependencies);
   const [blockEditing, setBlockEditing] = useState(false);
   const [syncLocked, setSyncLocked] = useState(false);
+  const [codingLocked, setCodingLocked] = useState(false);
   return <li className="manual-ticket">
     <button type="button" id={'ticket-' + ticket.id} className="ticket-card" disabled={busy} aria-haspopup="dialog"
       aria-label={'Open ticket ' + ticket.title} onClick={onOpen}>
@@ -37,7 +39,7 @@ export function ProjectTicketCard({ ticket, repository, context, view, editingPr
       <span className="ticket-card-hint">Open details <span aria-hidden="true">&rarr;</span></span>
     </button>
     <TicketBlockerNotice ticket={ticket} view={view} busy={busy} onVisit={onVisit} />
-    {open && <ProjectDialog title={ticket.title} returnFocusId={'ticket-' + ticket.id} locked={busy || !!editor || editingPrerequisites || syncLocked} onClose={onClose}>
+    {open && <ProjectDialog title={ticket.title} returnFocusId={'ticket-' + ticket.id} locked={busy || !!editor || editingPrerequisites || syncLocked || codingLocked} onClose={onClose}>
       <p className="feedback" role="status" aria-live="polite">{message}</p>
       {editor || <>
         <div className="ticket-detail-heading">
@@ -46,8 +48,11 @@ export function ProjectTicketCard({ ticket, repository, context, view, editingPr
             aria-label={'Edit ticket ' + ticket.title}>Edit ticket</button>
         </div>
         <CodingNotice ticket={ticket} repository={repository} />
-        {ticket.coding?.issueNumber && <LinkedWorkPanel ticketId={ticket.id} disabled={busy || editingPrerequisites}
-          onLock={setSyncLocked} onChanged={onChanged} />}
+        {ticket.coding?.issueNumber && <>
+          <CodingWorkspacePanel ticketId={ticket.id} disabled={busy || editingPrerequisites || syncLocked} onLock={setCodingLocked} />
+          <LinkedWorkPanel ticketId={ticket.id} disabled={busy || editingPrerequisites || codingLocked}
+            onLock={setSyncLocked} onChanged={onChanged} />
+        </>}
         {ticket.executionMode === 'manual' && <><h3>Change status</h3>
         <div className="ticket-status-buttons" role="group" aria-label={'Change status for ' + ticket.title}>
           {TICKET_STATUSES.map(status => <button type="button" key={status} data-status={status}

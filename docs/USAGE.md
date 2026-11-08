@@ -68,7 +68,7 @@ In the checkout for the PR you are reviewing, run:
 
 ~~~powershell
 npm ci
-.\Review-FocusFlow.cmd pr-72
+.\Start-FocusFlow.cmd --review pr-72
 ~~~
 
 Use the name given in the PR. The equivalent command is npm run review -- pr-72. The window shows **Sample data - Review pr-72** in its title and a yellow **Sample data** notice above both workspaces.

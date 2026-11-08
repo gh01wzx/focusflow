@@ -4,6 +4,8 @@ A Windows desktop app for daily tasks and personal projects. Built with TypeScri
 
 **Development preview.** Personal and manual Projects are available. AI/GitHub integrations have preview implementations; live coding, AI review and trusted one-click updates remain unfinished. There is no official signed release.
 
+**Local acceptance workflow:** double-click Start-FocusFlow.cmd. It prepares missing source dependencies and the pinned AI runtime, builds the source and opens the app. It does not run tests, sign in or request a model response. This implementation batch is unverified until the owner performs local acceptance. Automated verification workflows are manual-only. Installation, release and updates are deferred.
+
 ![Action center with Review, In progress and one Next task](docs/images/action-center.jpg)
 
 *Actual browser rendering of the shared desktop interface with synthetic sample data. These screenshots contain no personal tasks, account details or credentials.*
@@ -21,7 +23,7 @@ npm ci
 
 After setup, double-click **Start-FocusFlow.cmd**. Run npm ci again when dependencies change. The source launcher builds the app, keeps its console open and uses separate **Sample data**. Personal and manual Projects need no GitHub/Codex sign-in or model allowance. A browser preview is available with npm run start:web.
 
-For a proposed change, check out its exact PR commit and run **Review-FocusFlow.cmd** with the review name supplied in that PR. Reopen the same name to retain changes; use a new name for fresh examples. Source, named reviews and installed everyday data stay separate.
+For a proposed change, check out its exact PR commit and run **Start-FocusFlow.cmd --review** with the review name supplied in that PR. Reopen the same name to retain changes; use a new name for fresh examples. Source, named reviews and installed everyday data stay separate.
 
 The packaging target is Windows x64. Installed automation runs on GitHub's Windows runner; other Windows configurations have not been separately certified. Build an unsigned development installer with npm run package:windows, open the versioned installer in release, then open **FocusFlow** from the Desktop or Start menu. It bundles Electron/Node, installs per user and needs no Node/npm on the destination computer. Windows may show unknown-publisher or SmartScreen prompts; verify the source and candidate before deciding whether to run one. No downloadable official release or automatic updater is provided.
 

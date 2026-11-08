@@ -7,20 +7,33 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+node -e "const v=process.versions.node.split('.').map(Number);process.exit(v[0]===24 && v[1]>=12 ? 0 : 1)"
+if errorlevel 1 (
+  echo Please use Node.js 24.12 or a later 24.x version.
+  pause
+  exit /b 1
+)
 if not exist node_modules\typescript\bin\tsc (
-  echo Run npm ci once in this folder before launching FocusFlow.
-  pause
-  exit /b 1
+  call npm ci --no-audit --no-fund
+  if errorlevel 1 goto failed
 )
-if not exist node_modules\electron\cli.js (
-  echo Run npm ci once in this folder to install the Electron launcher package.
-  pause
-  exit /b 1
+if not exist "%LOCALAPPDATA%\FocusFlow\codex-product\runtime\node_modules\@openai\codex\package.json" (
+  echo Preparing the official AI runtime. No sign-in or model request is started.
+  call npm run ai:install
+  if errorlevel 1 echo AI setup was not completed. You can still use local tasks.
 )
-if not exist node_modules\esbuild\package.json (
-  echo Run npm ci in this folder to install the updated Today interface dependencies.
-  pause
-  exit /b 1
+if /i "%~1"=="--review" (
+  if "%~2"=="" (
+    call npm run review -- local
+  ) else (
+    call npm run review -- "%~2"
+  )
+) else (
+  call npm start
 )
-call npm start
-if errorlevel 1 pause
+if errorlevel 1 goto failed
+exit /b 0
+:failed
+echo FocusFlow did not start. Keep this message and your data for troubleshooting.
+pause
+exit /b 1

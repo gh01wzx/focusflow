@@ -22,6 +22,9 @@ import { HttpError, readJson, secureRequest, sendJson } from '../http/request.ts
 import { openWorkspaceStore } from './store.ts';
 import { matchTaskRoute, dispatchTaskRoute } from '../tasks/routes.ts';
 import { TaskInputError } from '../tasks/validation.ts';
+import { createWorkspaceService } from '../execution/workspaces.ts';
+import { matchCodingRoute, dispatchWorkspaceRoute } from '../execution/routes.ts';
+import { ExecutionFailure } from '../execution/git.ts';
 
 const assets = new Map([
   ['/', ['today/index.html', 'text/html; charset=utf-8']],
@@ -41,6 +44,7 @@ export async function startWorkspaceServer(options: {
   const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock, !!options.sampleLabel);
   const trace = (stage: ShutdownStage) => { options.onShutdown?.(stage); };
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
+  const workspaces = createWorkspaceService(store.execution, store.projectRepository, join(options.dataDirectory, '..', 'coding-workspaces'));
   const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });
   const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai), store.planApproval);
   const publications = createPublicationService(store.publications, store.projects, store.projectTransaction, options.github?.issues);
@@ -50,6 +54,11 @@ export async function startWorkspaceServer(options: {
     try {
       secureRequest(request, response, origin);
       const resource = request.url ?? '';
+      const codingRoute = matchCodingRoute(request.method, resource);
+      if (codingRoute) {
+        const input = request.method === 'GET' ? undefined : await readJson(request, origin, 8192);
+        sendJson(response, 200, await dispatchWorkspaceRoute(codingRoute, input, workspaces)); return;
+      }
       if (request.method === 'GET' && resource === '/api/build') { sendJson(response, 200, await readBuildInfo(!!options.sampleLabel, options.appVersion)); return; }
       if (request.method === 'POST' && resource === '/api/runtime/ready') {
         const value = await readJson(request, origin, 256);
@@ -125,15 +134,16 @@ export async function startWorkspaceServer(options: {
         response.end();
         return;
       }
-      const known = error instanceof HttpError || error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof ProjectNotFoundError || error instanceof PlanInputError || error instanceof PublicationError || error instanceof LinkedWorkError;
+      const known = error instanceof HttpError || error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof ProjectNotFoundError || error instanceof PlanInputError || error instanceof PublicationError || error instanceof LinkedWorkError || error instanceof ExecutionFailure;
       const status = error instanceof HttpError ? error.status : error instanceof ProjectNotFoundError ? 404
-        : error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof PlanInputError || error instanceof PublicationError || error instanceof LinkedWorkError ? 400 : 500;
+        : error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof PlanInputError || error instanceof PublicationError || error instanceof LinkedWorkError || error instanceof ExecutionFailure ? 400 : 500;
       sendJson(response, status, {
         error: known ? error.message : 'Could not save local data. Check disk space and try again.',
       });
     }
   }, () => { trace('database:begin'); store.close(); trace('database:end'); }, async () => {
     trace('transport:stopped');
+    workspaces.close();
     const results = await Promise.allSettled([
       (async () => { trace('plans:begin'); await plans.close(); trace('plans:end'); })(),
       publications.close(),

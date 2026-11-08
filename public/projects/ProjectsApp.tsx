@@ -62,7 +62,7 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
       error={error} message={message} onStatus={state.setStatus}
       onOpen={() => { state.clearFeedback(); setOpenTicketId(ticket.id); }}
       onClose={() => { setOpenTicketId(null); state.clearFeedback(); }} onEdit={() => state.beginEdit('ticket', ticket.id)}
-      editor={editor('ticket', ticket.id, ticket, ticket.acceptanceCriteria)} />;
+      editor={editor('ticket', ticket.id, ticket, ticket.acceptanceCriteria)} onChanged={() => { void state.refresh(); }} />;
   }
   function openComposer(kind: 'project' | 'milestone' | 'ticket') { state.clearError(); setComposing(kind); }
   return (

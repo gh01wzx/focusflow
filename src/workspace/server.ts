@@ -7,6 +7,8 @@ import type { PlanGenerator } from '../plans/service.ts';
 import { matchPlanRoute, dispatchPlanRoute } from '../plans/routes.ts';
 import { createPublicationService, PublicationError } from '../publication/service.ts';
 import { matchPublicationRoute, dispatchPublicationRoute } from '../publication/routes.ts';
+import { createLinkedWorkService, LinkedWorkError } from '../sync/service.ts';
+import { matchLinkedWorkRoute, dispatchLinkedWorkRoute } from '../sync/routes.ts';
 import type { GitHubService } from '../github/service.ts';
 import { matchGitHubRoute, dispatchGitHubRoute } from '../github/routes.ts';
 import { matchProjectRoute, dispatchProjectRoute } from '../projects/routes.ts';
@@ -39,6 +41,7 @@ export async function startWorkspaceServer(options: {
   const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });
   const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai), store.planApproval);
   const publications = createPublicationService(store.publications, store.projects, store.projectTransaction, options.github?.issues);
+  const linkedWork = createLinkedWorkService(store.linkedWork, store.projectRepository, store.projectTransaction, options.github?.issues);
   const local = await listenLocal(async (request, response, origin) => {
     try {
       secureRequest(request, response, origin);
@@ -57,6 +60,12 @@ export async function startWorkspaceServer(options: {
         }
         response.writeHead(200, { 'Content-Type': type! });
         response.end(content);
+        return;
+      }
+      const linkedWorkRoute = matchLinkedWorkRoute(request.method, resource);
+      if (linkedWorkRoute) {
+        const input = request.method === 'GET' ? undefined : await readJson(request, origin, 32768);
+        sendJson(response, 200, await dispatchLinkedWorkRoute(linkedWorkRoute, input, linkedWork));
         return;
       }
       const publicationRoute = matchPublicationRoute(request.method, resource);
@@ -105,9 +114,9 @@ export async function startWorkspaceServer(options: {
         response.end();
         return;
       }
-      const known = error instanceof HttpError || error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof ProjectNotFoundError || error instanceof PlanInputError || error instanceof PublicationError;
+      const known = error instanceof HttpError || error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof ProjectNotFoundError || error instanceof PlanInputError || error instanceof PublicationError || error instanceof LinkedWorkError;
       const status = error instanceof HttpError ? error.status : error instanceof ProjectNotFoundError ? 404
-        : error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof PlanInputError || error instanceof PublicationError ? 400 : 500;
+        : error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof PlanInputError || error instanceof PublicationError || error instanceof LinkedWorkError ? 400 : 500;
       sendJson(response, status, {
         error: known ? error.message : 'Could not save local data. Check disk space and try again.',
       });

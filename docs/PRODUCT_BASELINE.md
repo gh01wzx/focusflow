@@ -40,6 +40,8 @@ Do not control existing Codex App UI/sessions or automatically start the next Ti
 
 ## Releases and quality
 
+Current delivery is a source-only local acceptance build. The owner requested one Windows Start-FocusFlow.cmd entry, implementation of the AI workflow and unified manual acceptance after coding. Formal installation, signing, release and updating are deferred. Development does not run test suites or live model trials for this batch. This changes delivery/verification timing, not the requirement to describe unverified behavior honestly.
+
 Formal releases are built and verified separately from PR merges. One-click update must preserve data, show progress/restart behavior and provide backup/recovery protection. Unsigned development artifacts do not prove release readiness.
 
 Keep real Issues/PRs, a readable README, installation/architecture notes, screenshots and key automated tests/CI for the portfolio.

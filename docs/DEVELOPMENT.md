@@ -1,5 +1,7 @@
 # Development
 
+The current delivery is a source-only local acceptance build. Start-FocusFlow.cmd is the only Windows command file; it also accepts --review NAME. The owner requested implementation without automated tests or live model trials. Verification workflows are manual-only, and neither their absence nor a merged PR is evidence that the new code works. Formal packaging/release/updating is deferred.
+
 Prerequisite: Node 24.12.x or later 24.x. Install exact dependencies with npm ci.
 
 ## Where information belongs
@@ -41,7 +43,7 @@ After GitHub creates an Issue, add its actual number to the title; do not guess 
 | npm run ai:install | Explicitly install pinned Codex into the separate product runtime; no login or model turn |
 | npm run package:windows | Build an unsigned NSIS installer; publication is disabled |
 
-Start-FocusFlow.cmd opens development data. Review-FocusFlow.cmd pr-72 opens a named review. Run npm ci again when dependencies change. The installed app bundles its runtime and accepts --review pr-72 without Node or npm.
+Start-FocusFlow.cmd opens development data. Start-FocusFlow.cmd --review pr-72 opens a named review. Run npm ci again when dependencies change. The installed app bundles its runtime and accepts --review pr-72 without Node or npm.
 
 ## Source and generated files
 

@@ -1,31 +1,5 @@
 name: Windows installer replacement experiment
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/install-update.yml'
-      - 'scripts/smoke-install-update.ts'
-      - 'scripts/installer-process.ts'
-      - 'scripts/installed-entry.ts'
-      - 'test/installer-process.test.ts'
-      - 'electron-builder.json'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'src/database/**'
-      - 'src/runtime/**'
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/install-update.yml'
-      - 'scripts/smoke-install-update.ts'
-      - 'scripts/installer-process.ts'
-      - 'scripts/installed-entry.ts'
-      - 'test/installer-process.test.ts'
-      - 'electron-builder.json'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'src/database/**'
-      - 'src/runtime/**'
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

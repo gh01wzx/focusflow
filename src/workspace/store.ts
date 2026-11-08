@@ -15,6 +15,7 @@ import { createPlanRepository, createPlanApprovalRepository } from '../plans/rep
 import { createPlanApprovalService } from '../plans/approval.ts';
 import { createPublicationRepository } from '../publication/repository.ts';
 import { createLinkedWorkRepository } from '../sync/repository.ts';
+import { createExecutionRepository } from '../execution/repository.ts';
 
 export async function openWorkspaceStore(path: string, clock: () => Date = () => new Date(), sampleData = false) {
   const existed = existsSync(path);
@@ -36,6 +37,7 @@ export async function openWorkspaceStore(path: string, clock: () => Date = () =>
       planDrafts,
       publications: createPublicationRepository(db),
       linkedWork: createLinkedWorkRepository(db),
+      execution: createExecutionRepository(db),
       projectRepository,
       projectTransaction,
       planApproval: createPlanApprovalService(planDrafts, createPlanApprovalRepository(db), projectRepository, projectTransaction, randomUUID),

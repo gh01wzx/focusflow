@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { join, resolve } from 'node:path';
+import { realpath } from 'node:fs/promises';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 import type { ElectronApplication } from 'playwright-core';
 import { runInstallerProcess } from './installer-process.ts';
@@ -19,8 +20,9 @@ export async function checkInstalledEntry(application: ElectronApplication, inst
     // Installer shell paths belong to the hosted Windows user, not the synthetic app profile.
     return paths.map(path => shell.readShortcutLink(path));
   }, process.env.APPDATA);
+  const actualExecutable = (await realpath(executable)).toLowerCase();
   for (const shortcut of shortcuts) {
-    assert.equal(resolve(shortcut.target).toLowerCase(), resolve(executable).toLowerCase());
+    assert.equal((await realpath(shortcut.target)).toLowerCase(), actualExecutable);
     assert.equal(shortcut.args ?? '', '', 'Everyday shortcuts must not select review/developer data.');
   }
   const page = await application.firstWindow();

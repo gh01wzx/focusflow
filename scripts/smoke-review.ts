@@ -155,7 +155,7 @@ try {
   assert.equal(await reopenedPersonal.page.getByText('Review change persists', { exact: true }).count(), 0);
   await close(reopenedPersonal.application);
   assert.deepEqual(await readFile(personalDatabase), personalBytes);
-  await writeFile(join(artifacts, 'report.json'), JSON.stringify({ status: 'verified',
+  await writeFile(join(artifacts, 'report.json'), JSON.stringify({ status: 'verified', commit: process.env.GITHUB_SHA ?? 'unknown',
     scope: 'Installed ordinary/review apps run separately; sample edits and visible labels survive restart; ordinary sample sentinel data stays unchanged.' }, null, 2));
   console.log('REVIEW_SMOKE_VERIFIED');
 } catch (error) {

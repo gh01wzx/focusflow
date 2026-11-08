@@ -150,3 +150,9 @@ Source, app text and repository documentation use English. User-entered content 
 GitHub project connection is under development; see [setup and limits](docs/GITHUB_CONNECTION.md). Manual projects work without a GitHub account.
 
 Formal installer/update decisions and remaining trust gates are described in [Windows release route](docs/RELEASE_ROUTE.md). Current installers are unsigned development builds.
+
+## Prepare a development candidate
+
+From a clean committed Windows checkout, run `npm run release:candidate`. It runs language/types, packaging (including the full build) and tests, then writes `release/candidate.json` with version/commit/tree, database format, installer size and SHA-256. `npm run release:verify` checks the manifest and installer again. Local preparation explicitly leaves installed-app verification incomplete; hosted Windows preparation requires successful ordinary/review/recovery/manual-flow reports from the exact same commit.
+
+This is an unpublished development candidate. Checksums establish local file integrity, not publisher trust. The manifest explicitly requires an owner publication decision and is never an automatic update feed. No installer is published or retained by CI; local output remains ignored. Signing, a trusted release channel and a genuine supported-version update/recovery trial remain separate gates. See [Windows release route](docs/RELEASE_ROUTE.md#prepare-an-unpublished-candidate).

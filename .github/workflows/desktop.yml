@@ -74,6 +74,8 @@ jobs:
           $installation = Join-Path $env:RUNNER_TEMP 'focusflow-today-installed'
           node dist/scripts/smoke-today.js (Join-Path $installation 'FocusFlow.exe') --manual-completion
           exit $LASTEXITCODE
+      - name: Prepare and verify an unpublished development candidate
+        run: node dist/scripts/release-candidate.js --record-ci
       - name: Print desktop results in the run log
         if: always()
         shell: pwsh

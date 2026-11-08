@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { access } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { withCodexProcess } from '../src/codex/process.ts';
+import type { CodexProcessObservation } from '../src/codex/process.ts';
 import { cancelReadOnlyProbe, ProbeFailure } from '../src/codex/read-only-probe.ts';
 
 const fixture = fileURLToPath(new URL(import.meta.url.endsWith('.ts')
@@ -54,4 +55,26 @@ test('spawn failure rejects pending initialization and removes the disposable cw
     await client.initialize();
   }), { code: 'CLOSED' });
   await assert.rejects(access(directory), { code: 'ENOENT' });
+});
+
+test('an early owned child exit reports numeric evidence after cleanup and preserves CLOSED', async () => {
+  let directory = '';
+  let observation: CodexProcessObservation | undefined;
+  await assert.rejects(withCodexProcess(process.execPath, ['-e', 'process.exit(7)'], environment, async (client, cwd) => {
+    directory = cwd;
+    await client.initialize();
+  }, { onClosed: value => { observation = value; } }), { code: 'CLOSED' });
+  assert.deepEqual(observation, { processClosed: true, temporaryDirectoryRemoved: true,
+    exitCode: 7, signal: null, spawnError: null });
+  await assert.rejects(access(directory), { code: 'ENOENT' });
+});
+
+test('spawn error observation contains only an allowlisted code after cleanup', async () => {
+  let observation: CodexProcessObservation | undefined;
+  await assert.rejects(withCodexProcess(fileURLToPath(new URL('./missing-private-executable', import.meta.url)), [], environment,
+    async client => { await client.initialize(); }, { onClosed: value => { observation = value; } }), { code: 'CLOSED' });
+  assert.equal(observation?.spawnError, 'ENOENT');
+  assert.equal(observation?.processClosed, true);
+  assert.equal(observation?.temporaryDirectoryRemoved, true);
+  assert.equal(JSON.stringify(observation).includes('missing-private-executable'), false);
 });

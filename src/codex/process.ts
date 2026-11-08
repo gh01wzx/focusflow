@@ -15,20 +15,36 @@ export class CodexProcessFailure extends Error {
   }
 }
 
+export interface CodexProcessObservation {
+  processClosed: true;
+  temporaryDirectoryRemoved: true;
+  exitCode: number | null;
+  signal: NodeJS.Signals | null;
+  spawnError: 'ENOENT' | 'EACCES' | 'EPERM' | 'OTHER' | null;
+}
+
 /** Owns one process and one disposable cwd. It never discovers existing App processes. */
 export async function withCodexProcess<T>(
   executable: string, args: string[], environment: NodeJS.ProcessEnv,
   operation: (client: CodexClient, cwd: string) => Promise<T>,
-  options: { graceMs?: number; shutdownMs?: number } = {},
+  options: { graceMs?: number; shutdownMs?: number; onClosed?: (observation: CodexProcessObservation) => void } = {},
 ): Promise<{ result: T; processClosed: true; temporaryDirectoryRemoved: true }> {
   const cwd = await mkdtemp(join(tmpdir(), 'focusflow-codex-turn-'));
   const child = spawn(executable, args, { cwd, env: environment, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
   child.stderr.resume();
   const client = new CodexClient(child.stdout, child.stdin);
-  child.on('error', () => client.close());
+  let spawnError: CodexProcessObservation['spawnError'] = null;
+  child.on('error', (error: NodeJS.ErrnoException) => {
+    spawnError = error.code === 'ENOENT' || error.code === 'EACCES' || error.code === 'EPERM' ? error.code : 'OTHER';
+    client.close();
+  });
   let exited = false;
   child.once('exit', () => { exited = true; });
-  const closed = new Promise<void>(resolveClosed => child.once('close', () => resolveClosed()));
+  let exitCode: number | null = null;
+  let signal: NodeJS.Signals | null = null;
+  const closed = new Promise<void>(resolveClosed => child.once('close', (code, terminated) => {
+    exitCode = code; signal = terminated; resolveClosed();
+  }));
   let result!: T;
   let failed = false;
   let failure: unknown;
@@ -69,6 +85,8 @@ export async function withCodexProcess<T>(
     if (killTimer) clearTimeout(killTimer);
     if (deadline) clearTimeout(deadline);
   }
+  // Observation occurs after verified cleanup, including when the operation failed.
+  options.onClosed?.({ processClosed: true, temporaryDirectoryRemoved: true, exitCode, signal, spawnError });
   if (failed) throw failure;
   return { result, processClosed: true, temporaryDirectoryRemoved: true };
 }

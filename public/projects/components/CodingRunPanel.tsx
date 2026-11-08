@@ -1,6 +1,7 @@
 import {useEffect,useState,useRef} from 'react';
 import type {CodingState} from '../../../src/shared/coding.ts';
 import {createRunClient} from '../../../src/client/coding.ts';
+import {CodingDeliveryPanel} from './CodingDeliveryPanel.tsx';
 
 const api=createRunClient();
 export function CodingRunPanel({ticketId,disabled,onChanged}:{ticketId:string;disabled:boolean;onChanged():void}){
@@ -40,6 +41,7 @@ export function CodingRunPanel({ticketId,disabled,onChanged}:{ticketId:string;di
         {state.run.commands.map((command,index)=><div key={index}><code>{command.command}</code><p>Exit: {command.exitCode??'unknown'}</p><pre>{command.output}</pre></div>)}
       </details>}
       <details><summary>Run activity</summary>{state.run.events.map((event,index)=><p key={index}>{new Date(event.at).toLocaleTimeString()} / {event.text}</p>)}</details>
+      <CodingDeliveryPanel ticketId={ticketId} disabled={busy||disabled} canPreview={['ready','review','interrupted'].includes(state.run.stage)} onChanged={onChanged} />
     </>}
   </section>;
 }

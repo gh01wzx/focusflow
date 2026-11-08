@@ -8,6 +8,7 @@ export interface CodingRun {
   processId:number|null;threadId:string|null;turnId:string|null;headSha:string|null;
   summary:string;errorCode:string;message:string;commands:CodingCommand[];events:{at:string;text:string}[];
   feedback:string;previousRunId:string|null;allowChecks:boolean;
+  requirementsToken?:string;
 }
 export interface CodingState {
   ticketId:string;run:CodingRun|null;activeTicketId:string|null;canStart:boolean;canResume:boolean;requirementsToken:string;

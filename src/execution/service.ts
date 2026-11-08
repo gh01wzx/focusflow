@@ -1,4 +1,5 @@
-import { createHash,randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
+import {codingScope} from './scope.ts';
 import { realpath } from 'node:fs/promises';
 import type { ProjectRepository } from '../projects/repository.ts';
 import type { ProjectTransaction } from '../projects/service.ts';
@@ -39,7 +40,7 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
   function current(id:string){const ticket=projects.findTicket(id);if(!ticket?.coding?.repository||!ticket.coding.issueNumber||ticket.executionMode!=='codex')throw new ExecutionFailure('NOT_PUBLISHED','Choose a published coding ticket.');return ticket;}
   function eligible(id:string){const t=current(id);return t.status==='backlog'&&!t.blockReason&&unfinishedPrerequisites(id,projects.listTickets(t.projectId),projects.listDependencies(t.projectId)).length===0;}
   function unblocked(id:string){const t=current(id);return !t.blockReason&&unfinishedPrerequisites(id,projects.listTickets(t.projectId),projects.listDependencies(t.projectId)).length===0;}
-  function token(id:string){const t=current(id);return createHash('sha256').update(JSON.stringify({ticket:t,dependencies:projects.listDependencies(t.projectId),workspace:repository.workspace(id)})).digest('hex');}
+  function token(id:string){const t=current(id);return codingScope(t,projects.listDependencies(t.projectId),repository.workspace(id));}
   function save(run:CodingRun,stage:CodingStage,text:string){const now=new Date().toISOString();repository.saveRun({...run,stage,updatedAt:now,message:text,events:[...run.events,{at:now,text}].slice(-200)});}
   function update(runId:string,ticketId:string,change:Partial<CodingRun>){const run=repository.latestRun(ticketId);if(run?.id===runId)repository.saveRun({...run,...change,updatedAt:new Date().toISOString()});}
   function lostRun(run:CodingRun){const alive=processState(run.processId);save(run,alive==='stopped'?'interrupted':'uncertain',
@@ -48,9 +49,10 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
   for(const run of repository.runs())if(activeCodingStage(run.stage))lostRun(run);
   function state(id:string):CodingState {
     const t=current(id),run=repository.latestRun(id),owner=repository.runs().find(r=>activeCodingStage(r.stage));
+    const delivery=repository.delivery(id),publicationPending=!!delivery&&['committing','creating-pr','uncertain'].includes(delivery.stage);
     return {ticketId:id,run,activeTicketId:owner?.ticketId??null,requirementsToken:token(id),
-      canStart:!closing&&!active&&!owner&&eligible(id)&&repository.workspace(id)?.state==='ready',
-      canResume:!closing&&!active&&!owner&&!!run&&['failed','stopped','interrupted','ready','review'].includes(run.stage)&&t.status!=='done'&&unblocked(id)&&repository.workspace(id)?.state==='ready'};
+      canStart:!closing&&!active&&!owner&&!publicationPending&&eligible(id)&&repository.workspace(id)?.state==='ready',
+      canResume:!closing&&!active&&!owner&&!publicationPending&&!!run&&['failed','stopped','interrupted','ready','review'].includes(run.stage)&&t.status!=='done'&&unblocked(id)&&repository.workspace(id)?.state==='ready'};
   }
   async function perform(id:string,runId:string,abort:AbortController,prompt:string,expected:string){
     try{
@@ -80,7 +82,7 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
       const run=repository.latestRun(id);if(run?.id===runId)save({...run,summary,processId:null},'ready','Coding ended and the owned process closed. Inspect changes before publishing a PR.');
     }catch(error){
       const run=repository.latestRun(id);if(run?.id===runId){
-        const code=error instanceof CodingTurnFailure||error instanceof CodexFailure||error instanceof CodexProcessFailure||error instanceof ExecutionFailure||error instanceof ProbeFailure?error.code:'UNKNOWN';
+        const code=abort.signal.aborted?'CANCELLED':error instanceof CodingTurnFailure||error instanceof CodexFailure||error instanceof CodexProcessFailure||error instanceof ExecutionFailure||error instanceof ProbeFailure?error.code:'UNKNOWN';
         const uncertain=error instanceof CodexProcessFailure&&error.cleanupFailed;
         save({...run,errorCode:code,processId:uncertain?run.processId:null},uncertain?'uncertain':code==='CANCELLED'?'stopped':'failed',uncertain?'Owned-process cleanup was not confirmed. Inspect and stop the previous process before recovery.':message(code));
       }
@@ -95,7 +97,7 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
     if(!workspace)throw new ExecutionFailure('NO_WORKSPACE','Prepare the ticket workspace first.');
     const now=new Date().toISOString(),run:CodingRun={id:randomUUID(),ticketId:id,stage:'starting',createdAt:now,updatedAt:now,
       processId:null,threadId:null,turnId:null,headSha:null,summary:'',errorCode:'',message:'Checking ChatGPT account and the retained worktree.',commands:[],events:[],
-      feedback,previousRunId:before.run?.id??null,allowChecks:request.allowChecks===true};
+      feedback,previousRunId:before.run?.id??null,allowChecks:request.allowChecks===true,requirementsToken:before.requirementsToken};
     transaction(()=>{if(token(id)!==before.requirementsToken)throw new ExecutionFailure('STALE_REQUEST','The ticket changed. Refresh it first.');repository.saveRun(run);projects.setStatus(id,'in_progress',now);});
     const prompt=['Implement only this approved coding ticket. Do not publish, push, merge or deploy.',
       'Ticket #'+t.coding!.issueNumber+': '+t.title,t.description,'Acceptance criteria:',t.acceptanceCriteria,
@@ -112,6 +114,7 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
     state,begin,
     cancel(id:string){current(id);if(active?.ticketId!==id)throw new ExecutionFailure('NO_ACTIVE_RUN','No owned active coding process exists for this ticket.');const run=repository.latestRun(id);if(run)save(run,'cancelling','Cancellation requested. Waiting for interruption and actual process cleanup.');approvals.cancel(id);active.abort.abort();return state(id);},
     recover(id:string){current(id);if(active)throw new ExecutionFailure('BUSY','Stop the current owned run before recovery.');const run=repository.latestRun(id);if(!run)throw new ExecutionFailure('NO_RUN','There is no saved run to recover.');
+      const delivery=repository.delivery(id);if(delivery&&['committing','creating-pr','uncertain'].includes(delivery.stage))throw new ExecutionFailure('PUBLICATION_UNCERTAIN','Inspect saved PR publication progress before recovering this coding run.');
       if(processState(run.processId)!=='stopped')throw new ExecutionFailure('PROCESS_UNCERTAIN','The saved process is still running or cannot be checked. It was not killed or reattached.');
       if(run.stage==='uncertain'||activeCodingStage(run.stage))save({...run,processId:null},'interrupted','The saved process is no longer running. Inspect changes, then explicitly resume a fresh coding context.');return state(id);},
     async close(){closing=true;approvals.close();const owned=active;if(owned){owned.abort.abort();await owned.work;}},

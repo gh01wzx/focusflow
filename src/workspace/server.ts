@@ -27,6 +27,7 @@ import { matchCodingRoute, dispatchWorkspaceRoute } from '../execution/routes.ts
 import { ExecutionFailure } from '../execution/git.ts';
 import { createApprovalBroker } from '../execution/approvals.ts';
 import { createCodingService } from '../execution/service.ts';
+import {createDeliveryService} from '../execution/delivery.ts';
 
 const assets = new Map([
   ['/', ['today/index.html', 'text/html; charset=utf-8']],
@@ -53,11 +54,17 @@ export async function startWorkspaceServer(options: {
   const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai), store.planApproval);
   const publications = createPublicationService(store.publications, store.projects, store.projectTransaction, options.github?.issues);
   const linkedWork = createLinkedWorkService(store.linkedWork, store.projectRepository, store.projectTransaction, options.github?.issues);
+  const delivery=createDeliveryService(store.execution,store.projectRepository,store.linkedWork,store.projectTransaction,options.github?.coding);
   let ready = false;
   const local = await listenLocal(async (request, response, origin) => {
     try {
       secureRequest(request, response, origin);
       const resource = request.url ?? '';
+      const deliveryRoute=/^\/api\/project-tickets\/([a-f0-9-]{36})\/coding\/delivery(?:\/(preview|publish|reconcile))?$/.exec(resource);
+      if(deliveryRoute&&(deliveryRoute[2]?request.method==='POST':request.method==='GET')){
+        const id=deliveryRoute[1]!,action=deliveryRoute[2];const input=action?await readJson(request,origin,8192):undefined;
+        sendJson(response,200,!action?delivery.state(id):action==='preview'?await delivery.preview(id):action==='publish'?await delivery.publish(id,input):await delivery.reconcile(id));return;
+      }
       const runRoute=/^\/api\/project-tickets\/([a-f0-9-]{36})\/coding\/run(?:\/(start|resume|cancel|recover))?$/.exec(resource);
       if(runRoute&&(runRoute[2]?request.method==='POST':request.method==='GET')){
         const id=runRoute[1]!;
@@ -164,6 +171,7 @@ export async function startWorkspaceServer(options: {
     approvals.close();
     const results = await Promise.allSettled([
       coding.close(),
+      delivery.close(),
       (async () => { trace('plans:begin'); await plans.close(); trace('plans:end'); })(),
       publications.close(),
       (async () => { trace('ai:begin'); await ai.close(); trace('ai:end'); })(),

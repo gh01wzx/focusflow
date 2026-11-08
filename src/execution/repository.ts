@@ -1,9 +1,12 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { CodingWorkspace } from '../shared/execution.ts';
 import type { CodingRun } from '../shared/coding.ts';
+import type {CodingDelivery} from '../shared/delivery.ts';
 
 export function createExecutionRepository(db: DatabaseSync) {
   return {
+    delivery(id:string):CodingDelivery|null {const row=db.prepare('SELECT delivery_json FROM coding_deliveries WHERE ticket_id=?').get(id);return row?JSON.parse(String(row.delivery_json)) as CodingDelivery:null;},
+    saveDelivery(value:CodingDelivery){db.prepare('INSERT INTO coding_deliveries(ticket_id,delivery_json) VALUES(?,?) ON CONFLICT(ticket_id) DO UPDATE SET delivery_json=excluded.delivery_json').run(value.ticketId,JSON.stringify(value));},
     latestRun(id:string):CodingRun|null {
       const row=db.prepare('SELECT run_json FROM coding_runs WHERE ticket_id=? ORDER BY rowid DESC LIMIT 1').get(id);
       return row?JSON.parse(String(row.run_json)) as CodingRun:null;

@@ -3,6 +3,7 @@ import { repositoryName, parseGitHubRepository, unavailableGitHub } from '../sha
 import type { GitHubVault, StoredGitHub } from './vault.ts';
 import { createIssueProvider } from './issues.ts';
 import type { RepositoryRequest } from './issues.ts';
+import {createCodingProvider} from './coding.ts';
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -43,7 +44,7 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
     catch { throw new GitHubFailure('GitHub could not connect. Check your network, then retry.'); }
     if (!response.ok) {
       if (response.status === 401) {
-        if (saved) { saved = { ...saved, token: '', expiresAt: 0 }; await vault.write(saved); }
+        if (saved && new Headers(options.headers).get('Authorization') === 'Bearer ' + saved.token) { saved = { ...saved, token: '', expiresAt: 0 }; await vault.write(saved); }
         throw new GitHubFailure('GitHub access expired or was revoked. Authorize again.', options.method === 'POST');
       }
       if (response.status === 403 || response.status === 429) throw new GitHubFailure('GitHub refused access or reached a rate limit. Check the App permissions, repository access and retry time.', options.method === 'POST');
@@ -104,6 +105,7 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
   };
   return {
     issues: createIssueProvider(repositoryRequest),
+    coding: createCodingProvider(repositoryRequest),
     token: (projectId:string,token:unknown,confirmed:unknown)=>run(projectId,async()=>{
       if(confirmed!==true||typeof token!=='string'||!/^github_pat_[A-Za-z0-9_]{20,1000}$/.test(token))throw new GitHubFailure('Enter a fine-grained GitHub token and explicitly confirm protected local storage.');
       const login=await account(token);

@@ -4,6 +4,7 @@ import type { GitHubVault, StoredGitHub } from './vault.ts';
 import { createIssueProvider } from './issues.ts';
 import type { RepositoryRequest } from './issues.ts';
 import {createCodingProvider} from './coding.ts';
+import {createReviewProvider} from './review.ts';
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -106,6 +107,7 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
   return {
     issues: createIssueProvider(repositoryRequest),
     coding: createCodingProvider(repositoryRequest),
+    review: createReviewProvider(repositoryRequest),
     token: (projectId:string,token:unknown,confirmed:unknown)=>run(projectId,async()=>{
       if(confirmed!==true||typeof token!=='string'||!/^github_pat_[A-Za-z0-9_]{20,1000}$/.test(token))throw new GitHubFailure('Enter a fine-grained GitHub token and explicitly confirm protected local storage.');
       const login=await account(token);

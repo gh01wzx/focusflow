@@ -1,4 +1,5 @@
 import type {CodingProvider,RemoteCodingPull} from '../shared/delivery.ts';
+import {CodingCreationRefused} from '../shared/delivery.ts';
 import type {RepositoryRequest} from './issues.ts';
 import {parseLinkedPull} from '../shared/linked-work.ts';
 
@@ -47,7 +48,9 @@ export function createCodingProvider(run:RepositoryRequest):CodingProvider {
     }),
     createPull:(projectId,repository,branch,title,body)=>run(projectId,repository,async(_r,request)=>{
       const info=record(await request(''));if(typeof info.default_branch!=='string')throw new Error('GitHub default branch is unavailable.');
-      return codingPull(await request('/pulls','POST',{head:branch,base:info.default_branch,title,body}),repository.id);
+      let result:unknown;try{result=await request('/pulls','POST',{head:branch,base:info.default_branch,title,body});}
+      catch(error){if(error&&typeof error==='object'&&'refused'in error&&error.refused===true)throw new CodingCreationRefused('GitHub explicitly refused PR creation.');throw error;}
+      return codingPull(result,repository.id);
     }),
     pull:(projectId,repository,number)=>run(projectId,repository,async(_r,request)=>{
       if(!Number.isSafeInteger(number)||number<1)throw new Error('Invalid PR number.');

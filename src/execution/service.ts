@@ -11,6 +11,7 @@ import { unfinishedPrerequisites } from '../shared/dependencies.ts';
 import { issueFields } from '../shared/linked-work.ts';
 import type { LinkedWorkProvider } from '../sync/service.ts';
 import type { GitHubRepository } from '../shared/github.ts';
+import type {LinkedWorkRepository} from '../sync/repository.ts';
 import { codingTurn,CodingTurnFailure } from '../codex/coding-turn.ts';
 import { CodexFailure } from '../codex/client.ts';
 import { CodexProcessFailure } from '../codex/process.ts';
@@ -35,7 +36,7 @@ function message(code:string):string {
   return'The run did not complete. Inspect the retained workspace and recorded stage; the cause is not established.';
 }
 export function createCodingService(repository:ExecutionRepository,projects:ProjectRepository,transaction:ProjectTransaction,
-  ai:AiService,approvals:ApprovalBroker,provider?:LinkedWorkProvider & {inspect(projectId:string):Promise<GitHubRepository>}) {
+  ai:AiService,approvals:ApprovalBroker,provider?:LinkedWorkProvider & {inspect(projectId:string):Promise<GitHubRepository>},linkedWork?:LinkedWorkRepository) {
   let active:{ticketId:string;runId:string;abort:AbortController;work:Promise<void>}|null=null,closing=false;
   function current(id:string){const ticket=projects.findTicket(id);if(!ticket?.coding?.repository||!ticket.coding.issueNumber||ticket.executionMode!=='codex')throw new ExecutionFailure('NOT_PUBLISHED','Choose a published coding ticket.');return ticket;}
   function eligible(id:string){const t=current(id);return t.status==='backlog'&&!t.blockReason&&unfinishedPrerequisites(id,projects.listTickets(t.projectId),projects.listDependencies(t.projectId)).length===0;}
@@ -50,10 +51,12 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
   function state(id:string):CodingState {
     const t=current(id),run=repository.latestRun(id),owner=repository.runs().find(r=>activeCodingStage(r.stage));
     const delivery=repository.delivery(id),publicationPending=!!delivery&&['committing','creating-pr','uncertain'].includes(delivery.stage);
+    const linked=linkedWork?.read(id),pullNumber=delivery?.pullNumber??linked?.pullNumber??null,linkedHeadSha=linked?.pull?.headSha??delivery?.commitSha??null;
+    const remoteAligned=!delivery?.pullNumber||linkedHeadSha===delivery.commitSha;
     const history=repository.runs().filter(r=>r.ticketId===id).slice(-20).reverse().map(r=>({id:r.id,stage:r.stage,createdAt:r.createdAt,updatedAt:r.updatedAt,headSha:r.headSha,feedback:r.feedback,summary:r.summary.slice(0,4000)}));
-    return {ticketId:id,run,activeTicketId:owner?.ticketId??null,requirementsToken:token(id),history,
-      canStart:!closing&&!active&&!owner&&!publicationPending&&eligible(id)&&repository.workspace(id)?.state==='ready',
-      canResume:!closing&&!active&&!owner&&!publicationPending&&!!run&&['failed','stopped','interrupted','ready','review'].includes(run.stage)&&t.status!=='done'&&unblocked(id)&&repository.workspace(id)?.state==='ready'};
+    return {ticketId:id,run,activeTicketId:owner?.ticketId??null,requirementsToken:token(id),history,pullNumber,linkedHeadSha,
+      canStart:!closing&&!active&&!owner&&!ai.busy()&&!publicationPending&&eligible(id)&&repository.workspace(id)?.state==='ready',
+      canResume:!closing&&!active&&!owner&&!ai.busy()&&!publicationPending&&remoteAligned&&!!run&&['failed','stopped','interrupted','ready','review'].includes(run.stage)&&t.status!=='done'&&unblocked(id)&&repository.workspace(id)?.state==='ready'};
   }
   async function perform(id:string,runId:string,abort:AbortController,prompt:string,expected:string){
     try{
@@ -65,6 +68,8 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
       const issue=await provider.read(linked.projectId,expectedRepository,linked.coding!.issueNumber!);
       const fields=issueFields(issue,id);
       if(issue.state!=='open'||!fields||fields.title!==linked.title||fields.description!==linked.description||fields.acceptanceCriteria!==linked.acceptanceCriteria)throw new ExecutionFailure('SYNC_REQUIRED','Refresh linked work and reconcile the open Issue requirements before starting or resuming.');
+      const delivery=repository.delivery(id);
+      if(delivery?.pullNumber){const pull=await provider.pull(linked.projectId,expectedRepository,delivery.pullNumber);if(pull.merged||pull.state!=='open'||pull.headSha!==delivery.commitSha)throw new ExecutionFailure('REMOTE_HEAD_CHANGED','The PR changed or closed. Refresh review evidence before revising this worktree.');}
       const actual=await realpath(await git(workspace.workspacePath,['rev-parse','--show-toplevel'],abort.signal));
       if(actual.toLowerCase()!==(await realpath(workspace.workspacePath)).toLowerCase()||await git(workspace.workspacePath,['branch','--show-current'],abort.signal)!==workspace.branch)throw new ExecutionFailure('WORKSPACE_CHANGED','The ticket worktree or branch changed. Inspect it before resuming.');
       const summary=await ai.runWithChatGPT(async(client,_cwd,signal)=>{
@@ -73,26 +78,27 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
         return codingTurn(client,workspace.workspacePath,prompt,{signal,
           identity:(threadId,turnId)=>update(runId,id,{threadId,turnId}),
           activity:text=>{const run=repository.latestRun(id);if(run?.id===runId&&run.stage!=='permission'&&run.stage!=='cancelling')save(run,'coding',text);},
-          command:(command,exitCode,output)=>{const run=repository.latestRun(id);if(run?.id===runId)update(runId,id,{commands:[...run.commands,{command,exitCode,output,source:'runtime',at:new Date().toISOString()}].slice(-100)});},
+          command:(command,exitCode,output)=>{const run=repository.latestRun(id);if(run?.id===runId)update(runId,id,{commands:[...run.commands,{command,exitCode,output,source:'runtime' as const,at:new Date().toISOString()}].slice(-100)});},
           permission:(method,params)=>approvals.request(id,runId,workspace.workspacePath,method,params,signal,waiting=>{
             const run=repository.latestRun(id);if(run?.id===runId&&run.stage!=='cancelling')save(run,waiting?'permission':'coding',waiting?'Waiting for your decision on the exact runtime request.':'The permission request ended.');
           }),
         });
       },abort.signal);
       if(expected!==token(id))throw new ExecutionFailure('REQUIREMENTS_CHANGED','The ticket changed during coding. Inspect retained changes before explicitly resuming with the new scope.');
-      const run=repository.latestRun(id);if(run?.id===runId)save({...run,summary,processId:null},'ready','Coding ended and the owned process closed. Inspect changes before publishing a PR.');
+      const run=repository.latestRun(id);if(run?.id===runId&&run.stage!=='merged')save({...run,summary,processId:null},'ready','Coding ended and the owned process closed. Inspect changes before publishing a PR.');
     }catch(error){
       const run=repository.latestRun(id);if(run?.id===runId){
         const code=abort.signal.aborted?'CANCELLED':error instanceof CodingTurnFailure||error instanceof CodexFailure||error instanceof CodexProcessFailure||error instanceof ExecutionFailure||error instanceof ProbeFailure?error.code:'UNKNOWN';
         const uncertain=error instanceof CodexProcessFailure&&error.cleanupFailed;
-        save({...run,errorCode:code,processId:uncertain?run.processId:null},uncertain?'uncertain':code==='CANCELLED'?'stopped':'failed',uncertain?'Owned-process cleanup was not confirmed. Inspect and stop the previous process before recovery.':message(code));
+        if(run.stage!=='merged'||uncertain)save({...run,errorCode:code,processId:uncertain?run.processId:null},uncertain?'uncertain':code==='CANCELLED'?'stopped':'failed',uncertain?'Owned-process cleanup was not confirmed. Inspect and stop the previous process before recovery.':message(code));
       }
-    }finally{approvals.cancel(id);if(active?.runId===runId)active=null;}
+    }finally{approvals.cancel(id);const saved=repository.latestRun(id);if(saved?.id===runId&&saved.stage==='merged')repository.saveRun({...saved,processId:null});if(active?.runId===runId)active=null;}
   }
   function begin(id:string,input:unknown,resume=false):CodingState {
     const request=executionRecord(input),before=state(id),t=current(id),workspace=repository.workspace(id);
     if(request.confirmAllowance!==true||request.confirmScope!==true||request.requirementsToken!==before.requirementsToken)throw new ExecutionFailure('CONFIRM_REQUIRED','Confirm this ticket, workspace and Codex allowance for this exact request.');
     if(resume?!before.canResume:!before.canStart)throw new ExecutionFailure('NOT_ELIGIBLE','This ticket cannot start now. Check blockers, workspace and any active or uncertain run.');
+    if(resume&&before.pullNumber&&request.headSha!==before.linkedHeadSha)throw new ExecutionFailure('STALE_REVISION','Preview feedback against the latest observed PR head before resuming.');
     const feedback=typeof request.feedback==='string'?request.feedback.trim():'';
     if(feedback.length>8000)throw new ExecutionFailure('FEEDBACK_TOO_LONG','Keep feedback within 8000 characters.');
     if(!workspace)throw new ExecutionFailure('NO_WORKSPACE','Prepare the ticket workspace first.');
@@ -113,6 +119,7 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
   }
   return {
     state,begin,
+    stopForMerge(id:string){if(active?.ticketId===id){approvals.cancel(id);active.abort.abort();}},
     cancel(id:string){current(id);if(active?.ticketId!==id)throw new ExecutionFailure('NO_ACTIVE_RUN','No owned active coding process exists for this ticket.');const run=repository.latestRun(id);if(run)save(run,'cancelling','Cancellation requested. Waiting for interruption and actual process cleanup.');approvals.cancel(id);active.abort.abort();return state(id);},
     recover(id:string){current(id);if(active)throw new ExecutionFailure('BUSY','Stop the current owned run before recovery.');const run=repository.latestRun(id);if(!run)throw new ExecutionFailure('NO_RUN','There is no saved run to recover.');
       const delivery=repository.delivery(id);if(delivery&&['committing','creating-pr','uncertain'].includes(delivery.stage))throw new ExecutionFailure('PUBLICATION_UNCERTAIN','Inspect saved PR publication progress before recovering this coding run.');

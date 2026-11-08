@@ -28,6 +28,7 @@ import { ExecutionFailure } from '../execution/git.ts';
 import { createApprovalBroker } from '../execution/approvals.ts';
 import { createCodingService } from '../execution/service.ts';
 import {createDeliveryService} from '../execution/delivery.ts';
+import {createReviewService} from '../execution/review.ts';
 
 const assets = new Map([
   ['/', ['today/index.html', 'text/html; charset=utf-8']],
@@ -50,16 +51,23 @@ export async function startWorkspaceServer(options: {
   const workspaces = createWorkspaceService(store.execution, store.projectRepository, join(options.dataDirectory, '..', 'coding-workspaces'));
   const approvals = createApprovalBroker();
   const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });
-  const coding = createCodingService(store.execution,store.projectRepository,store.projectTransaction,ai,approvals,options.github?.issues);
+  const coding = createCodingService(store.execution,store.projectRepository,store.projectTransaction,ai,approvals,options.github?.issues,store.linkedWork);
   const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai), store.planApproval);
   const publications = createPublicationService(store.publications, store.projects, store.projectTransaction, options.github?.issues);
   const linkedWork = createLinkedWorkService(store.linkedWork, store.projectRepository, store.projectTransaction, options.github?.issues);
   const delivery=createDeliveryService(store.execution,store.projectRepository,store.linkedWork,store.projectTransaction,options.github?.coding);
+  const reviews=createReviewService(store.execution,store.projectRepository,store.linkedWork,store.projectTransaction,ai,options.github?.review,id=>coding.stopForMerge(id));
   let ready = false;
   const local = await listenLocal(async (request, response, origin) => {
     try {
       secureRequest(request, response, origin);
       const resource = request.url ?? '';
+      const reviewRoute=/^\/api\/project-tickets\/([a-f0-9-]{36})\/coding\/review(?:\/(refresh|observe|ask|approve|cancel|close-issue))?$/.exec(resource);
+      if(reviewRoute&&(reviewRoute[2]?request.method==='POST':request.method==='GET')){
+        const id=reviewRoute[1]!,action=reviewRoute[2],input=action?await readJson(request,origin,16384):undefined;
+        const result=!action?reviews.state(id):action==='refresh'?await reviews.refresh(id):action==='observe'?await reviews.observe(id):action==='ask'?reviews.ask(id,input):action==='approve'?await reviews.approve(id,input):action==='cancel'?reviews.cancel(id):await reviews.closeIssue(id,input);
+        sendJson(response,200,result);return;
+      }
       const deliveryRoute=/^\/api\/project-tickets\/([a-f0-9-]{36})\/coding\/delivery(?:\/(preview|publish|reconcile))?$/.exec(resource);
       if(deliveryRoute&&(deliveryRoute[2]?request.method==='POST':request.method==='GET')){
         const id=deliveryRoute[1]!,action=deliveryRoute[2];const input=action?await readJson(request,origin,8192):undefined;
@@ -172,6 +180,7 @@ export async function startWorkspaceServer(options: {
     const results = await Promise.allSettled([
       coding.close(),
       delivery.close(),
+      reviews.close(),
       (async () => { trace('plans:begin'); await plans.close(); trace('plans:end'); })(),
       publications.close(),
       (async () => { trace('ai:begin'); await ai.close(); trace('ai:end'); })(),

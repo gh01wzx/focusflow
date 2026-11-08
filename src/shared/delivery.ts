@@ -18,6 +18,7 @@ export interface CodingProvider {
   createPull(projectId:string,repository:GitHubRepository,branch:string,title:string,body:string):Promise<RemoteCodingPull>;
   pull(projectId:string,repository:GitHubRepository,number:number):Promise<RemoteCodingPull>;
 }
+export class CodingCreationRefused extends Error {}
 export function parseDeliveryState(value:unknown,id:string):DeliveryState {
   const s=executionRecord(value);if(s.ticketId!==id||typeof s.busy!=='boolean')throw new Error('Invalid publication state.');
   let delivery:CodingDelivery|null=null,preview:DeliveryPreview|null=null;

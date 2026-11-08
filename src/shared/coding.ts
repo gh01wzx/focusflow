@@ -13,11 +13,14 @@ export interface CodingRun {
 export interface CodingState {
   ticketId:string;run:CodingRun|null;activeTicketId:string|null;canStart:boolean;canResume:boolean;requirementsToken:string;
   history:{id:string;stage:CodingStage;createdAt:string;updatedAt:string;headSha:string|null;feedback:string;summary:string}[];
+  pullNumber:number|null;linkedHeadSha:string|null;
 }
 export function activeCodingStage(stage:CodingStage):boolean { return ['starting','coding','permission','cancelling','publishing','uncertain'].includes(stage); }
 export function parseCodingState(value:unknown,ticketId:string):CodingState {
   const item=executionRecord(value);
   if(item.ticketId!==ticketId||typeof item.canStart!=='boolean'||typeof item.canResume!=='boolean'
+    ||!(item.pullNumber===null||Number.isSafeInteger(item.pullNumber)&&Number(item.pullNumber)>0)
+    ||!(item.linkedHeadSha===null||typeof item.linkedHeadSha==='string'&&/^[a-f0-9]{40}$/.test(item.linkedHeadSha))
     ||!(item.activeTicketId===null||typeof item.activeTicketId==='string'&&/^[a-f0-9-]{36}$/.test(item.activeTicketId))
     ||typeof item.requirementsToken!=='string'||!/^[a-f0-9]{64}$/.test(item.requirementsToken)||!Array.isArray(item.history)||item.history.length>20
     ||!item.history.every(raw=>{const h=executionRecord(raw);return typeof h.id==='string'&&/^[a-f0-9-]{36}$/.test(h.id)&&CODING_STAGES.includes(h.stage as CodingStage)
@@ -36,5 +39,5 @@ export function parseCodingState(value:unknown,ticketId:string):CodingState {
       ||!Array.isArray(r.commands)||r.commands.length>100||!r.commands.every(c=>{const v=executionRecord(c);return typeof v.command==='string'&&v.command.length<=8000&&typeof v.output==='string'&&v.output.length<=10000&&v.source==='runtime'&&(v.exitCode===null||Number.isInteger(v.exitCode))&&typeof v.at==='string'&&Number.isFinite(Date.parse(v.at));}))throw new Error('Invalid coding run record.');
     run=r as unknown as CodingRun;
   }
-  return {ticketId,run,activeTicketId:item.activeTicketId as string|null,canStart:item.canStart,canResume:item.canResume,requirementsToken:item.requirementsToken,history:item.history as CodingState['history']};
+  return {ticketId,run,activeTicketId:item.activeTicketId as string|null,canStart:item.canStart,canResume:item.canResume,requirementsToken:item.requirementsToken,history:item.history as CodingState['history'],pullNumber:item.pullNumber as number|null,linkedHeadSha:item.linkedHeadSha as string|null};
 }

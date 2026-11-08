@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process';
 
 export class ExecutionFailure extends Error {
-  constructor(readonly code: string, message: string) { super(message); }
+  readonly code:string;
+  constructor(code: string, message: string) { super(message);this.code=code; }
 }
 export function gitEnvironment(): NodeJS.ProcessEnv {
   const result: NodeJS.ProcessEnv = { GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never' };

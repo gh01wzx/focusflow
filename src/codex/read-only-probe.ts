@@ -19,6 +19,7 @@ interface CancellationEvidence {
   interruptedObserved: true;
 }
 interface ProbeOptions {
+  maximumPromptChars?: number;
   signal?: AbortSignal;
   timeoutMs?: number;
   interruptTimeoutMs?: number;
@@ -39,7 +40,7 @@ export function readOnlyProbe(client: CodexClient, cwd: string, options: ProbeOp
 }
 
 export function readOnlyResponse(client: CodexClient, cwd: string, prompt: string, options: ProbeOptions = {}): Promise<string> {
-  if (!prompt.trim() || prompt.length > 20_000) return Promise.reject(new ProbeFailure('INVALID_PROMPT'));
+  if (!prompt.trim() || prompt.length > Math.min(200000,options.maximumPromptChars??20000)) return Promise.reject(new ProbeFailure('INVALID_PROMPT'));
   return runProbe(client, cwd, options, false, prompt) as Promise<string>;
 }
 
@@ -118,7 +119,7 @@ async function runProbe(client: CodexClient, cwd: string, options: ProbeOptions,
     const started = record(await request('thread/start', {
       cwd, approvalPolicy: 'never', sandbox: 'read-only', ephemeral: true,
       baseInstructions: prompt
-        ? 'Answer the supplied planning request using text only. Do not use tools, read files, run commands or access the network.'
+        ? 'Answer the supplied text request using only its attached evidence. Do not use tools, read files, run commands or access the network.'
         : 'This is a connectivity probe. Do not use tools, read files, run commands or access the network. Reply only with the requested marker.',
     }));
     const id = record(started.thread).id;

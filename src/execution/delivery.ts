@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import {lstat,readFile,realpath} from 'node:fs/promises';
 import {isAbsolute,relative,resolve} from 'node:path';
 import type {CodingProvider,DeliveryFile,DeliveryPreview,DeliveryState,CodingDelivery,RemoteCodingPull} from '../shared/delivery.ts';
+import {CodingCreationRefused} from '../shared/delivery.ts';
 import {executionRecord} from '../shared/execution.ts';
 import type {ProjectRepository} from '../projects/repository.ts';
 import type {ProjectTransaction} from '../projects/service.ts';
@@ -26,6 +27,7 @@ export function createDeliveryService(repository:ExecutionRepository,projects:Pr
   function state(id:string,preview:DeliveryPreview|null=null):DeliveryState {if(!projects.findTicket(id)?.coding?.issueNumber)throw new ExecutionFailure('NOT_PUBLISHED','Choose a published coding ticket.');return {ticketId:id,delivery:repository.delivery(id),preview,busy:busy.has(id)};}
   async function snapshot(id:string){
     const c=context(id);if(!['ready','review','interrupted'].includes(c.run.stage))throw new ExecutionFailure('RUN_ACTIVE','Stop or finish the coding run before previewing publication.');
+    if(c.ticket.status==='done')throw new ExecutionFailure('ALREADY_DONE','This ticket is already Done. It cannot publish another revision.');
     if(!c.run.requirementsToken||c.run.requirementsToken!==codingScope(c.ticket,projects.listDependencies(c.ticket.projectId),c.workspace))throw new ExecutionFailure('SCOPE_CHANGED','Requirements changed. Explicitly resume and review the new scope before publication.');
     const root=await realpath(c.workspace.workspacePath);
     if(await git(root,['branch','--show-current'])!==c.workspace.branch)throw new ExecutionFailure('BRANCH_CHANGED','The worktree branch changed. Nothing was published.');
@@ -96,7 +98,7 @@ export function createDeliveryService(repository:ExecutionRepository,projects:Pr
       if(!pull){
         if(delivery.pullNumber)throw new ExecutionFailure('PR_MISSING','The known PR identity was not found. No replacement PR was created.');
         delivery={...delivery,stage:'creating-pr',message:'PR creation requested. A lost response requires reconciliation, not another creation.'};repository.saveDelivery(delivery);
-        const evidence=c.run.commands.length?c.run.commands.map((x,index)=>'- Runtime-reported command '+(index+1)+': exit '+(x.exitCode??'unknown')+'.').join('\n')+'\nExact commands and output remain in the local profile; these results are not independent verification.':'Checks were not run. The owner will test locally.';
+        const evidence=c.run.commands.length?c.run.commands.map((x,index)=>'- Runtime-reported command '+(index+1)+': exit '+(x.exitCode??'unknown')+'.').join('\n')+'\nExact commands and output remain in the local profile. These coding-time results do not establish tests of the final published commit and are not independent verification.':'Checks were not run. The owner will test locally.';
         pull=await provider.createPull(c.ticket.projectId,c.repository,c.workspace.branch,'['+c.issue+'] '+c.ticket.title,
           'Closes #'+c.issue+'\n\n## What changed\n\n'+c.ticket.description+'\n\n## How to check\n\n'+c.ticket.acceptanceCriteria+'\n\n## Check evidence\n\n'+evidence+'\n\nDeveloper statements are not independent verification. Review the exact current head and diff.\n\n'+marker(id));
       }
@@ -106,8 +108,9 @@ export function createDeliveryService(repository:ExecutionRepository,projects:Pr
     }catch(error){
       const delivery=repository.delivery(id),run=repository.latestRun(id);
       if(attempted&&delivery&&delivery.stage!=='published'){
-        repository.saveDelivery({...delivery,stage:delivery.stage==='creating-pr'?'uncertain':delivery.stage,message:'Publication stopped. Inspect remote progress before any retry.',updatedAt:new Date().toISOString()});
-        if(run)repository.saveRun({...run,stage:'uncertain',errorCode:'PUBLICATION_UNCERTAIN',message:'Remote progress must be reconciled before resuming.',updatedAt:new Date().toISOString()});
+        const refused=error instanceof CodingCreationRefused;
+        repository.saveDelivery({...delivery,stage:refused?'conflict':delivery.stage==='creating-pr'?'uncertain':delivery.stage,message:refused?'GitHub refused PR creation. No PR was created; correct access and explicitly preview/retry.':'Publication stopped. Inspect remote progress before any retry.',updatedAt:new Date().toISOString()});
+        if(run)repository.saveRun({...run,stage:refused?'ready':'uncertain',errorCode:refused?'PUBLICATION_REFUSED':'PUBLICATION_UNCERTAIN',message:refused?'PR creation was refused. Inspect permissions before explicitly retrying.':'Remote progress must be reconciled before resuming.',updatedAt:new Date().toISOString()});
       }
       throw error instanceof ExecutionFailure?error:new ExecutionFailure('PUBLICATION_FAILED','GitHub publication could not be confirmed. Existing work and any remote artifacts are retained.');
     }finally{busy.delete(id);}

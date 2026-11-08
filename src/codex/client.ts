@@ -131,7 +131,7 @@ export class CodexClient extends EventEmitter {
         } else {
           this.write({ id, error: { code: -32601, message: 'Client request is not supported' } });
         }
-        this.emit('approvalDenied');
+        this.emit('approvalDenied', method);
       } else {
         this.emit('notification', method, params);
       }

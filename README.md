@@ -1,160 +1,92 @@
 # FocusFlow
 
-A Windows desktop task tracker built with TypeScript, React, Electron and SQLite. Data stays on your computer; no Tracker account is required.
+A Windows desktop app for daily tasks and personal projects. Built with TypeScript, React, Electron and SQLite. Single user, local data, no FocusFlow account.
 
-**Status:** Personal tasks, selected-weekday repeats and manual Projects are available. This is an unsigned development build; the complete MVP remains in progress.
+**Development preview.** Personal and manual Projects are available. AI/GitHub integrations have preview implementations; live coding, AI review and trusted one-click updates remain unfinished. There is no official signed release.
 
-## Available now
+![Action center with Review, In progress and one Next task](docs/images/action-center.jpg)
 
-- Add temporary tasks with a planned date, defaulting to today.
-- Complete or cancel tasks; keep their records in History.
-- See due/overdue tasks in Today and future tasks in Upcoming.
-- Keep tasks across restarts, with original planned dates.
-- Repeat daily or on selected weekdays, retain missed periods in History and stop future repeats.
-- Switch to Projects, create projects/milestones/manual tickets, write acceptance criteria and change ticket status.
+*Actual browser rendering of the shared desktop interface with synthetic sample data. These screenshots contain no personal tasks, account details or credentials.*
 
-Deletion, coding execution/review and one-click updates are not implemented.
+## Try it on Windows
 
-## Repeating tasks
-
-Choose **Repeat** and a start date of today or later. Daily tasks reset at local midnight. For **Weekly**, select one or more weekdays, such as Mon, Tue and Sat. Each selected date is a separate task, starting on the first matching date on or after the start date. Unselected days have no task. Dates follow the computer's current local timezone.
-
-Existing weekly schedules retain their original seven-day periods after upgrading. Their schedule list explicitly identifies this behavior; editing weekdays is not available.
-
-Completing/cancelling affects one occurrence. Unfinished periods become **Missed** in History; reopening catches up closed-app periods without overdue accumulation. Temporary tasks keep their original dates and stay pending.
-
-Expand **Repeating tasks** to stop a schedule. Its current-period task stays available; a future first occurrence is cancelled. History is retained. Upcoming shows the first scheduled task, not an infinite preview.
-
-## Manual projects
-
-Choose **Projects** to see three horizontal columns: Review, In Progress and one recommended unblocked Backlog ticket across all projects. Each column has its own border, background and count. Smaller windows can scroll the columns horizontally. Lists use creation time, oldest first, with ticket ID breaking ties. Expand View details for descriptions and acceptance criteria. Start ticket moves only the chosen Backlog ticket to In Progress; nothing starts automatically. A Backlog ticket can start only when its prerequisites are Done and no manual blocker remains.
-
-Select a project directly in the sidebar to open its milestones and tickets. **New project** is in the sidebar only. Compact **New milestone** and **New ticket** buttons open separate creation dialogs, keeping the main page focused on existing work. **Action center** stays in the sidebar to return to the overview. Open a ticket card for its description and acceptance criteria. Use its status buttons to move between Backlog, In Progress, Review and Done. Descriptions and acceptance criteria support multiple lines.
-
-The sidebar selects a project; the milestone selector limits the visible ticket list. Manual tickets have no GitHub/Codex controls. Everything stays in the local database across restarts. Switching workspaces starts their default view; unsaved form drafts are not retained across workspace changes. Choose Status board to browse tickets from all milestones in four horizontal status columns. Normal windows show all four columns together; narrower windows show Previous columns / Next columns controls above the cards. Each card shows its milestone and opens the same details/status controls. Milestones returns to the focused list; Action center stays the default.
-
-Use **Edit project**, **Edit milestone** or **Edit ticket** inside a ticket's details dialog to correct its title and details. Tickets also allow editing acceptance criteria. **Save changes** keeps the same identity, parent and status, including Done; **Cancel** discards the draft without saving. A failed save keeps your input. Save or cancel an edit before switching projects, milestones or workspaces.
-
-Use **Set prerequisites** in a ticket's details to choose work that must finish first. Click task cards to select or remove them; Selected cards show the saved choices when you reopen the picker. Links stay within the same project, including different milestones. Self-links and circular chains are rejected. Unfinished prerequisites appear by title; click one to open its details. A Backlog ticket is recommended and startable only when every prerequisite is Done and no manual blocker remains. Blocked is a notice, not a status or column. The card lists unfinished prerequisite titles and milestone names as clickable links. Links open the exact ticket, including across milestones; the action center uses the same links. Completing prerequisites removes that notice without changing status or starting work.
-
-Use **Add blocker** inside a ticket for waiting on something outside the project. Save a reason, edit it later or choose **Clear blocker** explicitly. Manual blockers stay visible until cleared, even after prerequisites finish. A failed save keeps your input; Cancel discards it. Blockers can appear on Backlog, In Progress and Review cards. Done cards keep their saved reason and dependency records without displaying an active blocked notice.
-
-Choose **Work type** when creating or editing an unpublished Backlog ticket. **Manual** keeps the usual status controls. **Coding with Codex** saves a local unpublished coding draft and shows its project repository, if connected. It creates no Issue or coding run. Coding drafts are excluded from next-task recommendations and cannot start or be marked Done. Published coding records show their GitHub Issue number as the task ID and retain their repository identity; work type cannot change after publication or while running. Publication and coding execution are later features.
-
-Existing installed data upgrades only after a verified pre-change backup. Old Ready tickets become Backlog; old Blocked tickets become Backlog with a manual blocker that you must explain or clear. IDs, text and dependency links remain. Named reviews use separate format-12 sample data; previous review formats remain untouched.
-
-## AI connection preview
-
-Open **AI connection** in the sidebar to check the separate FocusFlow Codex account. Install the pinned official runtime explicitly with npm run ai:install from a source checkout, then choose **Sign in with ChatGPT** and follow the browser link. The shared runtime stays under %LOCALAPPDATA%\FocusFlow\codex-product\runtime. Each app profile supplies its own codex-profile directory for sign-in settings. Live Windows credential-store separation still needs verification. Credentials use the OS credential store; no plaintext fallback is configured and existing Codex App sessions are not copied.
-
-**Check account** does not request a model response. **Run read-only AI check** requires the allowance checkbox and a ChatGPT-authenticated account. It consumes Codex allowance; API-key and other auth modes are refused. Code-writing remains later work. The new product login/keyring/live path still needs an owner-triggered Windows trial; ordinary tests use simulated accounts/results and never call a live model.
-
-## AI plan drafts
-
-Open a project and choose **AI plan draft**. Enter a goal, confirm that generation uses Codex allowance, then choose **Generate draft**. Only the entered goal is included in the planning prompt. It is sent to OpenAI through the pinned Codex runtime; project files, existing tasks and GitHub credentials are not attached. Each request checks for a ChatGPT account again. API-key billing is refused.
-
-Progress and **Cancel generation** remain visible while waiting. Closing the dialog requests cancellation too. A request already sent may use allowance. There is no automatic retry after failure, cancellation or reopening. Provider-internal retry progress may appear during an existing request.
-
-A valid result is saved only in this data profile, separately from project milestones and tickets. Reopen the dialog to read it without another model call. Expand suggestions to see descriptions, acceptance criteria, proposed Manual/Coding modes and prerequisite titles. Failed or cancelled replacements keep the previous draft and all existing tasks. Generating creates no approved tasks, GitHub Issues, pull requests or coding runs. Live response quality and Windows credential-store behavior still require an owner-triggered trial; automated checks use simulated replies.
-
-Choose **Edit draft plan** to correct milestone/task text, acceptance criteria, work types and prerequisite links. Clear **Include task** to exclude an unwanted suggestion. Save draft changes keeps those choices across restarts without creating project tickets. Cancel discards unsaved changes; failed saves retain your input. Save or cancel before closing the editor. A draft changed elsewhere must be reopened before saving or approving.
-
-Choose **Preview selected plan** to inspect exactly which milestones and tasks will be created. Excluded prerequisites must be included or their links removed explicitly. Confirm the checkbox and choose **Approve selected plan**. The selected plan is saved together in Backlog with its dependencies. Nothing starts or publishes to GitHub. Coding tasks remain unpublished and unstartable. Repeated approval, a lost reply or restarting cannot duplicate that plan. A failed write saves none of the plan; reopen to check its approval result before retrying. Approved drafts cannot be edited again; edit their saved tickets or generate a new draft instead.
-
-## Publish approved coding work
-
-Open **Publish approved work** in a project, then **Preview publication**. The Windows GitHub connection must already have an owner-authorized App installation with Issues read/write access. This feature cannot grant that permission. Inspect the repository name, visibility and public Issue content, confirm the checkbox, then approve the whole batch. Only coding tasks from approved plans are published. Personal data, goals, project notes and manual task text are excluded. One publication approval covers the batch; no per-task approval or automatic coding Start follows.
-
-GitHub assigns each Issue number after creation; the final title uses [ID] and coding prerequisite references use assigned numbers. The preview explains these substitutions and shows the public recovery marker. Results are saved per task. Reopen after restart or **Resume approved publication** to recover missing links, without duplicating successful creations. A definite refusal retains uncreated work for an explicit retry. An uncertain creation is searched by its marker; absence does not permit another creation. Conflicting/duplicate markers or remote edits require reconciliation. A wholly unstarted batch can be cancelled before revising its preview. Approved publication content and repository are locked; linked requirement changes use the explicit comparison flow. No product live-write trial is claimed by simulated tests.
-
-## Compare linked work
-
-Open a published coding ticket and choose **Compare linked work**, then **Refresh linked work**. The panel shows the last successful refresh, saved GitHub Issue state/body, local fields and which side changed since a known common version. Offline, expired/revoked access and rate-limit failures keep the previous evidence visible with an error. Opening the panel reads local state; refreshing reads GitHub without writing or calling a model. Manual tickets have no comparison controls.
-
-Use **Edit local requirements** to confirm a local proposal, or confirm **Use GitHub fields locally** to copy recognized public fields deliberately. Both retain Issue/task identity, prerequisites, mode and progress. The remote version is checked again before adopting it; changed/stale comparisons are refused. Unknown or ambiguous Issue formats cannot be imported silently. FocusFlow never overwrites the Issue during comparison: use **Open Issue on GitHub** for a deliberate public edit, then refresh. Save or cancel local edits before closing; a failed save retains the draft.
-
-If an existing PR belongs to this ticket, enter its number and explicitly choose **Inspect and link this PR**. It must explicitly close this Issue in the same repository; an existing PR identity cannot be replaced silently. Refresh retains its actual head, state and merge commit across restart. Issue closure, a closed unmerged PR and an observed merge are displayed separately. This comparison feature does not change task status or start another task; coding completion/review remains later work.
-
-## Run on Windows
-
-Install Node 24.12.x or a later 24.x release. In the project folder, run:
+Install Git and Node 24.12.x or a later 24.x release, then run:
 
 ~~~powershell
+git clone https://github.com/gh01wzx/focusflow.git
+cd focusflow
 npm ci
 .\Start-FocusFlow.cmd
 ~~~
 
-Run npm ci again when dependencies change. After setup, double-click Start-FocusFlow.cmd. The source launcher builds the app and keeps its console open. Source runs open separate development data, marked **Sample data**. Electron downloads its pinned runtime on first use.
+After setup, double-click **Start-FocusFlow.cmd**. Run npm ci again when dependencies change. The source launcher builds the app, keeps its console open and uses separate **Sample data**. Personal and manual Projects need no GitHub/Codex sign-in or model allowance. A browser preview is available with npm run start:web.
 
-Open **Build information** in the sidebar to see the actual app version, source commit/tree, uncommitted-change warning, database format and sample/everyday profile. Support details exclude task text, credentials and local paths. The desktop waits for a successfully rendered task view before showing the main window; window creation alone is not accepted as startup success. A missing interface reports a bounded 15-second diagnostic. Window-loading, database-upgrade and newer-data errors have separate guidance. These checks do not establish the cause of every historical native crash.
+For a proposed change, check out its exact PR commit and run **Review-FocusFlow.cmd** with the review name supplied in that PR. Reopen the same name to retain changes; use a new name for fresh examples. Source, named reviews and installed everyday data stay separate.
 
-After building this version, run **npm run diagnose:desktop** for one runtime-only attempt. It bypasses task/profile setup and reports a ready marker, missing runtime, native exit code or timeout without raw process output. A disposable guard profile detects accidental task-profile access. For an installed build, use `npm run diagnose:desktop -- "C:\\path\\to\\FocusFlow.exe"`. Stop after a failure and record its result before another controlled experiment; do not repeatedly launch unchanged or delete everyday data.
+The packaging target is Windows x64. Installed automation runs on GitHub's Windows runner; other Windows configurations have not been separately certified. Build an unsigned development installer with npm run package:windows, open the versioned installer in release, then open **FocusFlow** from the Desktop or Start menu. It bundles Electron/Node, installs per user and needs no Node/npm on the destination computer. Windows may show unknown-publisher or SmartScreen prompts; verify the source and candidate before deciding whether to run one. No downloadable official release or automatic updater is provided.
 
-To build an unsigned installer locally, run npm run package:windows. The output is in release. CI checks packaging but does not retain downloadable installers, screenshots or caches. The installer bundles Node/Electron; it does not provide automatic updates.
+## What works now
 
-For an explicitly reviewed development installer, open the versioned FocusFlow installer in `release`, then open **FocusFlow** from the Desktop or Start menu. Installation is per user and requires no separate Node/npm setup. Current installers are unsigned: Windows may show an unknown publisher or SmartScreen prompt. Verify the build and its source before choosing whether to run it. This is a development route, not an official signed release. Reopening the same data profile restores its existing window. Review profiles remain separate.
+| Area | What you can do |
+| --- | --- |
+| Personal | Add dated tasks, complete/cancel them, browse Today, Upcoming and History |
+| Repeating tasks | Repeat daily or on selected weekdays; retain missed periods without overdue accumulation |
+| Manual Projects | Create Projects, Milestones and Tickets; edit text and acceptance criteria |
+| Next action | Review work, see active tasks and explicitly start one eligible Backlog ticket |
+| Status board | Browse Backlog, In Progress, Review and Done across milestones |
+| Blockers | Link prerequisites, open the exact blocker and add/clear a manual reason |
+| Data protection | Retain records after restart; verify snapshots before migration; restore separately |
+| Optional previews | Connect GitHub, edit/approve saved plan drafts, publish approved coding Issues and explicitly compare linked work; live acceptance remains separate |
 
-## Local data
+Task deletion, coding execution/recovery, AI PR review and official one-click updates are unavailable. Coding drafts cannot start or be marked Done through manual controls.
 
-The Windows product database is at:
+## Complete a small project
+
+1. Open **Projects**, choose **New project**, then create a milestone and three **Manual** tickets.
+2. Give each ticket an observable acceptance step. Use **Set prerequisites** to make the second ticket depend on the first.
+3. Open **Action center** and explicitly start the first ticket. Blocked tasks cannot be recommended or started.
+4. Open its details and move it through **Review** to **Done**, then explicitly start the newly eligible ticket. Finishing work never starts the next ticket automatically.
+5. Choose **Status board** to compare all four columns. Reopen the same profile to retain text, identity, progress and dependency links.
+
+**Blocked is a notice, not a fifth status.** Its links open unfinished prerequisites, including in another milestone. A manual reason stays until you clear it.
+
+![Project board showing Backlog, In Progress, Review and Done](docs/images/status-board.jpg)
+
+## Use Personal each day
+
+Add a task with a planned date; the default is Today. Temporary tasks stay pending until resolved and keep their original date. Choose **Daily** or **Weekly** for repeats; Weekly lets you select weekdays.
+
+Repeats follow the computer's local date. An unfinished recurring period becomes **Missed** in History rather than stacking up overdue copies. Completing/cancelling affects one occurrence. Stopping a repeat preserves history and any current occurrence. Older weekly schedules keep their original seven-day periods. [Detailed usage and integration instructions](docs/USAGE.md).
+
+![Today view with dated tasks and a daily repeat](docs/images/today.jpg)
+
+## Data and recovery
+
+Installed everyday tasks are stored outside the source and installation folders:
 
 ~~~text
 %LOCALAPPDATA%\FocusFlow\desktop\data\tracker.db
 ~~~
 
-It is outside source and installation output. The app does not import the old Phase 0 notes or access the separate Codex login profile. Local task data is not sent automatically. An explicitly requested AI draft sends the entered goal to OpenAI; saved drafts stay in local data and backups.
+Source launches and named reviews use separate sample data. Reopening never resets a profile or adds more examples. [Exact data paths](docs/DEVELOPMENT.md#data-paths).
 
-## Try a proposed change
+Existing databases change format only after a verified pre-change snapshot. A failed migration rolls back. Do not open newer data with an older app or overwrite the only current copy during recovery; restore a compatible snapshot to a separate target first. These protections do not implement installer rollback or a trusted updater. [Recovery commands](docs/DEVELOPMENT.md#backup-and-recovery).
 
-In the checkout for the PR you are reviewing, run:
+Personal/manual task actions stay local. Optional AI generation sends the goal you explicitly submit to OpenAI and uses ChatGPT Codex allowance. Optional approved publication sends previewed coding-ticket content to the selected GitHub repository. API-key billing is refused. Automated provider tests use simulations without spending live-model allowance. Credentials and personal databases never belong in public source. [GitHub setup and limits](docs/GITHUB_CONNECTION.md) � [AI setup](docs/DEVELOPMENT.md#ai-account-setup-and-validation).
 
-~~~powershell
-npm ci
-.\Review-FocusFlow.cmd pr-72
-~~~
+## Architecture and evidence
 
-Use the name given in the PR. The equivalent command is npm run review -- pr-72. The window shows **Sample data - Review pr-72** in its title and a yellow **Sample data** notice above both workspaces.
+React components render controls, controllers coordinate state, checked clients call local HTTP routes, and feature services enforce task rules. SQL repositories persist to SQLite; workspace composition owns transactions and shutdown. [Architecture](docs/ARCHITECTURE.md) follows one Add task action through the layers.
 
-The first run creates a few Personal examples and **Sample project** with three milestones and 12 manual tickets covering all four statuses. Open the project and choose **Status board** to see them together. Examples include a Backlog ticket waiting for a prerequisite in another milestone, a manual blocker and an active ticket with a completed prerequisite. Descriptions explain what to try; each ticket includes acceptance steps.
-
-Fresh sample profiles also include a saved example under **AI plan draft**. Edit, exclude, preview and approve it without installing Codex, signing in or calling a model. Its three suggestions are separate from the 12 existing sample tickets until you approve them. Existing sample data is never topped up or reset.
-
-Add, complete or change examples freely. Reopen with the same name to keep your changes; a different name starts a separate workspace. Review names use letters, numbers and hyphens. Existing review databases are never topped up or reset. To get newly added examples, use a new review name, such as task-41-four-states.
-
-An installed build also supports review mode:
-
-~~~powershell
-& "$env:LOCALAPPDATA\Programs\FocusFlow\FocusFlow.exe" --review pr-72
-~~~
-
-Use the actual installation path if it differs. Opening the installed app normally still uses your everyday tasks. Source development, named review and installed everyday data are separate; your existing everyday data is not moved or copied. To return to it after using the source launcher, open the installed app normally.
-
-Review/development folders are also separated by database format. A format change starts fresh sample data rather than upgrading another format's review workspace. See [Development](docs/DEVELOPMENT.md#data-paths) for paths and deliberate migration trials. Earlier builds without review mode must use their documented disposable-test setup; do not assume they understand the new review command.
-
-## Read the project
-
-Start with [Architecture](docs/ARCHITECTURE.md): it follows one Add task action from the screen to SQLite. Open `public/today/components/TaskComposer.tsx` alongside it; read one path before browsing every folder.
-
-The [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) is the roadmap. Feature labels group the user stories; the owner selects one task at a time.
-
-The [complete manual-project scenario](https://github.com/gh01wzx/focusflow/issues/67) checks a small reading project through planning, prerequisites, explicit Start, Review, Done and restart in separate browser/installed profiles. [Validation](docs/VALIDATION.md#complete-manual-project) explains its coverage. Live self-improvement through coding/review and a trusted update is a separate acceptance scenario; manual-flow evidence does not complete that gate.
-
-| Document | Purpose |
+| Scenario | Evidence and limits |
 | --- | --- |
-| [Architecture](docs/ARCHITECTURE.md) | Components, request flow and code-reading order |
-| [Development](docs/DEVELOPMENT.md) | Build, tests, data paths and recovery |
-| [Product baseline](docs/PRODUCT_BASELINE.md) | Approved MVP requirements |
-| [Validation](docs/VALIDATION.md) | Verification coverage, retained evidence and known limits |
-| [Codex commands](docs/CODEX.md) | Optional standalone integration checks |
+| Personal across days/restarts | [Task #37 / PR #70](https://github.com/gh01wzx/focusflow/pull/70): selected weekdays, old schedules and missed periods |
+| Complete a manual project | [Task #67 / PR #92](https://github.com/gh01wzx/focusflow/pull/92): browser/installed Start, Review, Done, dependencies and exact restart records |
+| Installed entry and data preservation | [Task #63 / PR #96](https://github.com/gh01wzx/focusflow/pull/96): exact tested source, shortcut targets, duplicate handoff, replacement and separate recovery; unsigned development builds |
+| AI self-improvement and official update | [Task #68](https://github.com/gh01wzx/focusflow/issues/68): unfinished; no end-to-end MVP claim |
 
-Source, app text and repository documentation use English. User-entered content keeps its original language.
+Required code checks: npm run check:language, npm run typecheck, npm run build and npm test. Public standard-runner CI also exercises browser/installed workflows. Each PR records its tested commit and failures. Passing hosted checks do not diagnose an earlier native crash on another machine. Persistent CI artifact uploads and caches are disabled. [Coverage and limitations](docs/VALIDATION.md).
 
-GitHub project connection is under development; see [setup and limits](docs/GITHUB_CONNECTION.md). Manual projects work without a GitHub account.
+For startup problems, record **Build information** when possible. Preserve data and run npm run diagnose:desktop for one data-free runtime attempt. Stop after a native failure and report the result before another controlled experiment. [Developer guidance](docs/DEVELOPMENT.md).
 
-Formal installer/update decisions and remaining trust gates are described in [Windows release route](docs/RELEASE_ROUTE.md). Current installers are unsigned development builds.
-
-## Prepare a development candidate
-
-From a clean committed Windows checkout, run `npm run release:candidate`. It runs language/types, packaging (including the full build) and tests, then writes `release/candidate.json` with version/commit/tree, database format, installer size and SHA-256. `npm run release:verify` checks the manifest and installer again. Local preparation explicitly leaves installed-app verification incomplete; hosted Windows preparation requires successful ordinary/review/recovery/manual-flow reports from the exact same commit.
-
-This is an unpublished development candidate. Checksums establish local file integrity, not publisher trust. The manifest explicitly requires an owner publication decision and is never an automatic update feed. No installer is published or retained by CI; local output remains ignored. Signing, a trusted release channel and a genuine supported-version update/recovery trial remain separate gates. See [Windows release route](docs/RELEASE_ROUTE.md#prepare-an-unpublished-candidate).
+The [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) tracks remaining work. [Product baseline](docs/PRODUCT_BASELINE.md) � [Windows release route](docs/RELEASE_ROUTE.md).

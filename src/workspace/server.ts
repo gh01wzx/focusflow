@@ -49,7 +49,7 @@ export async function startWorkspaceServer(options: {
   const workspaces = createWorkspaceService(store.execution, store.projectRepository, join(options.dataDirectory, '..', 'coding-workspaces'));
   const approvals = createApprovalBroker();
   const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });
-  const coding = createCodingService(store.execution,store.projectRepository,store.projectTransaction,ai,approvals);
+  const coding = createCodingService(store.execution,store.projectRepository,store.projectTransaction,ai,approvals,options.github?.issues);
   const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai), store.planApproval);
   const publications = createPublicationService(store.publications, store.projects, store.projectTransaction, options.github?.issues);
   const linkedWork = createLinkedWorkService(store.linkedWork, store.projectRepository, store.projectTransaction, options.github?.issues);
@@ -58,10 +58,11 @@ export async function startWorkspaceServer(options: {
     try {
       secureRequest(request, response, origin);
       const resource = request.url ?? '';
-      const runRoute=/^\/api\/project-tickets\/([a-f0-9-]{36})\/coding\/run(?:\/(cancel|recover))?$/.exec(resource);
+      const runRoute=/^\/api\/project-tickets\/([a-f0-9-]{36})\/coding\/run(?:\/(start|resume|cancel|recover))?$/.exec(resource);
       if(runRoute&&(runRoute[2]?request.method==='POST':request.method==='GET')){
         const id=runRoute[1]!;
-        if(runRoute[2]){await readJson(request,origin,4096);if(runRoute[2]==='cancel')coding.cancel(id);else coding.recover(id);}
+        if(runRoute[2]){const input=await readJson(request,origin,16384);if(runRoute[2]==='cancel')coding.cancel(id);
+          else if(runRoute[2]==='recover')coding.recover(id);else coding.begin(id,input,runRoute[2]==='resume');}
         sendJson(response,200,coding.state(id));return;
       }
       const approvalRoute = /^\/api\/project-tickets\/([a-f0-9-]{36})\/coding\/approval$/.exec(resource);

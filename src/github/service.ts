@@ -104,6 +104,13 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
   };
   return {
     issues: createIssueProvider(repositoryRequest),
+    token: (projectId:string,token:unknown,confirmed:unknown)=>run(projectId,async()=>{
+      if(confirmed!==true||typeof token!=='string'||!/^github_pat_[A-Za-z0-9_]{20,1000}$/.test(token))throw new GitHubFailure('Enter a fine-grained GitHub token and explicitly confirm protected local storage.');
+      const login=await account(token);
+      const value:StoredGitHub={clientId:'',token,account:login,expiresAt:null,repositories:saved?.account===login?saved.repositories:{}};
+      await vault.write(value);saved=value;device=null;preview=null;repositories=[];
+      message='GitHub token checked and stored using Windows encryption. Inspect and confirm this project repository; no Issue or code was published.';
+    }),
     status: (projectId: string) => run(projectId, async () => {}),
     start: (projectId: string, clientId: unknown) => run(projectId, async () => {
       if (typeof clientId !== 'string' || !/^[A-Za-z0-9_.-]{5,100}$/.test(clientId)) throw new GitHubFailure('Enter the client ID of your registered GitHub App with device flow enabled.');

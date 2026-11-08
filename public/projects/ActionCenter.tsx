@@ -25,7 +25,9 @@ export function ActionCenter({ onWorkspaceChange, onProject, onTicket, onNewProj
         onVisit={ticket => onTicket(ticket.projectId, ticket.id)} />
       {isTicketBlocked(item.ticket, view.tickets, view.dependencies) && <button className="secondary-button" disabled={state.busy}
         onClick={() => onTicket(item.ticket.projectId, item.ticket.id)}>Inspect blocker</button>}
-      {recommended && <button className="primary" disabled={state.busy} onClick={() => void state.start(item.ticket.id)}>Start ticket</button>}
+      {(recommended||item.ticket.executionMode==='codex') && <button className="primary" disabled={state.busy}
+        onClick={() => item.ticket.executionMode==='codex'?onTicket(item.ticket.projectId,item.ticket.id):void state.start(item.ticket.id)}>
+        {item.ticket.executionMode==='codex'?'Open coding task':'Start ticket'}</button>}
     </li>;
   }
   return <WorkspaceShell workspace="projects" busy={state.busy} onWorkspaceChange={onWorkspaceChange}

@@ -7,6 +7,9 @@ export function unfinishedPrerequisites(id: string, tickets: ProjectTicket[], de
 export function canStartTicket(ticket: ProjectTicket, tickets: ProjectTicket[], dependencies: TicketDependency[]) {
   return ticket.executionMode === 'manual' && ticket.status === 'backlog' && !isTicketBlocked(ticket, tickets, dependencies);
 }
+export function canStartCodingTicket(ticket: ProjectTicket,tickets: ProjectTicket[],dependencies: TicketDependency[]) {
+  return ticket.executionMode==='codex'&&!!ticket.coding?.issueNumber&&!!ticket.coding.repository&&ticket.status==='backlog'&&!isTicketBlocked(ticket,tickets,dependencies);
+}
 export function isTicketBlocked(ticket: ProjectTicket, tickets: ProjectTicket[], dependencies: TicketDependency[]) {
   return ticket.status !== 'done' && (!!ticket.blockReason || unfinishedPrerequisites(ticket.id, tickets, dependencies).length > 0);
 }

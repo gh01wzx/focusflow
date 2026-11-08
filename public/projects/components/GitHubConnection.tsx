@@ -8,6 +8,8 @@ export function GitHubConnection({ projectId, onRepository }: { projectId: strin
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [clientId, setClientId] = useState('');
+  const [personalToken,setPersonalToken]=useState('');
+  const [tokenConsent,setTokenConsent]=useState(false);
   const [name, setName] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [refresh, setRefresh] = useState(0);
@@ -109,7 +111,7 @@ export function GitHubConnection({ projectId, onRepository }: { projectId: strin
             <label htmlFor={'github-client-' + projectId}>GitHub App client ID</label>
             <input id={'github-client-' + projectId} value={clientId} maxLength={100} autoCapitalize="none" spellCheck={false}
               onChange={event => setClientId(event.target.value)} />
-            <p className="github-hint">Use your own GitHub App with device flow enabled and read-only Repository metadata access. No client secret is needed.</p>
+            <p className="github-hint">Use your GitHub App with device flow enabled. Reading needs repository metadata; publishing coding work also needs Issues, Contents and Pull requests write access. This app cannot grant those permissions. No client secret is needed.</p>
             <div className="github-actions">
               {!status.userCode && <button type="button" className="secondary-button" disabled={!clientId.trim()}
                 onClick={() => void act('start', { clientId })}>Authorize GitHub</button>}
@@ -123,6 +125,12 @@ export function GitHubConnection({ projectId, onRepository }: { projectId: strin
                 <button type="button" className="secondary-button" onClick={() => void act('cancel')}>Cancel authorization</button>
               </div>
             </div>}
+            <details><summary>Use a fine-grained GitHub token instead</summary>
+              <p>Choose only the intended repositories in GitHub. Reading needs metadata; code publication needs Contents, Issues and Pull requests access. No permission is added automatically.</p>
+              <label>Fine-grained token<input type="password" value={personalToken} autoComplete="off" maxLength={1100} spellCheck={false} onChange={event=>setPersonalToken(event.target.value)} /></label>
+              <label><input type="checkbox" checked={tokenConsent} onChange={event=>setTokenConsent(event.target.checked)} />Store this token locally using Windows-protected encryption.</label>
+              <button disabled={!personalToken||!tokenConsent} onClick={()=>{const token=personalToken;setPersonalToken('');setTokenConsent(false);void act('token',{token,confirmed:true});}}>Connect with token</button>
+            </details>
           </div>
         </details>
         <div className="github-disconnect">

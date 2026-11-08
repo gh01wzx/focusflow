@@ -5,6 +5,7 @@ import {createRunClient} from '../../../src/client/coding.ts';
 const api=createRunClient();
 export function CodingRunPanel({ticketId,disabled,onChanged}:{ticketId:string;disabled:boolean;onChanged():void}){
   const[state,setState]=useState<CodingState|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const[scope,setScope]=useState(false),[allowance,setAllowance]=useState(false),[checks,setChecks]=useState(false),[feedback,setFeedback]=useState('');
   const sequence=useRef(0),alive=useRef(true),requestBusy=useRef(false);
   useEffect(()=>{alive.current=true;let reading=false;
     const read=async()=>{if(reading||requestBusy.current)return;reading=true;const version=sequence.current;
@@ -12,12 +13,22 @@ export function CodingRunPanel({ticketId,disabled,onChanged}:{ticketId:string;di
     void read();const timer=setInterval(()=>void read(),2000);return()=>{alive.current=false;clearInterval(timer);sequence.current++;};
   },[ticketId]);
   async function act(action:string){if(requestBusy.current)return;requestBusy.current=true;sequence.current++;setBusy(true);setError('');
-    try{const next=await api.act(ticketId,action);if(alive.current){setState(next);onChanged();}}
+    try{const next=await api.act(ticketId,action,{confirmScope:scope,confirmAllowance:allowance,requirementsToken:state?.requirementsToken,feedback,allowChecks:checks});if(alive.current){setState(next);setScope(false);setAllowance(false);onChanged();}}
     catch(cause){if(alive.current)setError(cause instanceof Error?cause.message:'The coding action failed.');}
     finally{requestBusy.current=false;if(alive.current)setBusy(false);}
   }
   return <section className="coding-run" aria-label="Coding run"><h3>Coding run</h3>
     {error&&<p role="alert">{error}</p>}
+    {state?.activeTicketId&&state.activeTicketId!==ticketId&&<p>Another coding task is active or uncertain. Open it from Action center before starting more work.</p>}
+    {state&&(state.canStart||state.canResume)&&<div>
+      <p>Start runs Codex for this ticket in its prepared worktree. It uses ChatGPT Codex allowance. Nothing is merged, deployed or published automatically.</p>
+      <p>This is a local acceptance build. Real Windows sandbox enforcement and account integration have not been verified.</p>
+      {state.canResume&&<label>Revision or recovery instructions<textarea value={feedback} maxLength={8000} disabled={busy||disabled} onChange={event=>setFeedback(event.target.value)} /></label>}
+      <label><input type="checkbox" checked={scope} disabled={busy||disabled} onChange={event=>setScope(event.target.checked)} />I approve coding for this ticket in its prepared workspace.</label>
+      <label><input type="checkbox" checked={allowance} disabled={busy||disabled} onChange={event=>setAllowance(event.target.checked)} />I understand this uses Codex allowance, including work already sent before cancellation.</label>
+      <label><input type="checkbox" checked={checks} disabled={busy||disabled} onChange={event=>setChecks(event.target.checked)} />Allow project checks in this coding run. Otherwise report checks as not run.</label>
+      <button disabled={busy||disabled||!scope||!allowance} onClick={()=>void act(state.canStart?'start':'resume')}>{state.canStart?'Start coding ticket':'Resume this ticket explicitly'}</button>
+    </div>}
     {!state?.run?<p>No coding run has started for this ticket.</p>:<>
       <p role="status"><strong>{state.run.stage.replaceAll('_',' ')}</strong> / {state.run.message}</p>
       <p>Run <code>{state.run.id}</code> / updated {new Date(state.run.updatedAt).toLocaleString()}</p>

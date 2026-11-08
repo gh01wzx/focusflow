@@ -7,6 +7,9 @@ import type { CodingRun,CodingState,CodingStage } from '../shared/coding.ts';
 import { activeCodingStage } from '../shared/coding.ts';
 import { executionRecord } from '../shared/execution.ts';
 import { unfinishedPrerequisites } from '../shared/dependencies.ts';
+import { issueFields } from '../shared/linked-work.ts';
+import type { LinkedWorkProvider } from '../sync/service.ts';
+import type { GitHubRepository } from '../shared/github.ts';
 import { codingTurn,CodingTurnFailure } from '../codex/coding-turn.ts';
 import { CodexFailure } from '../codex/client.ts';
 import { CodexProcessFailure } from '../codex/process.ts';
@@ -31,7 +34,7 @@ function message(code:string):string {
   return'The run did not complete. Inspect the retained workspace and recorded stage; the cause is not established.';
 }
 export function createCodingService(repository:ExecutionRepository,projects:ProjectRepository,transaction:ProjectTransaction,
-  ai:AiService,approvals:ApprovalBroker) {
+  ai:AiService,approvals:ApprovalBroker,provider?:LinkedWorkProvider & {inspect(projectId:string):Promise<GitHubRepository>}) {
   let active:{ticketId:string;runId:string;abort:AbortController;work:Promise<void>}|null=null,closing=false;
   function current(id:string){const ticket=projects.findTicket(id);if(!ticket?.coding?.repository||!ticket.coding.issueNumber||ticket.executionMode!=='codex')throw new ExecutionFailure('NOT_PUBLISHED','Choose a published coding ticket.');return ticket;}
   function eligible(id:string){const t=current(id);return t.status==='backlog'&&!t.blockReason&&unfinishedPrerequisites(id,projects.listTickets(t.projectId),projects.listDependencies(t.projectId)).length===0;}
@@ -52,6 +55,13 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
   async function perform(id:string,runId:string,abort:AbortController,prompt:string,expected:string){
     try{
       const workspace=repository.workspace(id)!;
+      const linked=current(id);
+      if(!provider)throw new ExecutionFailure('GITHUB_REQUIRED','Connect GitHub in the desktop app before starting coding.');
+      const live=await provider.inspect(linked.projectId),expectedRepository=linked.coding!.repository!;
+      if(live.id!==expectedRepository.id||live.fullName!==expectedRepository.fullName||live.private!==expectedRepository.private)throw new ExecutionFailure('REPOSITORY_CHANGED','The GitHub repository changed. Reconcile the connection first.');
+      const issue=await provider.read(linked.projectId,expectedRepository,linked.coding!.issueNumber!);
+      const fields=issueFields(issue,id);
+      if(issue.state!=='open'||!fields||fields.title!==linked.title||fields.description!==linked.description||fields.acceptanceCriteria!==linked.acceptanceCriteria)throw new ExecutionFailure('SYNC_REQUIRED','Refresh linked work and reconcile the open Issue requirements before starting or resuming.');
       const actual=await realpath(await git(workspace.workspacePath,['rev-parse','--show-toplevel'],abort.signal));
       if(actual.toLowerCase()!==(await realpath(workspace.workspacePath)).toLowerCase()||await git(workspace.workspacePath,['branch','--show-current'],abort.signal)!==workspace.branch)throw new ExecutionFailure('WORKSPACE_CHANGED','The ticket worktree or branch changed. Inspect it before resuming.');
       const summary=await ai.runWithChatGPT(async(client,_cwd,signal)=>{

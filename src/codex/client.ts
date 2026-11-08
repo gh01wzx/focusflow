@@ -41,6 +41,8 @@ export function modelFailureCode(info: unknown): FailureCode {
 
 /** JSONL transport only. Consumers must not persist raw notifications or responses. */
 export class CodexClient extends EventEmitter {
+  private approvalHandler: ((method: string, params: Record<string, unknown>) => Promise<'accept' | 'decline' | 'cancel'>) | null = null;
+  private readonly incoming = new Set<string>();
   private nextId = 1;
   private readonly pending = new Map<number, Pending>();
   private buffer = '';
@@ -86,6 +88,10 @@ export class CodexClient extends EventEmitter {
 
   close(): void { this.fail('CLOSED'); }
 
+  setApprovalHandler(handler: ((method: string, params: Record<string, unknown>) => Promise<'accept' | 'decline' | 'cancel'>) | null): void {
+    this.approvalHandler = handler;
+  }
+
   private send(method: string, params: unknown): Promise<unknown> {
     if (this.closed) return Promise.reject(new CodexFailure('CLOSED'));
     const id = this.nextId++;
@@ -125,8 +131,19 @@ export class CodexClient extends EventEmitter {
     if (typeof method === 'string') {
       if (id !== undefined) {
         if (typeof id !== 'string' && typeof id !== 'number') { this.fail('PROTOCOL'); return; }
-        // This feasibility client never grants execution, file, network or account permissions.
+        // Without an explicit interactive owner, preserve the read-only client's denial behavior.
         if (method === 'item/commandExecution/requestApproval' || method === 'item/fileChange/requestApproval') {
+          const key = typeof id + ':' + String(id);
+          if (this.incoming.has(key)) { this.fail('PROTOCOL'); return; }
+          if (this.approvalHandler) {
+            this.incoming.add(key);
+            const handler = this.approvalHandler;
+            void Promise.resolve().then(() => handler(method, record(params))).catch(() => 'decline' as const).then(decision => {
+              this.incoming.delete(key);
+              if (!this.closed) this.write({ id, result: { decision: ['accept','decline','cancel'].includes(decision) ? decision : 'decline' } });
+            });
+            return;
+          }
           this.write({ id, result: { decision: 'cancel' } });
         } else {
           this.write({ id, error: { code: -32601, message: 'Client request is not supported' } });
@@ -151,6 +168,8 @@ export class CodexClient extends EventEmitter {
   private fail(code: FailureCode): void {
     if (this.closed) return;
     this.closed = true;
+    this.approvalHandler = null;
+    this.incoming.clear();
     this.buffer = '';
     this.input.off('data', this.onData);
     for (const pending of this.pending.values()) {

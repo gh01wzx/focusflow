@@ -25,6 +25,7 @@ import { TaskInputError } from '../tasks/validation.ts';
 import { createWorkspaceService } from '../execution/workspaces.ts';
 import { matchCodingRoute, dispatchWorkspaceRoute } from '../execution/routes.ts';
 import { ExecutionFailure } from '../execution/git.ts';
+import { createApprovalBroker } from '../execution/approvals.ts';
 
 const assets = new Map([
   ['/', ['today/index.html', 'text/html; charset=utf-8']],
@@ -45,6 +46,7 @@ export async function startWorkspaceServer(options: {
   const trace = (stage: ShutdownStage) => { options.onShutdown?.(stage); };
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
   const workspaces = createWorkspaceService(store.execution, store.projectRepository, join(options.dataDirectory, '..', 'coding-workspaces'));
+  const approvals = createApprovalBroker();
   const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });
   const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai), store.planApproval);
   const publications = createPublicationService(store.publications, store.projects, store.projectTransaction, options.github?.issues);
@@ -54,6 +56,12 @@ export async function startWorkspaceServer(options: {
     try {
       secureRequest(request, response, origin);
       const resource = request.url ?? '';
+      const approvalRoute = /^\/api\/project-tickets\/([a-f0-9-]{36})\/coding\/approval$/.exec(resource);
+      if (approvalRoute && (request.method === 'GET' || request.method === 'POST')) {
+        const id=approvalRoute[1]!; workspaces.read(id);
+        if (request.method==='POST') approvals.decide(id,await readJson(request,origin,4096));
+        sendJson(response,200,{ticketId:id,approval:approvals.state(id)});return;
+      }
       const codingRoute = matchCodingRoute(request.method, resource);
       if (codingRoute) {
         const input = request.method === 'GET' ? undefined : await readJson(request, origin, 8192);
@@ -144,6 +152,7 @@ export async function startWorkspaceServer(options: {
   }, () => { trace('database:begin'); store.close(); trace('database:end'); }, async () => {
     trace('transport:stopped');
     workspaces.close();
+    approvals.close();
     const results = await Promise.allSettled([
       (async () => { trace('plans:begin'); await plans.close(); trace('plans:end'); })(),
       publications.close(),

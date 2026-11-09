@@ -53,10 +53,11 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
     const delivery=repository.delivery(id),publicationPending=!!delivery&&['committing','creating-pr','uncertain'].includes(delivery.stage);
     const linked=linkedWork?.read(id),pullNumber=delivery?.pullNumber??linked?.pullNumber??null,linkedHeadSha=linked?.pull?.headSha??delivery?.commitSha??null;
     const remoteAligned=!delivery?.pullNumber||linkedHeadSha===delivery.commitSha;
+    const externalPull=!!linked?.pullNumber&&linked.pullNumber!==delivery?.pullNumber;
     const history=repository.runs().filter(r=>r.ticketId===id).slice(-20).reverse().map(r=>({id:r.id,stage:r.stage,createdAt:r.createdAt,updatedAt:r.updatedAt,headSha:r.headSha,feedbackHeadSha:r.feedbackHeadSha??null,feedback:r.feedback,summary:r.summary.slice(0,4000)}));
-    return {ticketId:id,run,activeTicketId:owner?.ticketId??null,requirementsToken:token(id),history,pullNumber,linkedHeadSha,
-      canStart:!closing&&!active&&!owner&&!ai.busy()&&!publicationPending&&eligible(id)&&repository.workspace(id)?.state==='ready',
-      canResume:!closing&&!active&&!owner&&!ai.busy()&&!publicationPending&&remoteAligned&&!!run&&['failed','stopped','interrupted','ready','review'].includes(run.stage)&&t.status!=='done'&&unblocked(id)&&repository.workspace(id)?.state==='ready'};
+    return {ticketId:id,run,activeTicketId:owner?.ticketId??null,requirementsToken:token(id),history,pullNumber,linkedHeadSha,externalPull,
+      canStart:!closing&&!active&&!owner&&!ai.busy()&&!publicationPending&&!externalPull&&eligible(id)&&repository.workspace(id)?.state==='ready',
+      canResume:!closing&&!active&&!owner&&!ai.busy()&&!publicationPending&&!externalPull&&remoteAligned&&!!run&&['failed','stopped','interrupted','ready','review'].includes(run.stage)&&t.status!=='done'&&unblocked(id)&&repository.workspace(id)?.state==='ready'};
   }
   async function perform(id:string,runId:string,abort:AbortController,prompt:string,expected:string){
     try{

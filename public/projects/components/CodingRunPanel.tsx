@@ -22,6 +22,7 @@ export function CodingRunPanel({ticketId,disabled,onChanged}:{ticketId:string;di
   }
   return <section className="coding-run" aria-label="Coding run"><h3>Coding run</h3>
     {error&&<p role="alert">{error}</p>}
+    {state?.externalPull&&<p>This PR was linked for review only. This worktree cannot publish or revise it; no replacement PR will be created.</p>}
     {state?.activeTicketId&&state.activeTicketId!==ticketId&&<p>Another coding task is active or uncertain. Open it from Action center before starting more work.</p>}
     {state&&(state.canStart||state.canResume)&&<div>
       <p>Start runs Codex for this ticket in its prepared worktree. It uses ChatGPT Codex allowance. Nothing is merged, deployed or published automatically.</p>

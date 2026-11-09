@@ -1,6 +1,6 @@
 # Development
 
-The current delivery is a source-only local acceptance build. Start-FocusFlow.cmd is the only Windows command file; it also accepts --review NAME. The owner requested implementation without automated tests or live model trials. Verification workflows are manual-only, and neither their absence nor a merged PR is evidence that the new code works. Formal packaging/release/updating is deferred.
+The product is a personal-use local tool run from source. Start-FocusFlow.cmd is the only Windows command file; it also accepts --review NAME. The owner requested implementation without automated tests or live model trials. Verification workflows are manual-only, and neither their absence nor a merged PR is evidence that the new code works. Formal installation, signing, distribution, release and updating are outside scope.
 
 Prerequisite: Node 24.12.x or later 24.x. Install exact dependencies with npm ci.
 
@@ -41,9 +41,8 @@ After GitHub creates an Issue, add its actual number to the title; do not guess 
 | npm test | Run compiled tests |
 | npm run test:source | Optional Node type-stripping execution; not a type check |
 | npm run ai:install | Explicitly install pinned Codex into the separate product runtime; no login or model turn |
-| npm run package:windows | Build an unsigned NSIS installer; publication is disabled |
 
-Start-FocusFlow.cmd opens development data. Start-FocusFlow.cmd --review pr-72 opens a named review. Run npm ci again when dependencies change. The installed app bundles its runtime and accepts --review pr-72 without Node or npm.
+Start-FocusFlow.cmd builds and opens fixed personal data using npm start -- --personal. Start-FocusFlow.cmd --review pr-72 opens separate sample data. npm start without --personal remains a developer sample launch. Existing development/review data is not automatically imported into the personal profile. Run npm ci again when dependencies change.
 
 ## Source and generated files
 
@@ -55,8 +54,8 @@ The build removes only the validated project dist directory before compiling. De
 
 | Launch | Directory under %LOCALAPPDATA%\FocusFlow |
 | --- | --- |
-| Installed app, no review argument | desktop |
-| Source desktop/browser default | development\CHECKOUT_ID\schema-N |
+| Start-FocusFlow.cmd / source --personal / legacy installed default | desktop |
+| npm start / browser developer default without --personal | development\CHECKOUT_ID\schema-N |
 | Source or installed --review pr-72 | reviews\pr-72\schema-N |
 
 Each directory contains data\tracker.db. N is the running build's database format; CHECKOUT_ID is a stable hash of the source directory. Reopening the same directory/name and format keeps changes. Named reviews can be reopened from another checkout; use a distinct name for each PR or independent trial. A schema change opens a separate sample workspace. No automatic import, reset or deletion occurs.
@@ -67,7 +66,7 @@ Development/review windows show a sample-data notice and title. Examples are add
 
 Explicit developer overrides remain available for existing tools: FOCUSFLOW_TEST_PROFILE selects a desktop-test directory, and FOCUSFLOW_DATA_DIR selects browser-service data directly. Neither seeds examples. Clear FOCUSFLOW_TEST_PROFILE before using --review; a conflict is refused. Browser review mode ignores FOCUSFLOW_DATA_DIR and uses the named review. These overrides are not everyday/review launch instructions.
 
-Previous spike data and the separate Codex profile are never imported or deleted by source cleanup. Installed everyday data stays in its original location; source launchers no longer open it by default.
+Previous spike, development/review data and the separate Codex profile are never imported or deleted by source cleanup. The personal source launcher reuses the established desktop everyday-data location. Its path does not change with checkout or schema version, and it never seeds examples. --personal refuses --review or FOCUSFLOW_TEST_PROFILE conflicts rather than silently choosing another profile.
 
 Private plan drafts use the current profile database and its snapshots. Reopening a draft reads local storage only. The shared current shutdown path cancels planning before data closure. No new schema version is introduced for enabling this interface.
 
@@ -115,7 +114,7 @@ Verification workflows are currently workflow_dispatch only. No PR/main push sta
 
 Installed task, review and synthetic prior-schema recovery checks use the same disposable installation in one job. Recovery still requires earlier steps to pass. This avoids transferring an installer through artifact storage. Real failures still fail the job; existing native-close failures are not suppressed.
 
-CI does not upload installers, screenshots, reports or dependency caches. Result/failure reports are printed in run logs; screenshots and installer files exist only on the disposable runner. The scripts still produce local files when run by a developer. Build a local unsigned installer with npm run package:windows; historical artifacts remain subject to their existing expiration dates.
+CI does not upload installers, screenshots, reports or dependency caches. Result/failure reports are printed in run logs; screenshots and installer files exist only on the disposable runner. The scripts still produce local files when run by a developer. Distribution tooling is historical and outside the personal-use scope; historical artifacts remain subject to their existing expiration dates.
 
 ### Personal account controls
 
@@ -135,10 +134,6 @@ After a native crash, stop repeated launches. Preserve user data and directory p
 
 See [GitHub connection](GITHUB_CONNECTION.md) for the authorization comparison, owner setup and disposable review steps. Review profile credentials are separate from everyday credentials. Connecting alone performs no repository writes.
 
-## Disposable installer replacement experiment
+## Historical distribution tooling
 
-The [Windows release route](RELEASE_ROUTE.md) describes a dedicated standard GitHub-hosted Windows Actions job in a public repository. It builds two unsigned versions from the same code, replaces binaries, compares sample records and restores a snapshot separately. It prints result/process reports in the run log without artifact uploads or caches. The harness refuses personal and self-hosted execution because installers change per-user registration. It stops on native launch/close failure. It does not publish or implement one-click updates.
-
-## Development candidate commands
-
-`npm run release:candidate` requires a clean committed Windows source tree and matching built metadata. It runs the required checks/package command, stops on the first failure, verifies the source did not change and records the regular installer SHA-256 in ignored release/candidate.json. Local candidates say installed evidence is not verified. `npm run release:verify` checks metadata and actual bytes without publishing/installing anything. Hosted Windows preparation runs after all four installed scenarios; every report must be verified at the current commit. Manifest/report hashes contain no task text or credential data. The candidate remains untrusted for official release until the owner-controlled signing/distribution gate is accepted.
+Old packaging scripts and the [release-route experiment](RELEASE_ROUTE.md) remain for their historical consumers and evidence. They are not part of personal-use acceptance and must not introduce installer/update work, paid services or release gates. Source-run data migration snapshots and separate-path recovery remain in scope.

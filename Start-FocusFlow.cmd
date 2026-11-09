@@ -31,7 +31,7 @@ if /i "%~1"=="--review" (
     call npm run review -- "%~2"
   )
 ) else (
-  call npm start
+  call npm start -- --personal
 )
 if errorlevel 1 goto failed
 exit /b 0

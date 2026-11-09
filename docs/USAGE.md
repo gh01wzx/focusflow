@@ -1,6 +1,6 @@
 # Using FocusFlow
 
-Personal and manual Projects work locally without a GitHub or AI account. Double-click Start-FocusFlow.cmd for the source acceptance build; see the [README](../README.md). Coding and review have new, untested implementations. Installation, release and updating are deferred.
+Personal and manual Projects work locally without a GitHub or AI account. Double-click Start-FocusFlow.cmd to build source and open your fixed personal data profile; see the [README](../README.md). A fresh personal profile starts empty. Use --review NAME for separate examples. Coding and review have new, untested implementations. Installation packages, public releases and updating are outside scope.
 
 ## Repeating tasks
 
@@ -95,13 +95,7 @@ Fresh sample profiles also include a saved example under **AI plan draft**. Edit
 
 Add, complete or change examples freely. Reopen with the same name to keep your changes; a different name starts a separate workspace. Review names use letters, numbers and hyphens. Existing review databases are never topped up or reset. To get newly added examples, use a new review name, such as task-41-four-states.
 
-An installed build also supports review mode:
-
-~~~powershell
-& "$env:LOCALAPPDATA\Programs\FocusFlow\FocusFlow.exe" --review pr-72
-~~~
-
-Use the actual installation path if it differs. Opening the installed app normally still uses your everyday tasks. Source development, named review and installed everyday data are separate; your existing everyday data is not moved or copied. To return to it after using the source launcher, open the installed app normally.
+To return to your personal tasks, close the review window and double-click Start-FocusFlow.cmd without arguments. It opens the fixed personal profile, including any existing everyday data. Source developer samples, named reviews and personal tasks remain separate. Earlier sample data is not automatically imported.
 
 Review/development folders are also separated by database format. A format change starts fresh sample data rather than upgrading another format's review workspace. See [Development](DEVELOPMENT.md#data-paths) for paths and deliberate migration trials. Earlier builds without review mode must use their documented disposable-test setup; do not assume they understand the new review command.
 

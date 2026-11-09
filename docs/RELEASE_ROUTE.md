@@ -1,4 +1,6 @@
-# Windows installer and update decision
+# Historical Windows installer and update experiment
+
+Installation, signing, public distribution, releases and updating are outside the owner's personal-use product scope. This document retains the earlier experiment and its limits as history. Its recommendations and gates are not current work or acceptance requirements. Use Start-FocusFlow.cmd for personal tasks and --review NAME for separate examples.
 
 This is a validation proposal for #61, not a formal release approval. The app remains version 0.1.0-alpha.3. No account, signing purchase, release feed or public distribution was created.
 

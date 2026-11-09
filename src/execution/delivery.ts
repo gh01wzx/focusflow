@@ -26,7 +26,10 @@ export function createDeliveryService(repository:ExecutionRepository,projects:Pr
   }
   function state(id:string,preview:DeliveryPreview|null=null):DeliveryState {if(!projects.findTicket(id)?.coding?.issueNumber)throw new ExecutionFailure('NOT_PUBLISHED','Choose a published coding ticket.');return {ticketId:id,delivery:repository.delivery(id),preview,busy:busy.has(id)};}
   async function snapshot(id:string){
-    const c=context(id);if(!['ready','review','interrupted'].includes(c.run.stage))throw new ExecutionFailure('RUN_ACTIVE','Stop or finish the coding run before previewing publication.');
+    const c=context(id);
+    const linkedNumber=linked.read(id).pullNumber;
+    if(linkedNumber&&repository.delivery(id)?.pullNumber!==linkedNumber)throw new ExecutionFailure('REVIEW_ONLY_PR','This PR was linked for review only. An owned publication receipt is required before this worktree can publish or revise it. No replacement PR will be created.');
+    if(!['ready','review','interrupted'].includes(c.run.stage))throw new ExecutionFailure('RUN_ACTIVE','Stop or finish the coding run before previewing publication.');
     if(c.ticket.status==='done')throw new ExecutionFailure('ALREADY_DONE','This ticket is already Done. It cannot publish another revision.');
     if(!c.run.requirementsToken||c.run.requirementsToken!==codingScope(c.ticket,projects.listDependencies(c.ticket.projectId),c.workspace))throw new ExecutionFailure('SCOPE_CHANGED','Requirements changed. Explicitly resume and review the new scope before publication.');
     const root=await realpath(c.workspace.workspacePath);
@@ -56,13 +59,25 @@ export function createDeliveryService(repository:ExecutionRepository,projects:Pr
       pullNumber:repository.delivery(id)?.pullNumber??linked.read(id).pullNumber,token:hash({run:c.run.id,scope:c.run.requirementsToken,repository:c.repository,branch:c.workspace.branch,base:c.workspace.baseSha,files})};
     return {context:c,preview,payload};
   }
+  function validatePull(id:string,pull:RemoteCodingPull,delivery:CodingDelivery){
+    const c=context(id),number=linked.read(id).pullNumber;
+    if(pull.headRef!==delivery.branch||!pull.body.includes(marker(id))||!new RegExp('Closes\\s+#'+c.issue+'\\b','i').test(pull.body)
+      ||delivery.pullNumber!==null&&pull.number!==delivery.pullNumber||number!==null&&pull.number!==number)throw new ExecutionFailure('PR_CONFLICT','The PR does not match this ticket and its saved identity.');
+  }
   function retainPull(id:string,pull:RemoteCodingPull,delivery:CodingDelivery){
     const c=context(id);
-    if(pull.headRef!==delivery.branch||!pull.body.includes(marker(id))||!new RegExp('Closes\\s+#'+c.issue+'\\b','i').test(pull.body))throw new ExecutionFailure('PR_CONFLICT','The PR does not match this ticket and recovery marker.');
+    if(c.ticket.status==='done'||c.run.stage==='merged')return;
+    validatePull(id,pull,delivery);
+    if(pull.state!=='open'&&!pull.merged)throw new ExecutionFailure('PR_CLOSED','The linked PR is closed without a merge. Its identity is retained; no replacement was created.');
     if(!delivery.commitSha||pull.headSha!==delivery.commitSha)throw new ExecutionFailure('HEAD_CHANGED','The remote PR has changes outside the recorded publication. Its identity is retained, but those changes are not silently replaced or adopted.');
     transaction(now=>{
       repository.saveDelivery({...delivery,pullNumber:pull.number,commitSha:pull.headSha,stage:'published',updatedAt:now.toISOString(),message:'The linked PR is ready for owner review. No merge was performed.'});
-      linked.linkPull(id,pull);projects.setStatus(id,'review',now.toISOString());
+      linked.linkPull(id,pull);
+      if(pull.merged){
+        repository.saveRun({...c.run,stage:'review',headSha:pull.headSha,updatedAt:now.toISOString(),message:'The recovered PR is merged on GitHub. Check merge state in PR review to reconcile Done; no publication or next task was started.'});
+        return;
+      }
+      projects.setStatus(id,'review',now.toISOString());
       repository.saveRun({...c.run,stage:'review',headSha:pull.headSha,updatedAt:now.toISOString(),message:'PR linked. Review the actual diff and current head before deciding to merge.'});
     });
   }
@@ -89,9 +104,16 @@ export function createDeliveryService(repository:ExecutionRepository,projects:Pr
         if(!currentTicket||!currentWorkspace||currentTicket.status==='done'||c.run.requirementsToken!==codingScope(currentTicket,projects.listDependencies(currentTicket.projectId),currentWorkspace))throw new ExecutionFailure('SCOPE_CHANGED','Requirements changed after preview.');
         repository.saveDelivery(delivery);repository.saveRun({...c.run,stage:'publishing',message:'Publishing the explicitly approved snapshot.',updatedAt:new Date().toISOString()});attempted=true;
       });
+      const assertPublishing=()=>{
+        const current=repository.latestRun(id);
+        if(closing||projects.findTicket(id)?.status==='done'||current?.stage==='merged')throw new ExecutionFailure('PUBLICATION_STOPPED','The ticket completed or the app is closing. No further publication is permitted.');
+        if(!current||current.id!==c.run.id||current.stage!=='publishing')throw new ExecutionFailure('RUN_CHANGED','The saved publication no longer owns this coding run.');
+      };
       const tree=await provider.baseTree(c.ticket.projectId,c.repository,c.workspace.baseSha);
+      assertPublishing();
       const commit=await provider.commit(c.ticket.projectId,c.repository,oldHead??c.workspace.baseSha,tree,prepared.payload,'['+c.issue+'] '+c.ticket.title);
       delivery={...delivery,commitSha:commit};repository.saveDelivery(delivery);
+      assertPublishing();
       await provider.writeBranch(c.ticket.projectId,c.repository,c.workspace.branch,commit,oldHead!==null);
       const matches=await provider.findPulls(c.ticket.projectId,c.repository,c.workspace.branch,marker(id));
       if(matches.length>1)throw new ExecutionFailure('PR_CONFLICT','More than one PR has this ticket marker. Reconcile manually.');
@@ -100,6 +122,7 @@ export function createDeliveryService(repository:ExecutionRepository,projects:Pr
         if(delivery.pullNumber)throw new ExecutionFailure('PR_MISSING','The known PR identity was not found. No replacement PR was created.');
         delivery={...delivery,stage:'creating-pr',message:'PR creation requested. A lost response requires reconciliation, not another creation.'};repository.saveDelivery(delivery);
         const evidence=c.run.commands.length?c.run.commands.map((x,index)=>'- Runtime-reported command '+(index+1)+': exit '+(x.exitCode??'unknown')+'.').join('\n')+'\nExact commands and output remain in the local profile. These coding-time results do not establish tests of the final published commit and are not independent verification.':'Checks were not run. The owner will test locally.';
+        assertPublishing();
         pull=await provider.createPull(c.ticket.projectId,c.repository,c.workspace.branch,'['+c.issue+'] '+c.ticket.title,
           'Closes #'+c.issue+'\n\n## What changed\n\n'+c.ticket.description+'\n\n## How to check\n\n'+c.ticket.acceptanceCriteria+'\n\n## Check evidence\n\n'+evidence+'\n\nDeveloper statements are not independent verification. Review the exact current head and diff.\n\n'+marker(id));
       }
@@ -108,7 +131,9 @@ export function createDeliveryService(repository:ExecutionRepository,projects:Pr
       retainPull(id,pull,delivery);return state(id);
     }catch(error){
       const delivery=repository.delivery(id),run=repository.latestRun(id);
-      if(attempted&&delivery&&delivery.stage!=='published'){
+      if(attempted&&delivery&&delivery.stage!=='published'&&(projects.findTicket(id)?.status==='done'||run?.stage==='merged')){
+        repository.saveDelivery({...delivery,stage:'conflict',message:'Publication stopped after an observed merge. The completed task and remote journal are retained; no further write is scheduled.',updatedAt:new Date().toISOString()});
+      }else if(attempted&&delivery&&delivery.stage!=='published'){
         const refused=error instanceof CodingCreationRefused;
         repository.saveDelivery({...delivery,stage:refused?'conflict':delivery.stage==='creating-pr'?'uncertain':delivery.stage,message:refused?'GitHub refused PR creation. No PR was created; correct access and explicitly preview/retry.':'Publication stopped. Inspect remote progress before any retry.',updatedAt:new Date().toISOString()});
         if(run)repository.saveRun({...run,stage:refused?'ready':'uncertain',errorCode:refused?'PUBLICATION_REFUSED':'PUBLICATION_UNCERTAIN',message:refused?'PR creation was refused. Inspect permissions before explicitly retrying.':'Remote progress must be reconciled before resuming.',updatedAt:new Date().toISOString()});
@@ -119,13 +144,29 @@ export function createDeliveryService(repository:ExecutionRepository,projects:Pr
   async function reconcile(id:string){
     if(busy.has(id)||closing)throw new ExecutionFailure('BUSY','Publication is already running.');
     const c=context(id),delivery=repository.delivery(id);if(!provider||!delivery)throw new ExecutionFailure('NO_DELIVERY','No saved publication to inspect.');
+    if(c.ticket.status==='done'||c.run.stage==='merged')return state(id);
     busy.add(id);try{
       const matches=await provider.findPulls(c.ticket.projectId,c.repository,delivery.branch,marker(id));
-      if(matches.length===1){retainPull(id,matches[0]!,delivery);return state(id);}
+      if(matches.length===1){
+        const pull=matches[0]!;validatePull(id,pull,delivery);
+        if(pull.headSha===delivery.commitSha){retainPull(id,pull,delivery);return state(id);}
+        if(delivery.stage!=='committing'||!delivery.previousSha||pull.headSha!==delivery.previousSha||pull.state!=='open'||pull.merged)throw new ExecutionFailure('HEAD_CHANGED','The PR does not match the saved publication or its known previous revision.');
+        const head=await provider.branch(c.ticket.projectId,c.repository,delivery.branch);
+        if(head!==delivery.previousSha)throw new ExecutionFailure('REMOTE_CHANGED','The remote branch differs from the known previous PR revision.');
+        if(projects.findTicket(id)?.status==='done'||repository.latestRun(id)?.stage==='merged')return state(id);
+        transaction(now=>{
+          repository.saveDelivery({...delivery,pullNumber:pull.number,commitSha:head,previousSha:head,digest:hash({reconciled:delivery.digest,head}),stage:'conflict',
+            message:'The previous PR revision is confirmed. The interrupted snapshot remains local; preview and explicitly publish it again.',updatedAt:now.toISOString()});
+          linked.linkPull(id,pull);
+          repository.saveRun({...c.run,stage:'ready',headSha:head,message:'The previous PR is retained. Preview the local revision before explicitly publishing again.',updatedAt:now.toISOString()});
+        });
+        return state(id);
+      }
       if(matches.length>1||delivery.stage==='uncertain'||delivery.stage==='creating-pr')throw new ExecutionFailure('PR_UNCERTAIN','The PR result is missing or ambiguous. Inspect GitHub manually; creating another PR is blocked.');
       const head=await provider.branch(c.ticket.projectId,c.repository,delivery.branch);
       if(head!==delivery.commitSha&&head!==delivery.previousSha)throw new ExecutionFailure('REMOTE_CHANGED','The remote branch differs from the recorded publication.');
-      repository.saveDelivery({...delivery,stage:'conflict',message:'No PR was requested. The branch result is retained; explicit publication can safely inspect and continue it.',updatedAt:new Date().toISOString()});
+      if(projects.findTicket(id)?.status==='done'||repository.latestRun(id)?.stage==='merged')return state(id);
+      repository.saveDelivery({...delivery,commitSha:head,previousSha:head,digest:hash({reconciled:delivery.digest,head}),stage:'conflict',message:'No PR creation result exists. The known branch head is retained; preview before explicitly publishing again. Earlier attempt: '+(delivery.commitSha??'no commit returned')+'.',updatedAt:new Date().toISOString()});
       repository.saveRun({...c.run,stage:'ready',message:'No PR creation was requested; preview before explicitly retrying publication.',updatedAt:new Date().toISOString()});
       return state(id);
     }finally{busy.delete(id);}

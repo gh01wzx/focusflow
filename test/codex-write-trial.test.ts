@@ -75,16 +75,22 @@ test('agent prose, other turns, changed commands and failed commands cannot esta
     { unit: false, boundary: false, network: false });
 });
 
-test('known permissions are cancelled without granting or calling them successful enforcement', async t => {
+test('known permissions are declined and do not count as sandbox check results', async t => {
   const f = await session(f => {
-    for (const method of ['item/commandExecution/requestApproval', 'item/fileChange/requestApproval']) {
-      f.reply({ id: 'approval', method, params: { private: 'discarded' } });
-    }
-    f.done();
-  }); t.after(() => f.client.close());
+    f.reply({ id: 'command-approval', method: 'item/commandExecution/requestApproval',
+      params: { threadId: 't', turnId: 'u', private: 'discarded' } });
+    f.reply({ id: 'file-approval', method: 'item/fileChange/requestApproval',
+      params: { threadId: 't', turnId: 'u', private: 'discarded' } });
+  });
+  t.after(() => f.client.close());
+  f.output.on('data', chunk => {
+    const response = record(JSON.parse(String(chunk)));
+    if (response.id === 'file-approval' && record(response.result).decision === 'decline') f.done();
+  });
   const result = await controlledWriteTurn(f.client, '/disposable', 'toy', { commands });
   assert.equal(result.approvalsDenied, 2); assert.equal(result.checks.boundary, false);
-  assert.equal(f.sent.filter(m => record(m.result).decision === 'cancel').length, 2);
+  assert.equal(f.sent.filter(m => record(m.result).decision === 'decline').length, 2);
+  assert.equal(f.sent.filter(m => m.method === 'turn/interrupt').length, 0);
 });
 
 test('unknown tools, unknown requests and unrelated file patches stop the owned turn', async t => {
@@ -129,7 +135,7 @@ test('structured failures are sanitized and a bounded pending start can be abort
     { code: 'SANDBOX_FAILED', message: 'Codex write trial blocked: SANDBOX_FAILED' });
   assert.deepEqual(diagnostics, [{
     terminalStatus: 'failed', runtimeError: 'SANDBOX_FAILED', checks: { unit: false, boundary: false, network: false },
-    approvalsDenied: 0, commandCompletions: 0, fileChangeStarted: false,
+    approvalsDenied: 0, approvalsByType: { command: 0, fileChange: 0 }, commandCompletions: 0, fileChangeStarted: false,
   }]);
   for (const mode of ['timeout', 'abort', 'already-aborted']) {
     const g = fixture(); await g.ready(); t.after(() => g.client.close());

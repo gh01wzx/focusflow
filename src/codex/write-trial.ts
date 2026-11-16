@@ -20,6 +20,7 @@ export interface WriteTurnDiagnostics {
   runtimeError: 'not-reported' | 'unclassified' | ReturnType<typeof modelFailureCode>;
   checks: WriteTurnEvidence['checks'];
   approvalsDenied: number;
+  approvalsByType: { command: number; fileChange: number };
   commandCompletions: number;
   fileChangeStarted: boolean;
 }
@@ -44,6 +45,7 @@ export async function controlledWriteTurn(client: CodexClient, cwd: string, prom
   let turnId: string | undefined;
   const checks = { unit: false, boundary: false, network: false };
   let approvalsDenied = 0;
+  const approvalsByType = { command: 0, fileChange: 0 };
   let commandCompletions = 0;
   let fileChangeStarted = false;
   const cancelOnStarted = options.cancelOnStarted === true;
@@ -65,10 +67,7 @@ export async function controlledWriteTurn(client: CodexClient, cwd: string, prom
   };
   const onAbort = () => stop('CANCELLED');
   const onClose = () => stop('CONNECTION_CLOSED');
-  const onApproval = (method: string) => {
-    if (method === 'item/commandExecution/requestApproval' || method === 'item/fileChange/requestApproval') approvalsDenied++;
-    else stop('UNSUPPORTED_REQUEST');
-  };
+  const onUnsupportedApproval = () => stop('UNSUPPORTED_REQUEST');
   const notification = (method: string, raw: unknown) => {
     const params = record(raw);
     if (!threadId || params.threadId !== threadId) return;
@@ -112,8 +111,18 @@ export async function controlledWriteTurn(client: CodexClient, cwd: string, prom
       resolveTerminal();
     }
   };
+  client.setApprovalHandler(async (method, params) => {
+    if (!threadId || params.threadId !== threadId || (turnId && params.turnId !== turnId)) {
+      stop('INVALID_APPROVAL_SCOPE');
+      return 'decline';
+    }
+    approvalsDenied++;
+    if (method === 'item/commandExecution/requestApproval') approvalsByType.command++;
+    else approvalsByType.fileChange++;
+    return 'decline';
+  });
   client.on('notification', notification);
-  client.on('approvalDenied', onApproval);
+  client.on('approvalDenied', onUnsupportedApproval);
   client.on('closed', onClose);
   options.signal?.addEventListener('abort', onAbort, { once: true });
   const timer = setTimeout(() => stop('TURN_TIMEOUT'), options.timeoutMs ?? 90_000);
@@ -166,8 +175,9 @@ export async function controlledWriteTurn(client: CodexClient, cwd: string, prom
     throw error;
   } finally {
     clearTimeout(timer);
+    client.setApprovalHandler(null);
     client.off('notification', notification);
-    client.off('approvalDenied', onApproval);
+    client.off('approvalDenied', onUnsupportedApproval);
     client.off('closed', onClose);
     options.signal?.removeEventListener('abort', onAbort);
     const terminalStatus = completed?.status;
@@ -176,7 +186,7 @@ export async function controlledWriteTurn(client: CodexClient, cwd: string, prom
       terminalStatus: terminalStatus === 'completed' || terminalStatus === 'failed' || terminalStatus === 'interrupted'
         ? terminalStatus : completed ? 'unknown' : 'not-received',
       runtimeError: errorInfo != null ? modelFailureCode(errorInfo) : completed?.error != null ? 'unclassified' : 'not-reported',
-      checks: { ...checks }, approvalsDenied, commandCompletions, fileChangeStarted,
+      checks: { ...checks }, approvalsDenied, approvalsByType, commandCompletions, fileChangeStarted,
     });
   }
 }

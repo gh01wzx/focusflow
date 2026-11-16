@@ -1,6 +1,11 @@
 import { join, resolve } from 'node:path';
 import { CodexClient, modelFailureCode, record } from './client.ts';
 
+export function writeTrialSandbox(cwd: string) {
+  return { type: 'workspaceWrite', writableRoots: [cwd], networkAccess: false,
+    excludeSlashTmp: true, excludeTmpdirEnvVar: true };
+}
+
 export const MARKERS = { unit: 'FOCUSFLOW_WRITE_TEST_OK', boundary: 'FOCUSFLOW_BOUNDARY_DENIED', network: 'FOCUSFLOW_NETWORK_DENIED' } as const;
 export class WriteTrialFailure extends Error {
   readonly code: string;
@@ -138,8 +143,7 @@ export async function controlledWriteTurn(client: CodexClient, cwd: string, prom
     const startedTurn = record(await request('turn/start', {
       threadId, input: [{ type: 'text', text: prompt }],
       approvalPolicy: 'on-request',
-      sandboxPolicy: { type: 'workspaceWrite', writableRoots: [cwd], networkAccess: false,
-        excludeSlashTmp: true, excludeTmpdirEnvVar: true },
+      sandboxPolicy: writeTrialSandbox(cwd),
     }));
     const returnedId = record(startedTurn.turn).id;
     if (typeof returnedId !== 'string' || (turnId && returnedId !== turnId)) throw new WriteTrialFailure('INVALID_TURN');

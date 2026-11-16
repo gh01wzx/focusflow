@@ -51,6 +51,14 @@ These are observations, not a security boundary. Tool notifications arrive after
 
 Ordinary tests use fake protocol messages and disposable fixture files, with no live model or authenticated GitHub writes. CI does not run --live. The real Windows write/permission/cancellation gate remains open.
 
+### Check Windows sandbox writes without a model
+
+~~~powershell
+npm run codex:write-trial -- --sandbox-only
+~~~
+
+This check uses the trial's existing pinned runtime and profile. It queries Windows sandbox readiness and runs one fixed local command in a disposable workspace using the same workspace-write policy as the live trial. The host verifies the file bytes. No account lookup, model turn, setup escalation or public write is requested. Passing verifies a local command under that policy. The model's file patch, approval and cancellation paths still need live acceptance.
+
 ### Diagnose a trial that stops before coding
 
 ~~~powershell

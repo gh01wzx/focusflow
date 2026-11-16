@@ -1,5 +1,5 @@
 // Explicit developer trial. CI and app startup never run model turns.
-import { stat, mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { stat, lstat, readFile, mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { createServer } from 'node:http';
@@ -9,13 +9,23 @@ import type { CodexProcessObservation } from '../src/codex/process.ts';
 import { resolveCodexCommand } from '../src/codex/runtime.ts';
 import { CODEX_VERSION } from '../src/shared/ai.ts';
 import { controlledWriteTurn, WriteTrialFailure } from '../src/codex/write-trial.ts';
-import { fixtureFiles, seedTrial, verifyTrial, verifyGuard, GUARD } from '../src/codex/write-trial-fixture.ts';
+import type { WriteTurnDiagnostics } from '../src/codex/write-trial.ts';
+import { fixtureFiles, seedTrial, verifyTrial, verifyGuard, BEFORE, AFTER, GUARD } from '../src/codex/write-trial-fixture.ts';
 
 type TrialPhase = 'setup' | 'runtime-check' | 'profile-check' | 'initialize' | 'account-read'
   | 'write-check-turn' | 'cancellation-turn' | 'result-check';
 let phase: TrialPhase = 'setup';
 let modelPhaseReached = false;
 let observation: CodexProcessObservation | undefined;
+let turnEvidence: WriteTurnDiagnostics | undefined;
+let fileResult: 'unchanged' | 'expected-change' | 'different-change' | 'unavailable' | undefined;
+let stderrTail = '';
+const hints = {
+  windowsSandbox: /sandbox.{0,120}(failed|denied|unavailable|setup required|not configured|elevat)|(?:failed to|unable to).{0,120}sandbox/i,
+  accessDenied: /access is denied|permission denied|\b(?:EACCES|EPERM)\b/i,
+  connectionFailure: /stream disconnected|connection reset|error sending request|connection failed/i,
+  allowance: /rate limit|usage limit|quota exceeded/i,
+};
 const args = process.argv.slice(2);
 const observe = (value: CodexProcessObservation) => { observation = value; };
 if (args.length === 0) {
@@ -38,6 +48,9 @@ if (args.length === 0) {
       ? error.code : 'LOCAL_TRIAL_FAILED';
     console.error(JSON.stringify({ status: 'blocked', reason, phase, modelPhaseReached, executionGate: 'unverified',
       ...(observation ? { process: observation } : {}),
+      ...(turnEvidence ? { turn: turnEvidence } : {}),
+      ...(fileResult ? { fileResult } : {}),
+      ...(stderrTail ? { runtimeHints: Object.entries(hints).filter(([, pattern]) => pattern.test(stderrTail)).map(([key]) => key) } : {}),
       ...(error instanceof CodexProcessFailure && error.cleanupFailed ? { cleanupFailed: true } : {}) }));
     process.exitCode = 1;
   }
@@ -119,19 +132,33 @@ async function run(diagnose: boolean): Promise<void> {
         ].join('\n');
         phase = 'write-check-turn';
         modelPhaseReached = true;
+        const capture = (evidence: WriteTurnDiagnostics) => { turnEvidence = evidence; };
         const first = await controlledWriteTurn(client, cwd, prompt, { commands, signal: abort.signal,
-          onProgress: kind => console.log('Progress: ' + kind) });
+          onProgress: kind => console.log('Progress: ' + kind), onEvidence: capture });
         await verifyTrial(cwd, files);
         await verifyGuard(guard, hits);
         if (!Object.values(first.checks).every(Boolean)) throw new WriteTrialFailure('CHECK_EVIDENCE_INCOMPLETE');
         phase = 'cancellation-turn';
         const second = await controlledWriteTurn(client, cwd,
           'This is a cancellation check. Wait for interruption. Do not use tools or change any files.',
-          { commands, cancelOnStarted: true, signal: abort.signal });
+          { commands, cancelOnStarted: true, signal: abort.signal, onEvidence: capture });
         await verifyTrial(cwd, files);
         return { auth: 'chatgpt', checks: first.checks,
           approvalsDenied: first.approvalsDenied + second.approvalsDenied, cancellationConfirmed: second.cancellationConfirmed };
-      }, { onClosed: observe });
+      }, {
+        onClosed: observe,
+        onStderr: chunk => { stderrTail = (stderrTail + chunk).slice(-16_384); },
+        async inspectWorkspace(cwd) {
+          if (!modelPhaseReached) return;
+          fileResult = 'unavailable';
+          const path = join(cwd, 'trial.ts');
+          const info = await lstat(path);
+          if (!info.isFile() || info.isSymbolicLink() || info.nlink !== 1) return;
+          if (info.size !== Buffer.byteLength(AFTER)) { fileResult = 'different-change'; return; }
+          const content = await readFile(path, 'utf8');
+          fileResult = content === AFTER ? 'expected-change' : content === BEFORE ? 'unchanged' : 'different-change';
+        },
+      });
     phase = 'result-check';
     await verifyGuard(guard, hits);
     report = { status: 'observations-complete', process: observation, cliVersion: CODEX_VERSION,

@@ -124,8 +124,13 @@ test('another turn terminal cannot confirm cancellation', async t => {
 test('structured failures are sanitized and a bounded pending start can be aborted', async t => {
   const f = await session(f => f.done('failed', { error: { codexErrorInfo: 'sandboxError', message: 'private' } }));
   t.after(() => f.client.close());
-  await assert.rejects(controlledWriteTurn(f.client, '/disposable', 'toy', { commands }),
+  const diagnostics: unknown[] = [];
+  await assert.rejects(controlledWriteTurn(f.client, '/disposable', 'toy', { commands, onEvidence: value => diagnostics.push(value) }),
     { code: 'SANDBOX_FAILED', message: 'Codex write trial blocked: SANDBOX_FAILED' });
+  assert.deepEqual(diagnostics, [{
+    terminalStatus: 'failed', runtimeError: 'SANDBOX_FAILED', checks: { unit: false, boundary: false, network: false },
+    approvalsDenied: 0, commandCompletions: 0, fileChangeStarted: false,
+  }]);
   for (const mode of ['timeout', 'abort', 'already-aborted']) {
     const g = fixture(); await g.ready(); t.after(() => g.client.close());
     const signal = new AbortController();

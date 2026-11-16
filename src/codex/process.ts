@@ -27,11 +27,15 @@ export interface CodexProcessObservation {
 export async function withCodexProcess<T>(
   executable: string, args: string[], environment: NodeJS.ProcessEnv,
   operation: (client: CodexClient, cwd: string) => Promise<T>,
-  options: { graceMs?: number; shutdownMs?: number; onClosed?: (observation: CodexProcessObservation) => void; jsonRpc?: boolean } = {},
+  options: {
+    graceMs?: number; shutdownMs?: number; onClosed?: (observation: CodexProcessObservation) => void;
+    inspectWorkspace?: (cwd: string) => Promise<void>; onStderr?: (chunk: string) => void; jsonRpc?: boolean;
+  } = {},
 ): Promise<{ result: T; processClosed: true; temporaryDirectoryRemoved: true }> {
   const cwd = await mkdtemp(join(tmpdir(), 'focusflow-codex-turn-'));
   const child = spawn(executable, args, { cwd, env: environment, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
-  child.stderr.resume();
+  if (options.onStderr) child.stderr.setEncoding('utf8').on('data', options.onStderr);
+  else child.stderr.resume();
   const client = new CodexClient(child.stdout, child.stdin, options.jsonRpc ? 30_000 : 15_000, 1_048_576, child.pid ?? null, options.jsonRpc);
   let spawnError: CodexProcessObservation['spawnError'] = null;
   child.on('error', (error: NodeJS.ErrnoException) => {
@@ -70,6 +74,10 @@ export async function withCodexProcess<T>(
     })]);
     if (dirname(resolve(cwd)) !== resolve(tmpdir()) || !basename(cwd).startsWith('focusflow-codex-turn-')) {
       throw new CodexProcessFailure('CLEANUP_PATH_REJECTED');
+    }
+    if (options.inspectWorkspace) {
+      // Optional evidence must not replace the original result or skip cleanup.
+      await options.inspectWorkspace(cwd).catch(() => {});
     }
     await rm(cwd, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
   } catch {

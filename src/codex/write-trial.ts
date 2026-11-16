@@ -13,7 +13,17 @@ export interface WriteTurnOptions {
   timeoutMs?: number;
   interruptTimeoutMs?: number;
   onProgress?: (kind: 'started' | 'retrying') => void;
+  onEvidence?: (evidence: WriteTurnDiagnostics) => void;
 }
+export interface WriteTurnDiagnostics {
+  terminalStatus: 'completed' | 'failed' | 'interrupted' | 'unknown' | 'not-received';
+  runtimeError: 'not-reported' | 'unclassified' | ReturnType<typeof modelFailureCode>;
+  checks: WriteTurnEvidence['checks'];
+  approvalsDenied: number;
+  commandCompletions: number;
+  fileChangeStarted: boolean;
+}
+
 export interface WriteTurnEvidence {
   checks: Record<keyof typeof MARKERS, boolean>;
   approvalsDenied: number;
@@ -34,6 +44,8 @@ export async function controlledWriteTurn(client: CodexClient, cwd: string, prom
   let turnId: string | undefined;
   const checks = { unit: false, boundary: false, network: false };
   let approvalsDenied = 0;
+  let commandCompletions = 0;
+  let fileChangeStarted = false;
   const cancelOnStarted = options.cancelOnStarted === true;
   let completed: { id: string; status: string; error: unknown } | undefined;
   let stoppedCode: string | undefined;
@@ -79,8 +91,10 @@ export async function controlledWriteTurn(client: CodexClient, cwd: string, prom
           const path = record(change).path;
           return typeof path !== 'string' || resolve(cwd, path) !== join(cwd, 'trial.ts');
         })) { stop('UNEXPECTED_FILE_CHANGE'); return; }
+        if (method === 'item/started') fileChangeStarted = true;
       }
       if (method === 'item/completed' && item.type === 'commandExecution') {
+        commandCompletions++;
         for (const key of ['unit', 'boundary', 'network'] as const) {
           if (item.command === options.commands[key] && item.exitCode === 0 &&
               typeof item.aggregatedOutput === 'string' && item.aggregatedOutput.trim() === MARKERS[key]) checks[key] = true;
@@ -156,5 +170,13 @@ export async function controlledWriteTurn(client: CodexClient, cwd: string, prom
     client.off('approvalDenied', onApproval);
     client.off('closed', onClose);
     options.signal?.removeEventListener('abort', onAbort);
+    const terminalStatus = completed?.status;
+    const errorInfo = record(completed?.error).codexErrorInfo;
+    options.onEvidence?.({
+      terminalStatus: terminalStatus === 'completed' || terminalStatus === 'failed' || terminalStatus === 'interrupted'
+        ? terminalStatus : completed ? 'unknown' : 'not-received',
+      runtimeError: errorInfo != null ? modelFailureCode(errorInfo) : completed?.error != null ? 'unclassified' : 'not-reported',
+      checks: { ...checks }, approvalsDenied, commandCompletions, fileChangeStarted,
+    });
   }
 }

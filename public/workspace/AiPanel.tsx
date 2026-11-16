@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { createAiClient } from '../../src/client/ai.ts';
 import { AI_SETUP_URL } from '../../src/shared/ai.ts';
 import type { AiStatus } from '../../src/shared/ai.ts';
+import { DSH_VERSION } from '../../src/shared/planning-ai.ts';
+import type { DshStatus } from '../../src/shared/planning-ai.ts';
 
 const client = createAiClient();
 export function AiPanel({ disabled }: { disabled: boolean }) {
@@ -10,6 +12,10 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [provider, setProvider] = useState<'codex' | 'dsh'>('codex');
+  const [dsh, setDsh] = useState<DshStatus | null>(null);
+  const [dshBusy, setDshBusy] = useState(false);
+  const [dshConfirmed, setDshConfirmed] = useState(false);
   const mounted = useRef(true);
   const generation = useRef(0);
   const busyRef = useRef(false);
@@ -40,12 +46,30 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
     catch { if (mounted.current) setError('Could not contact the local AI service. Close and reopen FocusFlow, then retry.'); }
     finally { busyRef.current = false; if (mounted.current) setBusy(false); }
   }
+  async function runDsh(operation: () => Promise<DshStatus>) {
+    if (dshBusy) return;
+    setDshBusy(true); setDshConfirmed(false); setError('');
+    try { const next = await operation(); if (mounted.current) setDsh(next); }
+    catch { if (mounted.current) setError('Could not contact the local DeepSeek Harness service.'); }
+    finally { if (mounted.current) setDshBusy(false); }
+  }
   return <>
     <button className="nav-item ai-entry" disabled={disabled} onClick={() => {
-      setConfirmed(false); dialog.current?.showModal(); void run(client.status);
+      setConfirmed(false); setDshConfirmed(false); dialog.current?.showModal();
+      if (provider === 'codex') void run(client.status);
+      else void runDsh(client.dshStatus);
     }}>AI connection</button>
     <dialog className="ai-dialog" ref={dialog} aria-labelledby="ai-title">
       <h2 id="ai-title">AI connection</h2>
+      <div className="ai-buttons" role="group" aria-label="AI provider">
+        <button aria-pressed={provider === 'codex'} disabled={busy || dshBusy} onClick={() => {
+          setProvider('codex'); void run(client.status);
+        }}>Codex</button>
+        <button aria-pressed={provider === 'dsh'} disabled={busy || dshBusy} onClick={() => {
+          setProvider('dsh'); setConfirmed(false); void runDsh(client.dshStatus);
+        }}>DeepSeek Harness</button>
+      </div>
+      {provider === 'codex' ? <>
       <p>FocusFlow uses the official Codex runtime with a separate ChatGPT sign-in. It does not copy Codex App sessions.</p>
       <p>A model request uses your Codex allowance. Available usage depends on your ChatGPT plan and current limits. FocusFlow never switches to API-key billing.</p>
       {status && <>
@@ -56,7 +80,6 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
         <p role="status">{status.message}</p>
         {status.signInUrl && <p><a href={status.signInUrl} target="_blank" rel="noreferrer">Continue ChatGPT sign-in in your browser</a></p>}
       </>}
-      {error && <p role="alert" className="error">{error}</p>}
       <p><a href={AI_SETUP_URL} target="_blank" rel="noreferrer">Official Codex setup guide</a></p>
       <p>From a FocusFlow source checkout, run <code>npm run ai:install</code> to install the pinned runtime. Setup needs Node 24 and npm. Credentials use the OS credential store; setup fails if that store is unavailable.</p>
       <div className="ai-buttons">
@@ -68,6 +91,17 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
         onChange={event => setConfirmed(event.target.checked)} />I understand that this read-only check uses Codex allowance.</label>
       <button className="primary" disabled={busy || !confirmed || status?.mode !== 'chatgpt'}
         onClick={() => void run(() => client.verify(confirmed))}>Run read-only AI check</button>
+      </> : <>
+        <p>Use DeepSeek Harness for plan drafts. Model requests use your DeepSeek API balance.</p>
+        <p>Install the CLI with <code>npm install -g @deepseek-ai/dsh@{DSH_VERSION}</code>. Set <code>DEEPSEEK_API_KEY</code> in the environment used to launch FocusFlow, then reopen it.</p>
+        <p role="status">{dsh?.message}</p>
+        <button disabled={dshBusy} onClick={() => void runDsh(client.dshCheck)}>Check DeepSeek Harness</button>
+        <label className="ai-consent"><input type="checkbox" checked={dshConfirmed} disabled={dshBusy || !dsh?.ready}
+          onChange={event => setDshConfirmed(event.target.checked)} />I understand that this check uses my DeepSeek API balance.</label>
+        <button className="primary" disabled={dshBusy || !dshConfirmed || !dsh?.ready}
+          onClick={() => void runDsh(() => client.dshVerify(dshConfirmed))}>Run read-only DeepSeek check</button>
+      </>}
+      {error && <p role="alert" className="error">{error}</p>}
       <form method="dialog"><button className="ai-close">Close</button></form>
     </dialog>
   </>;

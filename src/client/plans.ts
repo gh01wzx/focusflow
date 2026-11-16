@@ -1,5 +1,6 @@
 import { parsePlanState } from '../shared/plans.ts';
 import type { PlanDraft } from '../shared/plans.ts';
+import type { PlanningSelection } from '../shared/planning-ai.ts';
 
 export function createPlanClient(transport: typeof fetch = fetch) {
   async function request(projectId: string, action = '', input?: unknown) {
@@ -16,7 +17,8 @@ export function createPlanClient(transport: typeof fetch = fetch) {
     return result;
   }
   return { read: (projectId: string) => request(projectId),
-    generate: (projectId: string, goal: string, confirmAllowance: boolean) => request(projectId, '/generate', { goal, confirmAllowance }),
+    generate: (projectId: string, goal: string, confirmAllowance: boolean, selection?: PlanningSelection) =>
+      request(projectId, '/generate', { goal, confirmAllowance, selection }),
     cancel: (projectId: string) => request(projectId, '/cancel', {}),
     edit: (draft: PlanDraft) => request(draft.projectId, '/edit', {
       draftId: draft.id, revision: draft.revision ?? draft.id, plan: draft.plan, selectedTicketKeys: draft.selectedTicketKeys,

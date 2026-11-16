@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { parseSuggestedPlan } from '../shared/plans.ts';
+import { parsePlanningSelection } from '../shared/planning-ai.ts';
+import type { PlanningSelection } from '../shared/planning-ai.ts';
+import { DshFailure } from '../ai/dsh.ts';
 import type { PlanState, SuggestedPlan } from '../shared/plans.ts';
 import type { PlanRepository } from './repository.ts';
 import { PlanInputError } from './approval.ts';
@@ -8,14 +11,16 @@ export { PlanInputError } from './approval.ts';
 
 export type PlanProgress = 'checking' | 'waiting' | 'responding' | 'retrying';
 export interface PlanGenerator {
-  generate(goal: string, signal: AbortSignal, progress: (kind: PlanProgress) => void): Promise<SuggestedPlan>;
+  generate(goal: string, signal: AbortSignal, progress: (kind: PlanProgress) => void, selection?: PlanningSelection): Promise<SuggestedPlan>;
 }
 export class PlanGenerationError extends Error {
   readonly code: string;
   constructor(code: string) { super('AI planning could not complete.'); this.code = code; }
 }
 function failure(error: unknown) {
+  if (error instanceof DshFailure) return error.message;
   const code = error instanceof PlanGenerationError ? error.code : '';
+  if (code === 'UNSUPPORTED_SELECTION') return 'This Codex account does not list the selected model and effort. Refresh the model list.';
   if (code === 'MISSING') return 'Install the pinned runtime with npm run ai:install, then use AI connection to sign in.';
   if (code === 'AUTH_REQUIRED') return 'Open AI connection and sign in with ChatGPT. API-key billing is not supported.';
   if (code === 'BUSY') return 'Another AI request is active. Wait or cancel it before requesting a plan.';
@@ -47,7 +52,11 @@ export function createPlanService(repository: PlanRepository, generator: PlanGen
     },
     start(projectId: string, input: unknown) {
       const value = input && typeof input === 'object' ? input as Record<string, unknown> : {};
-      if (value.confirmAllowance !== true) throw new PlanInputError('Confirm that generating a plan uses Codex allowance.');
+      let selection: PlanningSelection;
+      try { selection = parsePlanningSelection(value.selection); }
+      catch { throw new PlanInputError('Choose a valid AI provider, model and reasoning effort.'); }
+      if (value.confirmAllowance !== true) throw new PlanInputError(selection.provider === 'codex'
+        ? 'Confirm that generating a plan uses Codex allowance.' : 'Confirm that generating a plan uses your DeepSeek API balance.');
       if (typeof value.goal !== 'string' || !value.goal.trim() || value.goal.length > 3000) throw new PlanInputError('Describe a goal using 1 to 3,000 characters.');
       if (closed) throw new PlanInputError('Planning is closing. Reopen FocusFlow before another request.');
       if (active) throw new PlanInputError('Another plan request is active. Wait or cancel it first.');
@@ -60,13 +69,13 @@ export function createPlanService(repository: PlanRepository, generator: PlanGen
             if (active !== owned || owned.abort.signal.aborted) return;
             messages.set(projectId, { checking: 'Checking the AI account.', waiting: 'Waiting for an AI draft.',
               responding: 'AI is responding.', retrying: 'The provider is retrying the current request.' }[kind]);
-          }));
+          }, selection));
           if (owned.abort.signal.aborted || closed) return;
           repository.save({ id: randomUUID(), projectId, goal, createdAt: new Date().toISOString(), plan });
           messages.set(projectId, 'Draft saved locally. Suggestions are not approved tasks.');
         } catch (error) { if (!owned.abort.signal.aborted) messages.set(projectId, failure(error)); }
         finally {
-          if (owned.abort.signal.aborted) messages.set(projectId, 'Plan request cancelled. The previous draft and project tasks are unchanged. A request already sent may use allowance.');
+          if (owned.abort.signal.aborted) messages.set(projectId, 'Plan request cancelled. The previous draft is still saved. A request already sent may use provider allowance or balance.');
           if (active === owned) active = null;
         }
       })();

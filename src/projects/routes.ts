@@ -6,6 +6,7 @@ type ProjectRoute =
   | { kind: 'prerequisites'; id: string }
   | { kind: 'blocker'; id: string }
   | { kind: 'view'; projectId?: string }
+  | { kind: 'deleteProject'; id: string }
   | { kind: 'addProject' | 'addMilestone' | 'addTicket' }
   | { kind: 'editProject' | 'editMilestone' | 'editTicket'; id: string }
   | { kind: 'setStatus'; id: string };
@@ -18,6 +19,8 @@ export function matchProjectRoute(method: string | undefined, path: string): Pro
   }
   if (method !== 'POST') return undefined;
   if (path === '/api/projects') return { kind: 'addProject' };
+  const deletion = /^\/api\/projects\/([a-f0-9-]{36})\/delete$/.exec(path);
+  if (deletion?.[1]) return { kind: 'deleteProject', id: deletion[1] };
   if (path === '/api/milestones') return { kind: 'addMilestone' };
   if (path === '/api/project-tickets') return { kind: 'addTicket' };
   const blocker = /^\/api\/project-tickets\/([a-f0-9-]{36})\/blocker$/.exec(path);
@@ -55,6 +58,10 @@ export function dispatchProjectRoute(route: ProjectRoute, input: unknown, servic
       return { status: 200, body: service.actions() };
     }
     case 'view': return { status: 200, body: service.view(route.projectId) };
+    case 'deleteProject': {
+      service.deleteProject(route.id, input);
+      return { status: 200, body: { view: service.view() } };
+    }
     case 'addProject': {
       const project = service.addProject(input);
       return { status: 201, body: { view: service.view(project.id) } };

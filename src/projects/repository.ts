@@ -28,6 +28,15 @@ export function createProjectRepository(db: DatabaseSync) {
   const insertDependency = db.prepare('INSERT INTO ticket_dependencies VALUES(?,?)');
   const touchTicket = db.prepare('UPDATE project_tickets SET updated_at=? WHERE id=?');
   const updateProject = db.prepare('UPDATE projects SET title=?,description=? WHERE id=?');
+  const selectedTickets = 'SELECT t.id FROM project_tickets t JOIN milestones m ON m.id=t.milestone_id WHERE m.project_id=?';
+  const deleteTicketLinks = db.prepare(`DELETE FROM ticket_dependencies WHERE ticket_id IN (${selectedTickets}) OR prerequisite_id IN (${selectedTickets})`);
+  const deleteTicketData = ['coding_reviews', 'coding_deliveries', 'coding_runs', 'coding_workspaces', 'linked_work',
+    'coding_tickets', 'issue_publications'].map(table => db.prepare(`DELETE FROM ${table} WHERE ticket_id IN (${selectedTickets})`));
+  const deleteProjectData = [
+    'DELETE FROM project_tickets WHERE milestone_id IN (SELECT id FROM milestones WHERE project_id=?)',
+    ...['milestones', 'plan_drafts', 'plan_approvals', 'publication_batches'].map(table => `DELETE FROM ${table} WHERE project_id=?`),
+    'DELETE FROM projects WHERE id=?',
+  ].map(sql => db.prepare(sql));
   const updateMilestone = db.prepare('UPDATE milestones SET title=?,description=? WHERE id=?');
   const updateTicket = db.prepare(`UPDATE project_tickets SET title=?,description=?,acceptance_criteria=?,updated_at=?
     WHERE id=? AND (title!=? OR description!=? OR acceptance_criteria!=?)`);
@@ -43,6 +52,11 @@ export function createProjectRepository(db: DatabaseSync) {
     else db.prepare('DELETE FROM coding_tickets WHERE ticket_id=?').run(id);
   }
   return {
+    deleteProject(id: string) {
+      deleteTicketLinks.run(id, id);
+      for (const statement of deleteTicketData) statement.run(id);
+      for (const statement of deleteProjectData) statement.run(id);
+    },
     codingBusy:(id:string)=>!!db.prepare("SELECT 1 FROM coding_runs WHERE ticket_id=? AND stage IN ('starting','coding','permission','cancelling','publishing','uncertain')").get(id),
     publicationLocked: (id: string) => !!db.prepare(`SELECT 1 FROM issue_publications i JOIN publication_batches b ON b.id=i.batch_id
       WHERE i.ticket_id=? AND b.approved_at IS NOT NULL`).get(id),

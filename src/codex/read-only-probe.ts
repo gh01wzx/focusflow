@@ -19,6 +19,8 @@ interface CancellationEvidence {
   interruptedObserved: true;
 }
 interface ProbeOptions {
+  model?: string;
+  effort?: string;
   maximumPromptChars?: number;
   signal?: AbortSignal;
   timeoutMs?: number;
@@ -118,6 +120,7 @@ async function runProbe(client: CodexClient, cwd: string, options: ProbeOptions,
     if (options.signal?.aborted) throw new ProbeFailure('CANCELLED');
     const started = record(await request('thread/start', {
       cwd, approvalPolicy: 'never', sandbox: 'read-only', ephemeral: true,
+      ...(options.model ? { model: options.model } : {}),
       baseInstructions: prompt
         ? 'Answer the supplied text request using only its attached evidence. Do not use tools, read files, run commands or access the network.'
         : 'This is a connectivity probe. Do not use tools, read files, run commands or access the network. Reply only with the requested marker.',
@@ -127,6 +130,8 @@ async function runProbe(client: CodexClient, cwd: string, options: ProbeOptions,
     threadId = id;
     const startedTurn = record(await request('turn/start', {
       threadId, input: [{ type: 'text', text: prompt ?? `Reply with exactly ${PROBE_MARKER}. Do not use any tools.` }],
+      ...(options.model ? { model: options.model } : {}),
+      ...(options.effort ? { effort: options.effort } : {}),
     }));
     const returnedId = record(startedTurn.turn).id;
     if (typeof returnedId !== 'string' || (turnId && returnedId !== turnId)) throw new ProbeFailure('INVALID_TURN');

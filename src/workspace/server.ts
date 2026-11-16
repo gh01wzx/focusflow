@@ -1,6 +1,7 @@
 import { matchAiRoute, dispatchAiRoute } from '../ai/routes.ts';
 import { createAiService } from '../ai/service.ts';
 import type { AiService } from '../ai/service.ts';
+import type { DshService } from '../ai/dsh.ts';
 import { createPlanGenerator } from '../plans/generator.ts';
 import { createPlanService, PlanInputError } from '../plans/service.ts';
 import type { PlanGenerator } from '../plans/service.ts';
@@ -41,6 +42,7 @@ export type ShutdownStage = 'transport:begin' | 'transport:stopped' | 'ai:begin'
 
 export async function startWorkspaceServer(options: {
   dataDirectory: string; clock?: () => Date; sampleLabel?: string | null; github?: GitHubService; ai?: AiService; planGenerator?: PlanGenerator;
+  dsh?: DshService;
   onShutdown?: (stage: ShutdownStage) => void;
   onInterfaceReady?: () => void;
   appVersion?: string;
@@ -52,16 +54,20 @@ export async function startWorkspaceServer(options: {
   const approvals = createApprovalBroker();
   const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });
   const coding = createCodingService(store.execution,store.projectRepository,store.projectTransaction,ai,approvals,options.github?.issues,store.linkedWork);
-  const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai), store.planApproval);
+  const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai, undefined, options.dsh), store.planApproval);
   const publications = createPublicationService(store.publications, store.projects, store.projectTransaction, options.github?.issues);
   const linkedWork = createLinkedWorkService(store.linkedWork, store.projectRepository, store.projectTransaction, options.github?.issues);
   const delivery=createDeliveryService(store.execution,store.projectRepository,store.linkedWork,store.projectTransaction,options.github?.coding);
   const reviews=createReviewService(store.execution,store.projectRepository,store.linkedWork,store.projectTransaction,ai,options.github?.review,id=>coding.stopForMerge(id));
   let ready = false;
+  let projectRequests = 0;
   const local = await listenLocal(async (request, response, origin) => {
+    let projectRequest = false;
     try {
       secureRequest(request, response, origin);
       const resource = request.url ?? '';
+      projectRequest = /^\/api\/(?:projects|milestones|project-tickets)(?:[/?]|$)/.test(resource);
+      if (projectRequest) projectRequests++;
       const reviewRoute=/^\/api\/project-tickets\/([a-f0-9-]{36})\/coding\/review(?:\/(refresh|observe|ask|approve|cancel|close-issue))?$/.exec(resource);
       if(reviewRoute&&(reviewRoute[2]?request.method==='POST':request.method==='GET')){
         const id=reviewRoute[1]!,action=reviewRoute[2],input=action?await readJson(request,origin,16384):undefined;
@@ -137,7 +143,7 @@ export async function startWorkspaceServer(options: {
       const aiRoute = matchAiRoute(request.method, resource);
       if (aiRoute) {
         const input = request.method === 'GET' ? undefined : await readJson(request, origin, 4096);
-        sendJson(response, 200, await dispatchAiRoute(aiRoute, input, ai));
+        sendJson(response, 200, await dispatchAiRoute(aiRoute, input, ai, options.dsh));
         return;
       }
       const githubRoute = matchGitHubRoute(request.method, resource);
@@ -158,6 +164,13 @@ export async function startWorkspaceServer(options: {
         return;
       }
       const input = request.method === 'GET' ? undefined : await readJson(request, origin, projectRoute ? 32768 : 4096);
+      if (projectRoute?.kind === 'deleteProject') {
+        const id = projectRoute.id;
+        if (projectRequests > 1 || plans.status(id).busy || publications.state(id).busy
+          || store.projectRepository.listTickets(id).some(ticket => reviews.busy(ticket.id))) {
+          throw new ProjectInputError('Wait for the current project work to finish, then retry deletion.');
+        }
+      }
       const result = route ? await dispatchTaskRoute(route, input, taskApi)
         : dispatchProjectRoute(projectRoute!, input, store.projects);
       sendJson(response, result.status, result.body);
@@ -172,6 +185,8 @@ export async function startWorkspaceServer(options: {
       sendJson(response, status, {
         error: known ? error.message : 'Could not save local data. Check disk space and try again.',
       });
+    } finally {
+      if (projectRequest) projectRequests--;
     }
   }, () => { trace('database:begin'); store.close(); trace('database:end'); }, async () => {
     trace('transport:stopped');
@@ -184,6 +199,7 @@ export async function startWorkspaceServer(options: {
       (async () => { trace('plans:begin'); await plans.close(); trace('plans:end'); })(),
       publications.close(),
       (async () => { trace('ai:begin'); await ai.close(); trace('ai:end'); })(),
+      options.dsh?.close(),
       (async () => { trace('github:begin'); await options.github?.close(); trace('github:end'); })(),
     ]);
     trace('handlers:draining');

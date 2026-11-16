@@ -99,6 +99,7 @@ export function useProjectsController(initialProjectId?: string, initialTicketId
     selectProject: (id: string) => run(() => client.read(id), ''),
     selectMilestone: (id: string) => { if (!busyRef.current) setMilestoneId(id); },
     addProject: (draft: EntityDraft) => run(() => client.addProject(draft), 'Project added.'),
+    deleteProject: (id: string, title: string) => run(() => client.deleteProject(id, title), 'Project deleted.'),
     addMilestone: (draft: EntityDraft) => run(
       () => client.addMilestone(selectedProject.current ?? '', draft), 'Milestone added.', true,
     ),

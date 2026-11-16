@@ -7,7 +7,8 @@ import type { AiStatus } from '../shared/ai.ts';
 
 export interface AiRuntime {
   installed(): Promise<boolean>;
-  run<T>(operation: (client: CodexClient, cwd: string) => Promise<T>): Promise<T>;
+  run<T>(operation: (client: CodexClient, cwd: string, verifyFreshModels?: () => Promise<void>) => Promise<T>,
+    freshModels?: boolean): Promise<T>;
 }
 const initial: AiStatus = { mode: 'unchecked', runtimeVersion: CODEX_VERSION, account: null, plan: null,
   message: 'Check your FocusFlow AI account before using a model.', signInUrl: null, verified: false };
@@ -30,7 +31,7 @@ function accountStatus(value: unknown): AiStatus {
   return { ...initial, mode: 'chatgpt',
     account: typeof account.email === 'string' && account.email.length <= 254 ? account.email : 'ChatGPT account',
     plan: typeof account.planType === 'string' && account.planType.length <= 80 ? account.planType : null,
-    message: 'ChatGPT sign-in is available. A model check consumes your Codex allowance.' };
+    message: 'Connected to ChatGPT. A read-only model check consumes Codex allowance.' };
 }
 export function createAiService(runtime: AiRuntime, probe = readOnlyProbe) {
   let state = { ...initial };
@@ -64,26 +65,35 @@ export function createAiService(runtime: AiRuntime, probe = readOnlyProbe) {
     active = work;
     return work;
   }
-  async function runWithChatGPT<T>(operation: (client: CodexClient, cwd: string, signal: AbortSignal) => Promise<T>, signal: AbortSignal): Promise<T> {
+  async function runWithChatGPT<T>(
+    operation: (client: CodexClient, cwd: string, signal: AbortSignal, verifyFreshModels?: () => Promise<void>) => Promise<T>,
+    signal: AbortSignal, freshModels = false,
+  ): Promise<T> {
     if (pending) throw new ProbeFailure('BUSY');
     const combined = AbortSignal.any([abort.signal, signal]);
     if (combined.aborted) throw new ProbeFailure('CANCELLED');
     pending = true;
     const work = (async () => {
-      if (!await runtime.installed()) throw new ProbeFailure('MISSING');
+      if (!await runtime.installed()) {
+        state = { ...initial, mode: 'missing', message: 'Install the pinned Codex runtime, then check the account.' };
+        throw new ProbeFailure('MISSING');
+      }
       if (combined.aborted) throw new ProbeFailure('CANCELLED');
-      return runtime.run(async (client, cwd) => {
+      return runtime.run(async (client, cwd, verifyFreshModels) => {
         const cancelSetup = () => client.close();
         combined.addEventListener('abort', cancelSetup, { once: true });
         try {
           if (combined.aborted) throw new ProbeFailure('CANCELLED');
           await client.initialize();
           const account = accountStatus(await client.request('account/read', { refreshToken: false }));
-          if (account.mode !== 'chatgpt') throw new CodexFailure('AUTH_REQUIRED');
+          if (account.mode !== 'chatgpt') {
+            state = account;
+            throw new CodexFailure('AUTH_REQUIRED');
+          }
         } finally { combined.removeEventListener('abort', cancelSetup); }
         if (combined.aborted) throw new ProbeFailure('CANCELLED');
-        return operation(client, cwd, combined);
-      });
+        return operation(client, cwd, combined, verifyFreshModels);
+      }, freshModels);
     })();
     active = work.catch(() => {});
     try { return await work; } finally { pending = false; }

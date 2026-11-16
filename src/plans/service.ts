@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { parseSuggestedPlan } from '../shared/plans.ts';
+import { aiProviderNames, parseAiModelSelection } from '../shared/ai.ts';
+import type { AiModelSelection, AiProvider } from '../shared/ai.ts';
+import { AiProviderError } from '../ai/providers.ts';
+import { DshFailure } from '../ai/dsh.ts';
 import type { PlanState, SuggestedPlan } from '../shared/plans.ts';
 import type { PlanRepository } from './repository.ts';
 import { PlanInputError } from './approval.ts';
@@ -8,13 +12,15 @@ export { PlanInputError } from './approval.ts';
 
 export type PlanProgress = 'checking' | 'waiting' | 'responding' | 'retrying';
 export interface PlanGenerator {
-  generate(goal: string, signal: AbortSignal, progress: (kind: PlanProgress) => void): Promise<SuggestedPlan>;
+  isConnected?(provider: AiProvider): boolean;
+  generate(goal: string, signal: AbortSignal, progress: (kind: PlanProgress) => void, selection?: AiModelSelection): Promise<SuggestedPlan>;
 }
 export class PlanGenerationError extends Error {
   readonly code: string;
   constructor(code: string) { super('AI planning could not complete.'); this.code = code; }
 }
 function failure(error: unknown) {
+  if (error instanceof AiProviderError || error instanceof DshFailure) return error.message;
   const code = error instanceof PlanGenerationError ? error.code : '';
   if (code === 'MISSING') return 'Install the pinned runtime with npm run ai:install, then use AI connection to sign in.';
   if (code === 'AUTH_REQUIRED') return 'Open AI connection and sign in with ChatGPT. API-key billing is not supported.';
@@ -47,10 +53,17 @@ export function createPlanService(repository: PlanRepository, generator: PlanGen
     },
     start(projectId: string, input: unknown) {
       const value = input && typeof input === 'object' ? input as Record<string, unknown> : {};
-      if (value.confirmAllowance !== true) throw new PlanInputError('Confirm that generating a plan uses Codex allowance.');
+      let selection: AiModelSelection;
+      try { selection = parseAiModelSelection(value.selection); }
+      catch { throw new PlanInputError('Choose a valid AI provider, model and reasoning effort.'); }
+      if (value.confirmAllowance !== true) throw new PlanInputError(selection.provider === 'codex'
+        ? 'Confirm that generating a plan uses Codex allowance.' : 'Confirm that generating a plan uses your DeepSeek API balance.');
       if (typeof value.goal !== 'string' || !value.goal.trim() || value.goal.length > 3000) throw new PlanInputError('Describe a goal using 1 to 3,000 characters.');
       if (closed) throw new PlanInputError('Planning is closing. Reopen FocusFlow before another request.');
       if (active) throw new PlanInputError('Another plan request is active. Wait or cancel it first.');
+      if (generator.isConnected?.(selection.provider) === false) {
+        throw new PlanInputError(`Connect ${aiProviderNames[selection.provider]} in AI connection first.`);
+      }
       const goal = value.goal.trim();
       const owned = { projectId, abort: new AbortController(), promise: Promise.resolve() };
       active = owned; messages.set(projectId, 'Checking the AI account.');
@@ -60,13 +73,13 @@ export function createPlanService(repository: PlanRepository, generator: PlanGen
             if (active !== owned || owned.abort.signal.aborted) return;
             messages.set(projectId, { checking: 'Checking the AI account.', waiting: 'Waiting for an AI draft.',
               responding: 'AI is responding.', retrying: 'The provider is retrying the current request.' }[kind]);
-          }));
+          }, selection));
           if (owned.abort.signal.aborted || closed) return;
           repository.save({ id: randomUUID(), projectId, goal, createdAt: new Date().toISOString(), plan });
           messages.set(projectId, 'Draft saved locally. Suggestions are not approved tasks.');
         } catch (error) { if (!owned.abort.signal.aborted) messages.set(projectId, failure(error)); }
         finally {
-          if (owned.abort.signal.aborted) messages.set(projectId, 'Plan request cancelled. The previous draft and project tasks are unchanged. A request already sent may use allowance.');
+          if (owned.abort.signal.aborted) messages.set(projectId, 'Plan request cancelled. The previous draft is still saved. A request already sent may use provider allowance or balance.');
           if (active === owned) active = null;
         }
       })();

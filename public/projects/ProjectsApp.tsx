@@ -31,9 +31,12 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
   const [editingPrerequisites, setEditingPrerequisites] = useState(false);
   const [layout, setLayout] = useState<'milestones' | 'board'>('milestones');
   const [planning, setPlanning] = useState(false);
+  const [deletion, setDeletion] = useState<{ id: string; title: string } | null>(null);
+  const [deletionName, setDeletionName] = useState('');
   const [repository, setRepository] = useState<{ projectId: string; value: GitHubRepository | null } | null>(null);
   const { view, busy, milestoneId, error, message } = state;
-  const locked = busy || planning || editingPrerequisites || !!state.editing || openTicketId !== null || (composing !== null && view !== null);
+  const locked = busy || planning || editingPrerequisites || !!state.editing || openTicketId !== null || !!deletion
+    || (composing !== null && view !== null);
   const project = view?.projects.find(item => item.id === view.selectedProjectId);
   const milestone = view?.milestones.find(item => item.id === milestoneId);
   const tickets = view?.tickets.filter(item => item.milestoneId === milestoneId) ?? [];
@@ -80,11 +83,23 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
             <p className="subtitle">Open a ticket to work on it.</p>
           </div>
         </header>
-        {error && !state.editing && !openTicketId && (!composing || !view) && <div className="error" role="alert">{error}
+        {error && !state.editing && !openTicketId && !deletion && (!composing || !view) && <div className="error" role="alert">{error}
           <button disabled={busy} onClick={() => void state.refresh()}>Retry</button></div>}
         {!openTicketId && <p className="feedback" role="status" aria-live="polite">{message || (!view && !error ? 'Loading projects.' : '')}</p>}
         {state.editing && state.editing.kind !== 'ticket' && <p className="editing-note">Save or cancel your changes before switching views.</p>}
         {view && <>
+          {deletion && <ProjectDialog title="Delete project" locked={busy} onClose={() => { setDeletion(null); state.clearError(); }}>
+            <p>Delete <strong>{deletion.title}</strong> and its local milestones, tickets, drafts and history? GitHub Issues, pull requests and worktree files are kept.</p>
+            <form className="project-form" onSubmit={async event => {
+              event.preventDefault();
+              if (deletionName === deletion.title && await state.deleteProject(deletion.id, deletionName)) setDeletion(null);
+            }}>
+              <label htmlFor="delete-project-name">Type the project name to confirm</label>
+              <input id="delete-project-name" value={deletionName} onChange={event => setDeletionName(event.target.value)} disabled={busy} />
+              {error && <p role="alert" className="error">{error}</p>}
+              <button className="secondary-button" disabled={busy || deletionName !== deletion.title}>Delete project permanently</button>
+            </form>
+          </ProjectDialog>}
           {composing && <ProjectDialog title={'New ' + composing} locked={busy} onClose={closeComposer}>
             {composing === 'ticket' && milestone
               ? <TicketComposer milestoneId={milestone.id} busy={busy} error={error} onAdd={state.addTicket} onCancel={closeComposer} />
@@ -99,6 +114,9 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
                   <PlanDraftPanel key={project.id} projectId={project.id} disabled={locked} onOpenChange={setPlanning} onApproved={() => { void state.refresh(); }} />
                   <PublicationPanel projectId={project.id} disabled={locked} onOpenChange={setPlanning} onChanged={() => { void state.refresh(); }} />
                   <button className="text-button" disabled={locked} onClick={() => state.beginEdit('project', project.id)}>Edit project</button>
+                  <button className="text-button" disabled={locked} onClick={() => {
+                    state.clearFeedback(); setDeletionName(''); setDeletion({ id: project.id, title: project.title });
+                  }}>Delete project</button>
                   <button className="secondary-button" disabled={locked} onClick={() => openComposer('milestone')}>New milestone</button>
                 </div>
               </div>

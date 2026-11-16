@@ -27,12 +27,12 @@ export interface CodexProcessObservation {
 export async function withCodexProcess<T>(
   executable: string, args: string[], environment: NodeJS.ProcessEnv,
   operation: (client: CodexClient, cwd: string) => Promise<T>,
-  options: { graceMs?: number; shutdownMs?: number; onClosed?: (observation: CodexProcessObservation) => void } = {},
+  options: { graceMs?: number; shutdownMs?: number; onClosed?: (observation: CodexProcessObservation) => void; jsonRpc?: boolean } = {},
 ): Promise<{ result: T; processClosed: true; temporaryDirectoryRemoved: true }> {
   const cwd = await mkdtemp(join(tmpdir(), 'focusflow-codex-turn-'));
   const child = spawn(executable, args, { cwd, env: environment, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
   child.stderr.resume();
-  const client = new CodexClient(child.stdout, child.stdin, 15_000, 1_048_576, child.pid ?? null);
+  const client = new CodexClient(child.stdout, child.stdin, options.jsonRpc ? 30_000 : 15_000, 1_048_576, child.pid ?? null, options.jsonRpc);
   let spawnError: CodexProcessObservation['spawnError'] = null;
   child.on('error', (error: NodeJS.ErrnoException) => {
     spawnError = error.code === 'ENOENT' || error.code === 'EACCES' || error.code === 'EPERM' ? error.code : 'OTHER';

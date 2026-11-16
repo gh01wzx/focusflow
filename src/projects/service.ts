@@ -7,6 +7,18 @@ export type ProjectTransaction = <T>(operation: (now: Date) => T) => T;
 
 export function createProjectService(repository: ProjectRepository, transaction: ProjectTransaction, nextId: () => string) {
   return {
+    deleteProject: (id: string, input: unknown): void => transaction(() => {
+      const project = repository.findProject(id);
+      if (!project) throw new ProjectNotFoundError('Project not found.');
+      if (!input || typeof input !== 'object' || !('title' in input) || input.title !== project.title
+        || !('confirm' in input) || input.confirm !== true) {
+        throw new ProjectInputError('Confirm the current project name before deleting.');
+      }
+      if (repository.listTickets(id).some(ticket => repository.codingBusy(ticket.id))) {
+        throw new ProjectInputError('Stop active coding and reconcile uncertain work before deleting this project.');
+      }
+      repository.deleteProject(id);
+    }),
     assertRepositoryChange: (projectId: string, repositoryId: unknown): void => transaction(() => {
       if (repository.publicationRepositoryChanged(projectId, repositoryId)) {
         throw new ProjectInputError('Keep the repository used by approved publication work. Reconcile it before changing projects.');

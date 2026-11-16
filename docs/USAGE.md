@@ -14,6 +14,8 @@ Expand **Repeating tasks** to stop a schedule. Its current-period task stays ava
 
 ## Manual projects
 
+To permanently remove a project from FocusFlow, open it and choose **Delete project**. Type its name and confirm. This removes its local milestones, tickets, dependencies, AI drafts and associated history. Active work must finish first. GitHub Issues, branches, pull requests and worktree files remain available.
+
 Choose **Projects** to see three horizontal columns: Review, In Progress and one recommended unblocked Backlog ticket across all projects. Each column has its own border, background and count. Smaller windows can scroll the columns horizontally. Lists use creation time, oldest first, with ticket ID breaking ties. Expand View details for descriptions and acceptance criteria. Start ticket moves only the chosen Backlog ticket to In Progress; nothing starts automatically. A Backlog ticket can start only when its prerequisites are Done and no manual blocker remains.
 
 Select a project directly in the sidebar to open its milestones and tickets. **New project** is in the sidebar only. Compact **New milestone** and **New ticket** buttons open separate creation dialogs, keeping the main page focused on existing work. **Action center** stays in the sidebar to return to the overview. Open a ticket card for its description and acceptance criteria. Use its status buttons to move between Backlog, In Progress, Review and Done. Descriptions and acceptance criteria support multiple lines.
@@ -30,15 +32,21 @@ Choose **Work type** when creating or editing an unpublished Backlog ticket. **M
 
 Existing data upgrades only after a verified pre-change backup. Old Ready tickets become Backlog; old Blocked tickets become Backlog with a manual blocker that you must explain or clear. IDs, text and dependency links remain. Named reviews use sample data separated by the current database format; previous formats remain untouched.
 
-## AI connection preview
+## AI connection
 
-Open **AI connection** in the sidebar to check the separate FocusFlow Codex account. Install the pinned official runtime explicitly with npm run ai:install from a source checkout, then choose **Sign in with ChatGPT** and follow the browser link. The shared runtime stays under %LOCALAPPDATA%\FocusFlow\codex-product\runtime. Each app profile supplies its own codex-profile directory for sign-in settings. Live Windows credential-store separation still needs verification. Credentials use the OS credential store; no plaintext fallback is configured and existing Codex App sessions are not copied.
+Open **AI connection** in the sidebar. The app checks each provider separately. Connect the provider you want to use in this session before generating a draft.
 
-**Check account** does not request a model response. **Run read-only AI check** requires the allowance checkbox and a ChatGPT-authenticated account. It consumes Codex allowance; API-key and other auth modes are refused. Coding uses a separate explicit Start decision. The product login/keyring/live path still needs owner-led Windows acceptance; launching the app never starts a model request.
+For Codex, install the pinned runtime with `npm run ai:install` from a source checkout. Choose **Sign in with ChatGPT** and follow the browser link. If you have already signed in to FocusFlow, choose **Check account**. FocusFlow uses the OS credential store and a separate Codex profile. Requests use ChatGPT Codex allowance.
+
+For DeepSeek Harness, install the CLI version shown under **AI connection**. FocusFlow looks in the default Windows global npm directory. If you installed it elsewhere, point `FOCUSFLOW_DSH_DIR` to the absolute package directory. Set `DEEPSEEK_API_KEY` in the environment used to launch FocusFlow, then reopen it. Choose **Check DeepSeek Harness** to validate your DeepSeek key and start the local SDK. Requests use your DeepSeek API balance.
+
+Connection checks do not request a model response. The optional read-only checks each send one request after you confirm usage. Coding and PR review use Codex.
 
 ## AI plan drafts
 
-Open a project and choose **AI plan draft**. Enter a goal, confirm that generation uses Codex allowance, then choose **Generate draft**. Only the entered goal is included in the planning prompt. It is sent to OpenAI through the pinned Codex runtime; project files, existing tasks and GitHub credentials are not attached. Each request checks for a ChatGPT account again. API-key billing is refused.
+Open a project and choose **AI plan draft**. The draft form is available after you connect a provider. When you open it, switch providers, or choose **Refresh models**, FocusFlow requests current models and their reasoning options through Codex or the DeepSeek model API. The form lists the efforts published for the selected model. **Provider default** leaves the effort to the provider. If a list fails to load, retry it before generating.
+
+Enter the goal, confirm usage, then choose **Generate draft**. The app checks the connection and selected model and effort again before sending the goal. Saved drafts can still be viewed and edited without a connection.
 
 Progress and **Cancel generation** remain visible while waiting. Closing the dialog requests cancellation too. A request already sent may use allowance. There is no automatic retry after failure, cancellation or reopening. Provider-internal retry progress may appear during an existing request.
 

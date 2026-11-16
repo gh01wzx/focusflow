@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPlanClient } from '../../src/client/plans.ts';
 import type { PlanState, PlanDraft } from '../../src/shared/plans.ts';
+import type { AiModelSelection } from '../../src/shared/ai.ts';
 
 const client = createPlanClient();
 export function usePlanController(projectId: string, open: boolean) {
@@ -49,7 +50,7 @@ export function usePlanController(projectId: string, open: boolean) {
     return () => { active = false; clearInterval(timer); };
   }, [open, state?.busy, projectId]);
   return { state, goal, setGoal, confirmed, setConfirmed, busy, error,
-    generate: () => run(() => client.generate(projectId, goal, confirmed)),
+    generate: (selection: AiModelSelection) => run(() => client.generate(projectId, goal, confirmed, selection)),
     cancel: () => run(() => client.cancel(projectId)),
     save: (draft: PlanDraft) => run(() => client.edit(draft)),
     approve: (draft: PlanDraft, confirmed: boolean) => run(() => client.approve(draft, confirmed)),

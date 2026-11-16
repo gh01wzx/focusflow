@@ -8,6 +8,7 @@ import { SCHEMA_VERSION } from '../database/schema.ts';
 import { selectProfile } from '../runtime/profile.ts';
 import { createAiService } from '../ai/service.ts';
 import { createAiRuntime } from '../ai/runtime.ts';
+import { createDshService } from '../ai/dsh.ts';
 import { AI_SETUP_URL, isAiSignInUrl } from '../shared/ai.ts';
 
 import { createGitHubVault } from '../github/vault.ts';
@@ -77,7 +78,7 @@ async function startDesktop(): Promise<void> {
         decrypt: async value => (await safeStorage.decryptStringAsync(value)).result,
       }));
       service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), sampleLabel: profile.sampleLabel,
-        github, ai, onShutdown: traceShutdown, onInterfaceReady: confirmReady, appVersion: app.getVersion() });
+        github, ai, dsh: createDshService(), onShutdown: traceShutdown, onInterfaceReady: confirmReady, appVersion: app.getVersion() });
       const origin = service.origin;
       window = new BrowserWindow({
         width: 1120,

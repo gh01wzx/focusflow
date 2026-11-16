@@ -52,15 +52,18 @@ export class CodexClient extends EventEmitter {
   private readonly output: Writable;
   private readonly timeoutMs: number;
   private readonly maxLineBytes: number;
+  private readonly jsonRpc: boolean;
   readonly processId: number | null;
 
-  constructor(input: Readable, output: Writable, timeoutMs = 15_000, maxLineBytes = 1_048_576, processId: number | null = null) {
+  constructor(input: Readable, output: Writable, timeoutMs = 15_000, maxLineBytes = 1_048_576, processId: number | null = null,
+    jsonRpc = false) {
     super();
     this.input = input;
     this.output = output;
     this.timeoutMs = timeoutMs;
     this.maxLineBytes = maxLineBytes;
     this.processId = processId;
+    this.jsonRpc = jsonRpc;
     input.setEncoding('utf8');
     input.on('data', this.onData);
     input.once('end', this.onEnd);
@@ -69,14 +72,15 @@ export class CodexClient extends EventEmitter {
     output.once('error', this.onEnd);
   }
 
-  async initialize(): Promise<void> {
+  async initialize(params?: Record<string, unknown>): Promise<unknown> {
     if (this.initialized || this.pending.size !== 0) throw new CodexFailure('PROTOCOL');
-    await this.send('initialize', {
+    const result = await this.send('initialize', params ?? {
       clientInfo: { name: 'focusflow_phase0', version: '0.0.2' },
       capabilities: { experimentalApi: false },
     });
-    this.write({ method: 'initialized', params: {} });
+    if (!this.jsonRpc) this.write({ method: 'initialized', params: {} });
     this.initialized = true;
+    return result;
   }
 
   request(method: string, params: unknown): Promise<unknown> {
@@ -104,9 +108,9 @@ export class CodexClient extends EventEmitter {
     });
   }
 
-  private write(value: unknown): void {
+  private write(value: Record<string, unknown>): void {
     if (this.closed) throw new CodexFailure('CLOSED');
-    try { this.output.write(JSON.stringify(value) + '\n'); }
+    try { this.output.write(JSON.stringify(this.jsonRpc ? { jsonrpc: '2.0', ...value } : value) + '\n'); }
     catch { this.fail('CLOSED'); }
   }
 

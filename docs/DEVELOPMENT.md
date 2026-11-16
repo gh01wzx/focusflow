@@ -76,6 +76,9 @@ The AI connection preview uses official Codex app-server over owned stdio, pinne
 
 The route follows [official app-server authentication](https://developers.openai.com/codex/app-server/) and [credential-storage guidance](https://developers.openai.com/codex/auth/). Account checks read sanitized account/plan fields. Sign-in is explicit and stays in an owned process until completion, cancellation or timeout. Windows starts the version-checked native executable with a hidden window; it does not use the npm wrapper for background requests. Cancel sign-in closes the local protocol and waits for owned-process cleanup rather than waiting for a provider reply. A timeout gives a retry message. The read-only model check uses the existing tool-denying probe in a disposable directory and requires a fresh server-side ChatGPT account check plus explicit allowance confirmation. No automatic API-key fallback exists.
 
+The shared AI provider service exposes connection status, model discovery and read-only responses. Plan generation checks the connection and reloads model metadata before sending a prompt. The pinned Codex app-server has no forced-refresh option. FocusFlow removes its own profile's model cache before discovery and requires a replacement from the runtime. DeepSeek Harness checks the DeepSeek API key and reads the official model catalog. Its isolated SDK handles model requests.
+
+
 Automated account, quota and login results are simulated. Before accepting the product integration gate, the owner must install the pinned runtime, explicitly sign in on Windows, confirm OS credential-store use, run one opted-in read-only check and record the exact app commit and result in its PR. Do not treat earlier Phase 0 results as verification of this new profile or UI. No new model run or authorization occurs on app launch.
 
 Do not point test overrides at real data. Do not commit databases, credentials, local config or logs.

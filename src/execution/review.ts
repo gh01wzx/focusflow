@@ -83,6 +83,7 @@ export function createReviewService(repository:ExecutionRepository,projects:Proj
   }
   return {
     state,refresh,observe,ask,
+    busy: (id: string) => active?.ticketId === id,
     async approve(id:string,input:unknown){const request=executionRecord(input);if(repository.runs().some(r=>activeCodingStage(r.stage))||active)throw new ExecutionFailure('BUSY','Finish coding and AI review before recording approval.');
       const before=state(id),c=context(id);if(!provider||!before.evidence||before.stale||request.confirm!==true||request.scope!==c.scope||request.headSha!==before.evidence.pull.headSha)throw new ExecutionFailure('STALE_REVIEW','Refresh and explicitly confirm the current PR head and requirements.');
       const freshEvidence=await provider.evidence(c.ticket.projectId,c.repository,c.number),live=freshEvidence.pull;observePull(id,live);

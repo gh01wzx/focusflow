@@ -108,7 +108,8 @@ async function run(mode: TrialMode): Promise<void> {
         ].join('\n');
         const result = record(await client.request('command/exec', {
           command: [process.execPath, '-e', patch], cwd, sandboxPolicy: writeTrialSandbox(cwd),
-          timeoutMs: 10_000, outputBytesCap: 2048,
+          // The native Windows sandbox requires the runtime's default output cap.
+          timeoutMs: 10_000,
         }));
         if (typeof result.exitCode !== 'number' || !Number.isInteger(result.exitCode)) {
           throw new WriteTrialFailure('INVALID_SANDBOX_RESULT');

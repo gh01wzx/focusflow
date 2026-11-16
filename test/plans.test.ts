@@ -9,6 +9,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { setImmediate as tick } from 'node:timers/promises';
 import { CodexClient } from '../src/codex/client.ts';
 import { createAiService } from '../src/ai/service.ts';
+import { createAiProviders } from '../src/ai/providers.ts';
 import type { AiRuntime } from '../src/ai/service.ts';
 import { createPlanGenerator } from '../src/plans/generator.ts';
 import { createPlanService, PlanGenerationError } from '../src/plans/service.ts';
@@ -119,9 +120,14 @@ function runtime(auth: string | null, cleanupFailure = false) {
       const message = JSON.parse(String(chunk)) as { id?: number; method: string };
       methods.push(message.method);
       if (message.id !== undefined) input.write(JSON.stringify({ id: message.id, result: message.method === 'account/read'
-        ? { account: auth ? { type: auth, email: 'account@example.invalid', accessToken: 'private-credential' } : null } : {} }) + '\n');
+        ? { account: auth ? { type: auth, email: 'account@example.invalid', accessToken: 'private-credential' } : null }
+        : message.method === 'model/list' ? { data: [{ model: 'fixture-model' }] } : {} }) + '\n');
     });
-    try { const result = await operation(client, 'disposable-empty-directory'); if (cleanupFailure) throw new Error('private cleanup path'); return result; }
+    try {
+      const result = await operation(client, 'disposable-empty-directory');
+      if (cleanupFailure && methods.includes('model/list')) throw new Error('private cleanup path');
+      return result;
+    }
     finally { client.close(); input.destroy(); output.destroy(); }
   } };
   return { value, methods };
@@ -131,11 +137,13 @@ test('planning requires a fresh ChatGPT account, only passes the goal, and share
   for (const auth of [null, 'apiKey', 'chatgpt']) {
     const fake = runtime(auth); const ai = createAiService(fake.value); let calls = 0;
     const pending = deferred<string>(); let sent = '';
-    const generator = createPlanGenerator(ai, async (_client, cwd, prompt) => {
+    const generator = createPlanGenerator(createAiProviders(ai, undefined, async (_client, cwd, prompt) => {
       calls++; sent = prompt; assert.equal(cwd, 'disposable-empty-directory'); return pending.promise;
-    });
+    }));
+    await assert.rejects(generator.generate('Goal before connection', new AbortController().signal, () => {}), /Connect Codex/);
+    await ai.check();
     const result = generator.generate('Only this goal', new AbortController().signal, () => {});
-    if (auth !== 'chatgpt') await assert.rejects(result, { code: 'AUTH_REQUIRED' });
+    if (auth !== 'chatgpt') await assert.rejects(result, /Connect Codex/);
     else {
       for (let count = 0; count < 100 && calls === 0; count++) await tick();
       await assert.rejects(generator.generate('Another goal', new AbortController().signal, () => {}), { code: 'BUSY' });
@@ -153,9 +161,11 @@ test('planning requires a fresh ChatGPT account, only passes the goal, and share
 test('missing runtimes, invalid model JSON and failed runtime cleanup never yield a plan', async () => {
   for (const kind of ['missing', 'json', 'cleanup']) {
     const fake = runtime('chatgpt', kind === 'cleanup');
-    if (kind === 'missing') fake.value.installed = async () => false;
     const ai = createAiService(fake.value);
-    const generator = createPlanGenerator(ai, async () => kind === 'json' ? 'provider private invalid JSON' : JSON.stringify(suggested()));
+    await ai.check();
+    if (kind === 'missing') fake.value.installed = async () => false;
+    const generator = createPlanGenerator(createAiProviders(ai, undefined,
+      async () => kind === 'json' ? 'provider private invalid JSON' : JSON.stringify(suggested())));
     await assert.rejects(generator.generate('Goal', new AbortController().signal, () => {}), error => {
       assert.ok(error instanceof PlanGenerationError); assert.doesNotMatch(error.message, /private/); return true;
     });

@@ -1,5 +1,6 @@
 import { matchAiRoute, dispatchAiRoute } from '../ai/routes.ts';
 import { createAiService } from '../ai/service.ts';
+import { createAiProviders } from '../ai/providers.ts';
 import type { AiService } from '../ai/service.ts';
 import type { DshService } from '../ai/dsh.ts';
 import { createPlanGenerator } from '../plans/generator.ts';
@@ -54,7 +55,8 @@ export async function startWorkspaceServer(options: {
   const approvals = createApprovalBroker();
   const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });
   const coding = createCodingService(store.execution,store.projectRepository,store.projectTransaction,ai,approvals,options.github?.issues,store.linkedWork);
-  const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(ai, undefined, options.dsh), store.planApproval);
+  const providers = createAiProviders(ai, options.dsh);
+  const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(providers), store.planApproval);
   const publications = createPublicationService(store.publications, store.projects, store.projectTransaction, options.github?.issues);
   const linkedWork = createLinkedWorkService(store.linkedWork, store.projectRepository, store.projectTransaction, options.github?.issues);
   const delivery=createDeliveryService(store.execution,store.projectRepository,store.linkedWork,store.projectTransaction,options.github?.coding);
@@ -143,7 +145,7 @@ export async function startWorkspaceServer(options: {
       const aiRoute = matchAiRoute(request.method, resource);
       if (aiRoute) {
         const input = request.method === 'GET' ? undefined : await readJson(request, origin, 4096);
-        sendJson(response, 200, await dispatchAiRoute(aiRoute, input, ai, options.dsh));
+        sendJson(response, 200, await dispatchAiRoute(aiRoute, input, ai, providers, options.dsh));
         return;
       }
       const githubRoute = matchGitHubRoute(request.method, resource);

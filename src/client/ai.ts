@@ -1,9 +1,9 @@
-import { parseAiStatus } from '../shared/ai.ts';
-import { parseDshStatus, parsePlanningModels } from '../shared/planning-ai.ts';
+import { parseAiConnections, parseAiModels, parseAiStatus, parseDshStatus } from '../shared/ai.ts';
+import type { AiProvider } from '../shared/ai.ts';
 
 export function createAiClient(transport: typeof fetch = fetch) {
-  async function request(action: string, value?: unknown) {
-    const response = await transport('/api/ai/' + action, value === undefined ? {} : {
+  async function request(action: string, value?: unknown, signal?: AbortSignal) {
+    const response = await transport('/api/ai/' + action, value === undefined ? { ...(signal ? { signal } : {}), cache: 'no-store' } : {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value),
     });
     const payload: unknown = await response.json();
@@ -14,7 +14,9 @@ export function createAiClient(transport: typeof fetch = fetch) {
   return { status: async () => parseAiStatus(await request('status')), check: async () => parseAiStatus(await request('check', {})),
     signIn: async () => parseAiStatus(await request('sign-in', {})), cancel: async () => parseAiStatus(await request('cancel-sign-in', {})),
     verify: async (confirmAllowance: boolean) => parseAiStatus(await request('verify', { confirmAllowance })),
-    codexModels: async () => parsePlanningModels(await request('codex-models')),
+    connections: async (signal?: AbortSignal) => parseAiConnections(await request('providers', undefined, signal)),
+    models: async (provider: AiProvider, signal?: AbortSignal) =>
+      parseAiModels(await request('providers/' + provider + '/models', undefined, signal)),
     dshStatus: async () => parseDshStatus(await request('dsh-status')),
     dshCheck: async () => parseDshStatus(await request('dsh-check', {})),
     dshVerify: async (confirmAllowance: boolean) => parseDshStatus(await request('dsh-verify', { confirmAllowance })),

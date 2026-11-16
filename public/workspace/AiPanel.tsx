@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createAiClient } from '../../src/client/ai.ts';
-import { AI_SETUP_URL } from '../../src/shared/ai.ts';
-import type { AiStatus } from '../../src/shared/ai.ts';
-import { DSH_VERSION } from '../../src/shared/planning-ai.ts';
-import type { DshStatus } from '../../src/shared/planning-ai.ts';
+import { AI_SETUP_URL, DSH_VERSION } from '../../src/shared/ai.ts';
+import type { AiProvider, AiStatus, DshStatus } from '../../src/shared/ai.ts';
 
 const client = createAiClient();
 export function AiPanel({ disabled }: { disabled: boolean }) {
@@ -12,7 +10,7 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const [provider, setProvider] = useState<'codex' | 'dsh'>('codex');
+  const [provider, setProvider] = useState<AiProvider>('codex');
   const [dsh, setDsh] = useState<DshStatus | null>(null);
   const [dshBusy, setDshBusy] = useState(false);
   const [dshConfirmed, setDshConfirmed] = useState(false);
@@ -92,7 +90,7 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
       <button className="primary" disabled={busy || !confirmed || status?.mode !== 'chatgpt'}
         onClick={() => void run(() => client.verify(confirmed))}>Run read-only AI check</button>
       </> : <>
-        <p>Use DeepSeek Harness for plan drafts. Model requests use your DeepSeek API balance.</p>
+        <p>Connect DeepSeek Harness to FocusFlow. Model requests use your DeepSeek API balance.</p>
         <p>Install the CLI with <code>npm install -g @deepseek-ai/dsh@{DSH_VERSION}</code>. Set <code>DEEPSEEK_API_KEY</code> in the environment used to launch FocusFlow, then reopen it.</p>
         <p role="status">{dsh?.message}</p>
         <button disabled={dshBusy} onClick={() => void runDsh(client.dshCheck)}>Check DeepSeek Harness</button>

@@ -70,7 +70,7 @@ For a manual project, create a milestone and a few tickets, link prerequisites, 
 
 ## Optional AI and GitHub
 
-AI planning sends the entered goal to the selected model through Codex or DeepSeek Harness. Coding operates on the selected ticket worktree. Review sends the question and relevant PR diffs and checks. Each model request requires explicit consent. Codex uses ChatGPT allowance for planning, coding and review. DeepSeek Harness planning uses your DeepSeek API balance.
+AI planning requires a connected provider and loads current model and reasoning options before sending the goal through Codex or DeepSeek Harness. Coding operates on the selected ticket worktree. Review sends the question and relevant PR diffs and checks. Each model request requires explicit consent. Codex uses ChatGPT allowance for planning, coding and review. DeepSeek Harness planning uses your DeepSeek API balance.
 
 Approved publication sends previewed ticket/source content to the selected repository. GitHub credentials stay in the profile's Windows-encrypted vault and are not attached to coding/review prompts. Live account, sandbox and cancellation behavior still need owner acceptance.
 

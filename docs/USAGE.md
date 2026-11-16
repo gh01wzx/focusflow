@@ -32,17 +32,21 @@ Choose **Work type** when creating or editing an unpublished Backlog ticket. **M
 
 Existing data upgrades only after a verified pre-change backup. Old Ready tickets become Backlog; old Blocked tickets become Backlog with a manual blocker that you must explain or clear. IDs, text and dependency links remain. Named reviews use sample data separated by the current database format; previous formats remain untouched.
 
-## AI connection preview
+## AI connection
 
-Open **AI connection** in the sidebar to check the separate FocusFlow Codex account. Install the pinned official runtime explicitly with npm run ai:install from a source checkout, then choose **Sign in with ChatGPT** and follow the browser link. The shared runtime stays under %LOCALAPPDATA%\FocusFlow\codex-product\runtime. Each app profile supplies its own codex-profile directory for sign-in settings. Live Windows credential-store separation still needs verification. Credentials use the OS credential store; no plaintext fallback is configured and existing Codex App sessions are not copied.
+Open **AI connection** in the sidebar. The app checks each provider separately. Connect the provider you want to use in this session before generating a draft.
 
-**Check account** does not request a model response. **Run read-only AI check** requires the allowance checkbox and a ChatGPT-authenticated account. It consumes Codex allowance; API-key and other auth modes are refused. Coding uses a separate explicit Start decision. The product login/keyring/live path still needs owner-led Windows acceptance; launching the app never starts a model request.
+For Codex, install the pinned runtime with `npm run ai:install` from a source checkout. Choose **Sign in with ChatGPT** and follow the browser link. If you have already signed in to FocusFlow, choose **Check account**. FocusFlow uses the OS credential store and a separate Codex profile. Requests use ChatGPT Codex allowance.
+
+For DeepSeek Harness, install the CLI version shown under **AI connection**. FocusFlow looks in the default Windows global npm directory. If you installed it elsewhere, point `FOCUSFLOW_DSH_DIR` to the absolute package directory. Set `DEEPSEEK_API_KEY` in the environment used to launch FocusFlow, then reopen it. Choose **Check DeepSeek Harness** to validate your DeepSeek key and start the local SDK. Requests use your DeepSeek API balance.
+
+Connection checks do not request a model response. The optional read-only checks each send one request after you confirm usage. Coding and PR review use Codex.
 
 ## AI plan drafts
 
-Open a project and choose **AI plan draft**. Pick **Codex** or **DeepSeek Harness**, a model, and an available reasoning effort. **Load Codex models** reads model options from the signed-in runtime without generating a draft. **Provider default** leaves the effort to the selected model. Enter the goal, confirm the selected provider's usage, then choose **Generate draft**. Only the goal is included as user input. Codex uses ChatGPT allowance, and DeepSeek Harness uses the separate DeepSeek API balance.
+Open a project and choose **AI plan draft**. The draft form is available after you connect a provider. When you open it, switch providers, or choose **Refresh models**, FocusFlow requests current models and their reasoning options through Codex or the DeepSeek model API. The form lists the efforts published for the selected model. **Provider default** leaves the effort to the provider. If a list fails to load, retry it before generating.
 
-For DeepSeek Harness, install the CLI version shown under **AI connection**. FocusFlow looks in the default Windows global npm directory. If you installed the package elsewhere, set `FOCUSFLOW_DSH_DIR` to its absolute package directory. Set `DEEPSEEK_API_KEY` in the environment used to launch FocusFlow, then reopen it. The app reads it from that environment. **Check DeepSeek Harness** checks SDK startup. **Run read-only DeepSeek check** sends one request after you confirm usage. DeepSeek Harness supports planning here. Coding and PR review still use Codex.
+Enter the goal, confirm usage, then choose **Generate draft**. The app checks the connection and selected model and effort again before sending the goal. Saved drafts can still be viewed and edited without a connection.
 
 Progress and **Cancel generation** remain visible while waiting. Closing the dialog requests cancellation too. A request already sent may use allowance. There is no automatic retry after failure, cancellation or reopening. Provider-internal retry progress may appear during an existing request.
 

@@ -88,6 +88,8 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
           }),
         });
       },abort.signal);
+      // A stop can arrive while the runtime is closing after returning its summary.
+      abort.signal.throwIfAborted();
       if(expected!==token(id))throw new ExecutionFailure('REQUIREMENTS_CHANGED','The ticket changed during coding. Inspect retained changes before explicitly resuming with the new scope.');
       const run=repository.latestRun(id);if(run?.id===runId&&run.stage!=='merged')save({...run,summary,processId:null},'ready','Coding ended and the owned process closed. Inspect changes before publishing a PR.');
     }catch(error){

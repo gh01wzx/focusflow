@@ -96,8 +96,16 @@ export function createProjectRepository(db: DatabaseSync) {
         value.status, 'manual', value.createdAt, value.updatedAt);
       setExecutionMode(value.id, value.executionMode);
     },
+    isBreakdown(id: string) {
+      return !!db.prepare("SELECT 1 FROM ticket_ai WHERE ticket_id=? AND json_array_length(draft_json,'$.children')>0").get(id);
+    },
     setStatus(id: string, status: TicketStatus, at: string) {
       updateStatus.run(status, at, id, status);
+      if (status === 'done') db.prepare(`UPDATE project_tickets SET status='review',updated_at=? WHERE status='backlog'
+        AND id IN (SELECT p.ticket_id FROM ticket_ai p JOIN json_each(p.draft_json,'$.children') item WHERE item.value=?)
+        AND NOT EXISTS (SELECT 1 FROM ticket_ai p JOIN json_each(p.draft_json,'$.children') item
+          LEFT JOIN project_tickets child ON child.id=item.value
+          WHERE p.ticket_id=project_tickets.id AND (child.id IS NULL OR child.status!='done'))`).run(at, id);
     },
     setBlocker(id: string, reason: string, at: string) {
       db.prepare('UPDATE project_tickets SET block_reason=?,updated_at=? WHERE id=? AND block_reason!=?').run(reason, at, id, reason);

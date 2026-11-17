@@ -14,9 +14,8 @@ export function ActionCenter({ onWorkspaceChange, onProject, onTicket, onNewProj
   function card(item: ActionTicket, recommended = false) {
     const view = state.views!.find(view => view.selectedProjectId === item.ticket.projectId)!;
     return <li className="action-card" key={item.ticket.id}>
-      <p className="eyebrow">{item.project} / {item.milestone}</p>
-      <h3>{item.ticket.title}</h3>
-      <p>Created {new Date(item.ticket.createdAt).toLocaleString()}</p>
+      <h3><button className="text-button" onClick={() => onTicket(item.ticket.projectId, item.ticket.id)}>{item.ticket.title}</button></h3>
+      <p>{item.project} / {item.milestone}</p>
       <details><summary>View details</summary>
         <h4>Description</h4><p className="action-text">{item.ticket.description || 'No description yet.'}</p>
         <h4>Acceptance criteria</h4><p className="action-text">{item.ticket.acceptanceCriteria || 'No acceptance criteria yet.'}</p>
@@ -34,9 +33,7 @@ export function ActionCenter({ onWorkspaceChange, onProject, onTicket, onNewProj
     navigation={<ProjectNavigation projects={state.views?.flatMap(view => view.projects) ?? []} overview busy={state.busy}
       onOverview={() => {}} onProject={onProject} onNewProject={onNewProject} />}>
     <main className="actions-main">
-      <header className="page-header"><div><p className="eyebrow">ACROSS ALL PROJECTS</p>
-        <h1>Action center<span className="heading-dot">.</span></h1>
-        <p className="subtitle">Review your work, then choose the next step.</p></div></header>
+      <header className="page-header"><h1>Action center</h1></header>
       {state.error && <div role="alert" className="error">{state.error}
         <button disabled={state.busy} onClick={() => void state.refresh()}>Retry</button></div>}
       <p role="status" className="feedback">{state.message || (!state.views && !state.error ? 'Loading project actions.' : '')}</p>
@@ -54,7 +51,7 @@ export function ActionCenter({ onWorkspaceChange, onProject, onTicket, onNewProj
           <p className="action-hint">One unblocked Backlog task, oldest created first.</p>
           {actions.next ? <ul className="action-list">{card(actions.next, true)}</ul>
             : <p className="action-empty">No eligible Backlog task. Select a project to add work or inspect blockers.</p>}
-          <p className="action-hint action-order">Equal timestamps keep a stable order. Finishing prerequisites never starts another task automatically.</p>
+
         </section>
       </div>}
     </main>

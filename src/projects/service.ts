@@ -62,6 +62,7 @@ export function createProjectService(repository: ProjectRepository, transaction:
     start: (id: string): void => transaction(now => {
       const ticket = repository.findTicket(id);
       if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
+      if (repository.isBreakdown(id)) throw new ProjectInputError('Complete the child tickets, then review the original requirements.');
       if (ticket.status !== 'backlog') throw new ProjectInputError('This ticket is no longer in Backlog. Refresh before choosing another task.');
       if (ticket.executionMode === 'codex') throw new ProjectInputError('Publish this coding ticket, then use its workspace and coding controls to start it.');
       if (ticket.blockReason) throw new ProjectInputError('Clear this ticket\'s blocker before starting it.');
@@ -72,6 +73,7 @@ export function createProjectService(repository: ProjectRepository, transaction:
     }),
     setPrerequisites: (id: string, input: unknown): string => transaction(now => {
       if (repository.publicationLocked(id)) throw new ProjectInputError('Reconcile published prerequisites explicitly instead of replacing them locally.');
+      if (repository.isBreakdown(id)) throw new ProjectInputError('The breakdown uses its approved child tickets as prerequisites.');
       const ids = prerequisiteInput(input);
       const ticket = repository.findTicket(id);
       if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
@@ -132,6 +134,9 @@ export function createProjectService(repository: ProjectRepository, transaction:
       const status = ticketStatus(input);
       const ticket = repository.findTicket(id);
       if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
+      if (repository.isBreakdown(id) && status !== ticket.status && (ticket.status !== 'review' || status !== 'done')) {
+        throw new ProjectInputError('Finish the child tickets and review their combined result.');
+      }
       if (ticket.executionMode === 'codex' && status !== ticket.status) {
         throw new ProjectInputError('Coding progress comes from its run and Done requires an observed pull request merge.');
       }

@@ -2,7 +2,7 @@ import { localDay, nextOccurrence } from '../shared/calendar.ts';
 import { nextScheduledDate } from '../shared/weekdays.ts';
 import type { TaskRepository } from './repository.ts';
 
-export function reconcileRecurrences(repository: TaskRepository, now: Date, nextId: () => string): void {
+export function reconcileRecurrences(repository: TaskRepository, now: Date, nextId: () => string, reachedTarget: (task: ReturnType<TaskRepository['listPendingOccurrences']>[number]) => boolean = () => false): void {
   const today = localDay(now);
   const timestamp = now.toISOString();
   for (const task of repository.listPendingOccurrences()) {
@@ -10,7 +10,10 @@ export function reconcileRecurrences(repository: TaskRepository, now: Date, next
     const rule = repository.findRule(task.recurrenceId!);
     if (!rule) throw new Error('Repeating task has no schedule.');
     const end = nextOccurrence(task.plannedDate, rule.weekdays === null ? task.frequency : 'daily');
-    if (end !== null && end <= today) repository.expireTask(task.id, timestamp);
+    if (end !== null && end <= today) {
+      if (reachedTarget(task)) repository.resolveTask(task.id, 'completed', timestamp);
+      else repository.expireTask(task.id, timestamp);
+    }
   }
 
   for (const rule of repository.listDueRules(today)) {

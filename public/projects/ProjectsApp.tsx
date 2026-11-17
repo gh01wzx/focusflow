@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ProjectSettingsPanel } from './components/ProjectSettingsPanel.tsx';
 import { GitHubConnection } from './components/GitHubConnection.tsx';
 import { ActionCenter } from './ActionCenter.tsx';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
@@ -122,6 +123,7 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
               </div>
               {editor('project', project.id, project)}
               {project.description && <p className="project-description">{project.description}</p>}
+              <ProjectSettingsPanel key={project.id} projectId={project.id} />
               <GitHubConnection key={project.id} projectId={project.id}
                 onRepository={value => setRepository(current => current?.projectId === project.id && JSON.stringify(current.value) === JSON.stringify(value)
                   ? current : { projectId: project.id, value })} />

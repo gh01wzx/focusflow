@@ -1,8 +1,13 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {codingScope} from './scope.ts';
 import { realpath } from 'node:fs/promises';
 import type { ProjectRepository } from '../projects/repository.ts';
 import type { ProjectTransaction } from '../projects/service.ts';
+import type { AiProviders } from '../ai/providers.ts';
+import { applyProviderPatch, patchFiles } from './patch-turn.ts';
+import { readCodexModels } from '../ai/models.ts';
+import { parseAiModelSelection, supportsSelection } from '../shared/ai.ts';
+import type { AiModelSelection } from '../shared/ai.ts';
 import type { AiService } from '../ai/service.ts';
 import type { CodingRun,CodingState,CodingStage } from '../shared/coding.ts';
 import { activeCodingStage } from '../shared/coding.ts';
@@ -26,6 +31,7 @@ export function processState(pid:number|null):'stopped'|'alive'|'unknown' {
 }
 function message(code:string):string {
   if(code==='AUTH_REQUIRED')return'Sign in with ChatGPT again before explicitly resuming this ticket.';
+  if(code==='TOKEN_BUDGET')return'The reported token budget was reached. Review retained source before resuming.';
   if(code==='USAGE_LIMIT')return'The provider reported exhausted Codex allowance. Resume only after it resets.';
   if(code==='RATE_LIMITED')return'The provider reported a rate limit. Wait before explicitly resuming.';
   if(code==='CANCELLED')return'The owned coding process stopped. Earlier file changes remain in its worktree.';
@@ -36,12 +42,12 @@ function message(code:string):string {
   return'The run did not complete. Inspect the retained workspace and recorded stage; the cause is not established.';
 }
 export function createCodingService(repository:ExecutionRepository,projects:ProjectRepository,transaction:ProjectTransaction,
-  ai:AiService,approvals:ApprovalBroker,provider?:LinkedWorkProvider & {inspect(projectId:string):Promise<GitHubRepository>},linkedWork?:LinkedWorkRepository) {
+  ai:AiService,approvals:ApprovalBroker,provider?:LinkedWorkProvider & {inspect(projectId:string):Promise<GitHubRepository>},linkedWork?:LinkedWorkRepository, context: (projectId:string) => string = () => '', models?: AiProviders, budget: (projectId: string) => number = () => 0) {
   let active:{ticketId:string;runId:string;abort:AbortController;work:Promise<void>}|null=null,closing=false;
   function current(id:string){const ticket=projects.findTicket(id);if(!ticket?.coding?.repository||!ticket.coding.issueNumber||ticket.executionMode!=='codex')throw new ExecutionFailure('NOT_PUBLISHED','Choose a published coding ticket.');return ticket;}
   function eligible(id:string){const t=current(id);return t.status==='backlog'&&!t.blockReason&&unfinishedPrerequisites(id,projects.listTickets(t.projectId),projects.listDependencies(t.projectId)).length===0;}
   function unblocked(id:string){const t=current(id);return !t.blockReason&&unfinishedPrerequisites(id,projects.listTickets(t.projectId),projects.listDependencies(t.projectId)).length===0;}
-  function token(id:string){const t=current(id);return codingScope(t,projects.listDependencies(t.projectId),repository.workspace(id));}
+  function token(id:string){const t=current(id);return createHash('sha256').update(JSON.stringify([codingScope(t,projects.listDependencies(t.projectId),repository.workspace(id)),context(t.projectId)])).digest('hex');}
   function save(run:CodingRun,stage:CodingStage,text:string){const now=new Date().toISOString();repository.saveRun({...run,stage,updatedAt:now,message:text,events:[...run.events,{at:now,text}].slice(-200)});}
   function update(runId:string,ticketId:string,change:Partial<CodingRun>){const run=repository.latestRun(ticketId);if(run?.id===runId)repository.saveRun({...run,...change,updatedAt:new Date().toISOString()});}
   function lostRun(run:CodingRun){const alive=processState(run.processId);save(run,alive==='stopped'?'interrupted':'uncertain',
@@ -59,7 +65,7 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
       canStart:!closing&&!active&&!owner&&!ai.busy()&&!publicationPending&&!externalPull&&eligible(id)&&repository.workspace(id)?.state==='ready',
       canResume:!closing&&!active&&!owner&&!ai.busy()&&!publicationPending&&!externalPull&&remoteAligned&&!!run&&['failed','stopped','interrupted','ready','review'].includes(run.stage)&&t.status!=='done'&&unblocked(id)&&repository.workspace(id)?.state==='ready'};
   }
-  async function perform(id:string,runId:string,abort:AbortController,prompt:string,expected:string){
+  async function perform(id:string,runId:string,abort:AbortController,prompt:string,expected:string,selection:AiModelSelection,files:string[],tokenBudget:number){
     try{
       const workspace=repository.workspace(id)!;
       const linked=current(id);
@@ -76,10 +82,17 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
       const worktreeCommon=await realpath(await git(workspace.workspacePath,['rev-parse','--path-format=absolute','--git-common-dir'],abort.signal));
       if(sourceCommon.toLowerCase()!==worktreeCommon.toLowerCase())throw new ExecutionFailure('WORKSPACE_CHANGED','The saved coding folder is no longer a worktree of its selected source repository.');
       if(actual.toLowerCase()!==(await realpath(workspace.workspacePath)).toLowerCase()||await git(workspace.workspacePath,['branch','--show-current'],abort.signal)!==workspace.branch)throw new ExecutionFailure('WORKSPACE_CHANGED','The ticket worktree or branch changed. Inspect it before resuming.');
-      const summary=await ai.runWithChatGPT(async(client,_cwd,signal)=>{
+      if(expected!==token(id))throw new ExecutionFailure('REQUIREMENTS_CHANGED','Ticket requirements changed before coding started.');
+      let summary: string;
+      if (selection.provider !== 'codex' && models) {
+        update(runId,id,{stage:'coding',message:'The selected model is drafting a patch for the selected files.'});
+        summary = await applyProviderPatch(models, selection, workspace.workspacePath, prompt, files, abort.signal);
+      } else summary=await ai.runWithChatGPT(async(client,_cwd,signal,verifyFresh)=>{
         if(expected!==token(id))throw new ExecutionFailure('REQUIREMENTS_CHANGED','Ticket requirements changed before coding started.');
+        const catalog = selection.model ? await readCodexModels(client, signal, verifyFresh) : [];
+        if (selection.model && !supportsSelection(catalog, selection)) throw new ExecutionFailure('MODEL_CHANGED', 'This model or effort is unavailable. Refresh and choose again.');
         update(runId,id,{processId:client.processId,stage:'coding',message:'Codex is working in the isolated ticket worktree.'});
-        return codingTurn(client,workspace.workspacePath,prompt,{signal,
+        return codingTurn(client,workspace.workspacePath,prompt,{signal,tokenBudget,usage:usage=>update(runId,id,{usage}),model:selection.model,effort:selection.effort,
           identity:(threadId,turnId)=>update(runId,id,{threadId,turnId}),
           activity:text=>{const run=repository.latestRun(id);if(run?.id===runId&&run.stage!=='permission'&&run.stage!=='cancelling')save(run,'coding',text);},
           command:(command,exitCode,output)=>{const run=repository.latestRun(id);if(run?.id===runId)update(runId,id,{commands:[...run.commands,{command,exitCode,output,source:'runtime' as const,at:new Date().toISOString()}].slice(-100)});},
@@ -87,7 +100,7 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
             const run=repository.latestRun(id);if(run?.id===runId&&run.stage!=='cancelling')save(run,waiting?'permission':'coding',waiting?'Waiting for your decision on the exact runtime request.':'The permission request ended.');
           }),
         });
-      },abort.signal);
+      },abort.signal,!!selection.model);
       // A stop can arrive while the runtime is closing after returning its summary.
       abort.signal.throwIfAborted();
       if(expected!==token(id))throw new ExecutionFailure('REQUIREMENTS_CHANGED','The ticket changed during coding. Inspect retained changes before explicitly resuming with the new scope.');
@@ -95,13 +108,21 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
     }catch(error){
       const run=repository.latestRun(id);if(run?.id===runId){
         const code=abort.signal.aborted?'CANCELLED':error instanceof CodingTurnFailure||error instanceof CodexFailure||error instanceof CodexProcessFailure||error instanceof ExecutionFailure||error instanceof ProbeFailure?error.code:'UNKNOWN';
+        const diagnostic=error instanceof ExecutionFailure?error.message:message(code);
         const uncertain=error instanceof CodexProcessFailure&&error.cleanupFailed;
-        if(run.stage!=='merged'||uncertain)save({...run,errorCode:code,processId:uncertain?run.processId:null},uncertain?'uncertain':code==='CANCELLED'?'stopped':'failed',uncertain?'Owned-process cleanup was not confirmed. Inspect and stop the previous process before recovery.':message(code));
+        if(run.stage!=='merged'||uncertain)save({...run,errorCode:code,processId:uncertain?run.processId:null},uncertain?'uncertain':code==='CANCELLED'?'stopped':'failed',uncertain?'Owned-process cleanup was not confirmed. Inspect and stop the previous process before recovery.':diagnostic);
       }
     }finally{approvals.cancel(id);const saved=repository.latestRun(id);if(saved?.id===runId&&saved.stage==='merged')repository.saveRun({...saved,processId:null});if(active?.runId===runId)active=null;}
   }
   function begin(id:string,input:unknown,resume=false):CodingState {
     const request=executionRecord(input),before=state(id),t=current(id),workspace=repository.workspace(id);
+    let selection: AiModelSelection;
+    try { selection = parseAiModelSelection(request.selection); }
+    catch { throw new ExecutionFailure('MODEL_CHANGED', 'Choose a valid coding model and effort.'); }
+    const files = selection.provider !== 'codex' ? patchFiles(request.files) : [];
+    if (selection.provider !== 'codex' && (!models?.isConnected(selection.provider) || !selection.model || !files.length)) {
+      throw new ExecutionFailure('FILE_SCOPE', 'Choose a connected patch model and list the tracked files it can edit.');
+    }
     if(request.confirmAllowance!==true||request.confirmScope!==true||request.requirementsToken!==before.requirementsToken)throw new ExecutionFailure('CONFIRM_REQUIRED','Confirm this ticket, workspace and Codex allowance for this exact request.');
     if(resume?!before.canResume:!before.canStart)throw new ExecutionFailure('NOT_ELIGIBLE','This ticket cannot start now. Check blockers, workspace and any active or uncertain run.');
     if(resume&&before.pullNumber&&request.headSha!==before.linkedHeadSha)throw new ExecutionFailure('STALE_REVISION','Preview feedback against the latest observed PR head before resuming.');
@@ -110,17 +131,19 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
     if(!workspace)throw new ExecutionFailure('NO_WORKSPACE','Prepare the ticket workspace first.');
     const now=new Date().toISOString(),run:CodingRun={id:randomUUID(),ticketId:id,stage:'starting',createdAt:now,updatedAt:now,
       processId:null,threadId:null,turnId:null,headSha:null,summary:'',errorCode:'',message:'Checking ChatGPT account and the retained worktree.',commands:[],events:[],
-      feedback,feedbackHeadSha:resume?before.linkedHeadSha:null,previousRunId:before.run?.id??null,allowChecks:request.allowChecks===true,requirementsToken:before.requirementsToken};
+      feedback,feedbackHeadSha:resume?before.linkedHeadSha:null,previousRunId:before.run?.id??null,allowChecks:selection.provider==='codex'&&request.allowChecks===true,requirementsToken:before.requirementsToken,selection};
     transaction(()=>{if(token(id)!==before.requirementsToken)throw new ExecutionFailure('STALE_REQUEST','The ticket changed. Refresh it first.');repository.saveRun(run);projects.setStatus(id,'in_progress',now);});
     const prompt=['Implement only this approved coding ticket. Do not publish, push, merge or deploy.',
-      'Ticket #'+t.coding!.issueNumber+': '+t.title,t.description,'Acceptance criteria:',t.acceptanceCriteria,
+      'Ticket #'+t.coding!.issueNumber+': '+t.title,t.description,'Acceptance criteria:',t.acceptanceCriteria,context(t.projectId),
       run.allowChecks?'You may run the project checks described by its instructions. Report actual commands and results.':'Do not run automated tests or verification commands. The owner will test locally. Report checks as not run.',
       resume?'This is a fresh context for the same branch/worktree. Preserve existing work and inspect it before editing.':'Use the prepared ticket branch and keep changes within the approved scope.',
       feedback?'Owner revision feedback:\n'+feedback:'',
       'Never read credentials, private environment files, personal task databases or unrelated folders. Finish with a plain-English change/check/concern summary.'].filter(Boolean).join('\n\n');
+    update(run.id,id,{inputEstimate:Math.ceil(prompt.length / 4)});
     const abort=new AbortController();
     const expected=token(id);
-    const work=Promise.resolve().then(()=>perform(id,run.id,abort,prompt,expected));active={ticketId:id,runId:run.id,abort,work};void work.catch(()=>{});
+    const tokenBudget=budget(t.projectId);
+    const work=Promise.resolve().then(()=>perform(id,run.id,abort,prompt,expected,selection,files,tokenBudget));active={ticketId:id,runId:run.id,abort,work};void work.catch(()=>{});
     return state(id);
   }
   return {

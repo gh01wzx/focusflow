@@ -18,9 +18,13 @@ export interface GitHubStatus {
   repositories: GitHubRepository[]; userCode: string | null; nextPollAt: number; message: string;
 }
 export function repositoryName(value: unknown): string {
-  if (typeof value !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_.-]{1,100}$/.test(value)
-    || ['.', '..'].includes(value.split('/')[1]!)) throw new Error('Enter a repository as owner/name.');
-  return value;
+  if (typeof value !== 'string') throw new Error('Enter a GitHub URL or owner/name.');
+  const entered = value.trim();
+  const remote = /^(?:https:\/\/github\.com\/|git@github\.com:)([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+?)(?:\.git)?\/?$/i.exec(entered);
+  const name = remote?.[1] ?? entered;
+  if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_.-]{1,100}$/.test(name)
+    || ['.', '..'].includes(name.split('/')[1]!)) throw new Error('Enter a GitHub URL or owner/name.');
+  return name;
 }
 export function parseGitHubRepository(value: unknown): GitHubRepository {
   if (!value || typeof value !== 'object') throw new Error('Could not read repository details.');

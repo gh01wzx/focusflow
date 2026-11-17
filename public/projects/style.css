@@ -264,3 +264,16 @@ nav[aria-label="Project list"] .nav-item {
 .coding-workspace label, .coding-run label, .coding-review label { display: block; margin: .7rem 0; }
 .coding-workspace input:not([type="checkbox"]), .coding-run textarea, .coding-review textarea { display: block; box-sizing: border-box; width: 100%; padding: .65rem; margin: .4rem 0; border: 1px solid #becab8; border-radius: 6px; font: inherit; }
 .coding-workspace code, .coding-run code, .coding-review code { overflow-wrap: anywhere; }
+
+
+.action-board { display: grid; grid-template-columns: minmax(0, 1fr); overflow: visible; }
+.action-column { min-width: 0; background: #fff; border: 1px solid #e2e8f0; padding: 12px 16px; border-radius: 12px; }
+.action-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; padding: 10px 0; }
+.action-card h3 { margin: 0; }
+.action-card p { color: #475569; }
+.project-dialog { margin: 0 0 0 auto; width: min(520px, 100%); height: 100%; max-height: 100%; border-radius: 12px 0 0 12px; }
+.project-settings, .ticket-ai { padding: 10px 0; }
+.project-settings summary, .ticket-ai summary { cursor: pointer; font-weight: 600; }
+.ticket-ai label { display: block; }
+.ticket-ai textarea { width: 100%; }
+.ticket-result { white-space: pre-wrap; word-break: break-word; }

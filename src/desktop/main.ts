@@ -8,6 +8,9 @@ import { SCHEMA_VERSION } from '../database/schema.ts';
 import { selectProfile } from '../runtime/profile.ts';
 import { createAiService } from '../ai/service.ts';
 import { createAiRuntime } from '../ai/runtime.ts';
+import { createProviderCredential } from '../ai/credential.ts';
+import type { CredentialCrypto } from '../github/vault.ts';
+import { createCompatibleService } from '../ai/compatible.ts';
 import { createDshService } from '../ai/dsh.ts';
 import { AI_SETUP_URL, isAiSignInUrl } from '../shared/ai.ts';
 
@@ -72,13 +75,17 @@ async function startDesktop(): Promise<void> {
       let confirmReady!: () => void;
       const ready = new Promise<void>(resolve => { confirmReady = resolve; });
       const ai = createAiService(createAiRuntime(process.env.LOCALAPPDATA ?? app.getPath('appData'), true, profileDirectory));
-      const github = createGitHubService(createGitHubVault(join(profileDirectory, 'github'), {
+      const crypto: CredentialCrypto = {
         available: async () => process.platform === 'win32' && await safeStorage.isAsyncEncryptionAvailable(),
         encrypt: value => safeStorage.encryptStringAsync(value),
         decrypt: async value => (await safeStorage.decryptStringAsync(value)).result,
-      }));
+      };
+      const github = createGitHubService(createGitHubVault(join(profileDirectory, 'github'), crypto));
+      const dsh = createDshService(createProviderCredential(join(profileDirectory, 'ai'), crypto));
+      const compatible = createCompatibleService(createProviderCredential(join(profileDirectory, 'ai'), crypto, 'compatible'));
       service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), sampleLabel: profile.sampleLabel,
-        github, ai, dsh: createDshService(), onShutdown: traceShutdown, onInterfaceReady: confirmReady, appVersion: app.getVersion() });
+        github, ai, dsh, compatible, onShutdown: traceShutdown, onInterfaceReady: confirmReady, appVersion: app.getVersion() });
+      void ready.then(() => Promise.allSettled([ai.check(), dsh.restore(), compatible.restore()]));
       const origin = service.origin;
       window = new BrowserWindow({
         width: 1120,
@@ -97,7 +104,7 @@ async function startDesktop(): Promise<void> {
       });
       window.removeMenu();
       window.webContents.setWindowOpenHandler(({ url }) => {
-        if (url === AI_SETUP_URL || isAiSignInUrl(url) || isGitHubIssueUrl(url) || isGitHubPullUrl(url) || isGitHubEvidenceUrl(url) ||
+        if (/^http:\/\/127\.0\.0\.1:\d{1,5}\/$/.test(url) || url === AI_SETUP_URL || isAiSignInUrl(url) || isGitHubIssueUrl(url) || isGitHubPullUrl(url) || isGitHubEvidenceUrl(url) ||
             ['https://github.com/login/device', 'https://github.com/settings/apps', 'https://github.com/settings/personal-access-tokens/new'].includes(url)) {
           void shell.openExternal(url).catch(() => {});
         }

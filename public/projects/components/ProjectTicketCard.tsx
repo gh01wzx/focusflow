@@ -1,3 +1,5 @@
+import { QuickRunPanel } from './QuickRunPanel.tsx';
+import { TicketAiPanel } from './TicketAiPanel.tsx';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { TICKET_STATUSES, TICKET_STATUS_LABELS, ticketLabel } from '../../../src/shared/projects.ts';
@@ -26,6 +28,7 @@ export function ProjectTicketCard({ ticket, repository, context, view, editingPr
 }) {
   const blockers = unfinishedPrerequisites(ticket.id, view.tickets, view.dependencies);
   const [blockEditing, setBlockEditing] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
   const [syncLocked, setSyncLocked] = useState(false);
   const [codingLocked, setCodingLocked] = useState(false);
   return <li className="manual-ticket">
@@ -41,7 +44,7 @@ export function ProjectTicketCard({ ticket, repository, context, view, editingPr
       <span className="ticket-card-hint">Open details <span aria-hidden="true">&rarr;</span></span>
     </button>
     <TicketBlockerNotice ticket={ticket} view={view} busy={busy} onVisit={onVisit} />
-    {open && <ProjectDialog title={ticket.title} returnFocusId={'ticket-' + ticket.id} locked={busy || !!editor || editingPrerequisites || syncLocked || codingLocked} onClose={onClose}>
+    {open && <ProjectDialog title={ticket.title} returnFocusId={'ticket-' + ticket.id} locked={busy || !!editor || editingPrerequisites || syncLocked || codingLocked || aiBusy} onClose={onClose}>
       <p className="feedback" role="status" aria-live="polite">{message}</p>
       {editor || <>
         <div className="ticket-detail-heading">
@@ -49,11 +52,17 @@ export function ProjectTicketCard({ ticket, repository, context, view, editingPr
           <button className="secondary-button" disabled={busy || editingPrerequisites || syncLocked || !!ticket.coding?.issueNumber} onClick={onEdit}
             aria-label={'Edit ticket ' + ticket.title}>Edit ticket</button>
         </div>
+        <TicketAiPanel ticket={ticket} onChanged={onChanged} onBusy={setAiBusy} onVisit={id => {
+          const child = view.tickets.find(item => item.id === id);
+          if (child) onVisit(child);
+        }} />
+        {ticket.executionMode === 'codex' && ticket.status === 'backlog' && !blockers.length && !ticket.blockReason &&
+          <QuickRunPanel ticketId={ticket.id} projectId={ticket.projectId} onChanged={onChanged} onBusy={setAiBusy} />}
         <CodingNotice ticket={ticket} repository={repository} />
         {ticket.coding?.issueNumber && <>
-          <CodingWorkspacePanel ticketId={ticket.id} disabled={busy || editingPrerequisites || syncLocked} onLock={setCodingLocked} />
+          <CodingWorkspacePanel ticketId={ticket.id} projectId={ticket.projectId} disabled={busy || editingPrerequisites || syncLocked} onLock={setCodingLocked} />
           <CodingApprovalPanel ticketId={ticket.id} disabled={busy || editingPrerequisites || syncLocked || codingLocked} />
-          <CodingRunPanel ticketId={ticket.id} disabled={busy || editingPrerequisites || syncLocked || codingLocked} onChanged={onChanged} />
+          <CodingRunPanel ticketId={ticket.id} projectId={ticket.projectId} disabled={busy || editingPrerequisites || syncLocked || codingLocked} onChanged={onChanged} />
           <LinkedWorkPanel ticketId={ticket.id} disabled={busy || editingPrerequisites || codingLocked}
             onLock={setSyncLocked} onChanged={onChanged} />
         </>}

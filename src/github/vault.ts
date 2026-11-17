@@ -6,6 +6,8 @@ import { parseGitHubRepository } from '../shared/github.ts';
 
 export interface StoredGitHub {
   clientId: string; token: string; account: string; expiresAt: number | null;
+  refreshToken?: string;
+  refreshExpiresAt?: number;
   repositories: Record<string, GitHubRepository>;
 }
 export interface GitHubVault {
@@ -45,7 +47,10 @@ export function createGitHubVault(directory: string, crypto: CredentialCrypto): 
         repositories[id] = parseGitHubRepository(repo);
       }
       return { clientId: value.clientId, token: value.token, account: value.account,
-        expiresAt: value.expiresAt as number | null, repositories };
+        expiresAt: value.expiresAt as number | null, repositories,
+        ...(typeof value.refreshToken === 'string' && /^ghr_[A-Za-z0-9_]+$/.test(value.refreshToken)
+          && typeof value.refreshExpiresAt === 'number' && Number.isFinite(value.refreshExpiresAt)
+          ? { refreshToken: value.refreshToken, refreshExpiresAt: value.refreshExpiresAt } : {}) };
     },
     async write(value) {
       if (!await crypto.available()) throw new Error('OS-protected credential storage is unavailable.');

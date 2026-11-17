@@ -2,6 +2,20 @@
 
 Personal and manual Projects work locally without a GitHub or AI account. Double-click Start-FocusFlow.cmd to build source and open your fixed personal data profile; see the [README](../README.md). A fresh personal profile starts empty. Use --review NAME for separate examples. Coding and review have new, untested implementations. Installation packages, public releases and updating are outside scope.
 
+## Points and rewards
+
+In Today, add a repeating task and select **Log minutes each day** to create a duration habit. Its starting target is five minutes at one point per minute. Open **Points settings** to change the target, rate or cue. Log twice to save two sessions, even after reaching the target. New completion tasks suggest five points. Tasks created in earlier versions earn points after you set a rule.
+
+Open **Rewards** to add and price your own rewards. Today's jar shows points earned on that local date. Available points carry forward and pay for redemptions. Use **Points history** to correct minutes or undo an entry. Sound, volume and reduced motion are in Feedback settings.
+
+## Saved connections and ticket actions
+
+The Windows desktop checks saved AI connections after opening. Use **Settings > AI connection** for initial sign-in, a DeepSeek key, or a compatible API base URL. DeepSeek and compatible API keys use Windows-protected storage. GitHub device-flow refresh requires a refresh token. A previously saved token may need one authorization to acquire one.
+
+Under a project, use **Context and settings** to save requirements, the local repository folder, preview command and separate model preferences. Open a ticket to choose **Run AI** for a breakdown or written result. Review suggested tickets before creating them. A coding ticket can use **Run coding ticket** to review the repository and Issue text, then start. DeepSeek and compatible API coding accept explicit tracked file paths and produce a bounded patch for review.
+
+After a coding result, **Preview** uses the ticket worktree. Use `focusflow` for a named FocusFlow sample profile or `npm run SCRIPT` for a repository script. A web script can report its loopback address for **Open preview**. Use the existing PR actions to inspect and publish reviewed changes.
+
 ## Repeating tasks
 
 Choose **Repeat** and a start date of today or later. Daily tasks reset at local midnight. For **Weekly**, select one or more weekdays, such as Mon, Tue and Sat. Each selected date is a separate task, starting on the first matching date on or after the start date. Unselected days have no task. Dates follow the computer's current local timezone.
@@ -106,4 +120,3 @@ Add, complete or change examples freely. Reopen with the same name to keep your 
 To return to your personal tasks, close the review window and double-click Start-FocusFlow.cmd without arguments. It opens the fixed personal profile, including any existing everyday data. Source developer samples, named reviews and personal tasks remain separate. Earlier sample data is not automatically imported.
 
 Review/development folders are also separated by database format. A format change starts fresh sample data rather than upgrading another format's review workspace. See [Development](DEVELOPMENT.md#data-paths) for paths and deliberate migration trials. Earlier builds without review mode must use their documented disposable-test setup; do not assume they understand the new review command.
-

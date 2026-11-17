@@ -21,21 +21,17 @@ export function WorkspaceShell({ workspace, busy, navigation, children, onWorksp
         <a className="brand" href="/" aria-label="FocusFlow home">
           <span className="brand-mark">f<span>.</span></span>FocusFlow
         </a>
-        <div className="workspace-label">YOUR WORKSPACE</div>
         <nav className="workspace-nav" aria-label="Workspaces">
           <button aria-current={workspace === 'personal' ? 'page' : undefined}
             disabled={busy} onClick={() => onWorkspaceChange('personal')}>Personal</button>
           <button aria-current={workspace === 'projects' ? 'page' : undefined}
             disabled={busy} onClick={() => onWorkspaceChange('projects')}>Projects</button>
         </nav>
-        <div className="space-title">
-          <span className="avatar">P</span>{workspace === 'personal' ? 'Personal' : 'Projects'}
-          <span className="local-pill">Local</span>
-        </div>
         {navigation}
-        <AiPanel disabled={busy} />
-        <BuildInformation disabled={busy} />
-        <div className="sidebar-note"><span className="local-dot" />Saved on this computer</div>
+        <details className="workspace-settings"><summary>Settings</summary>
+          <AiPanel disabled={busy} />
+          <BuildInformation disabled={busy} />
+        </details>
       </aside>
       {children}
     </div>

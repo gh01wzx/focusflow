@@ -42,14 +42,16 @@ This opens separate examples, including 12 manual project tickets, blockers and 
 
 | Area | What you can do |
 | --- | --- |
-| Personal | Add dated tasks, complete/cancel them, browse Today, Upcoming and History |
+| Personal | Log duration habits, complete tasks and see daily progress, points and History |
+| Rewards | Set prices, redeem saved points and correct entries |
 | Repeating tasks | Repeat daily or on selected weekdays; retain missed periods without overdue accumulation |
 | Projects | Organize projects, milestones and tickets with descriptions and acceptance steps |
 | Progress | Use Backlog, In Progress, Review and Done; see linked prerequisites and manual blocker reasons |
 | Action center | Review work, see active tickets and explicitly choose one eligible task |
 | AI planning | Generate, edit, select and explicitly approve a local plan |
 | GitHub | Confirm a repository, preview coding Issues before publication and compare linked requirements |
-| Coding | Prepare a separate Git worktree, start one ticket, decide on permissions, stop and recover saved work |
+| Coding | Use a prepared worktree, select a live model, preview and recover work |
+| Project context | Keep current requirements, decisions, model defaults and local preview commands |
 | PR review | Publish one linked PR, inspect diff/check evidence, ask AI code questions and request revisions |
 | Completion | Merge explicitly on GitHub; an observed matching merge makes the coding ticket Done |
 | Local data | Retain tasks, take verified snapshots before migrations and restore to a separate path |

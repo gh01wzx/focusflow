@@ -14,6 +14,7 @@ export function useTodayController() {
   const [title, setTitle] = useState('');
   const [plannedDate, setPlannedDate] = useState('');
   const [frequency, setFrequency] = useState<'none' | Frequency>('none');
+  const [habit, setHabit] = useState(false);
   const [weekdays, setWeekdays] = useState<Weekday[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -100,13 +101,13 @@ export function useTodayController() {
   }
   function add(event: FormEvent) {
     event.preventDefault();
-    void change(() => client.add({ title, plannedDate, frequency,
+    void change(() => client.add({ title, plannedDate, frequency, habit: frequency !== 'none' && habit,
       ...(frequency === 'weekly' ? { weekdays } : {}) }), 'Task added.', true);
   }
 
   return {
     view, tab, setTab, title, setTitle, plannedDate, setPlannedDate,
-    frequency, setFrequency, weekdays, setWeekdays, busy, error, message, titleInput, add, refresh,
+    frequency, setFrequency, habit, setHabit, weekdays, setWeekdays, busy, error, message, titleInput, add, refresh,
     resolve: (id: string, status: TaskResolution) => change(
       () => client.resolve(id, status), status === 'completed' ? 'Task completed.' : 'Task cancelled.',
     ),

@@ -1,20 +1,35 @@
+import { projectSettings } from '../../../src/client/project-settings.ts';
 import { useEffect, useState } from 'react';
 import { createCodingClient } from '../../../src/client/execution.ts';
 import type { WorkspaceState } from '../../../src/shared/execution.ts';
 
 const api = createCodingClient();
-export function CodingWorkspacePanel({ ticketId, disabled, onLock }: { ticketId: string; disabled: boolean; onLock(value: boolean): void }) {
+export function CodingWorkspacePanel({ ticketId, projectId, disabled, onLock }: { ticketId: string; projectId: string; disabled: boolean; onLock(value: boolean): void }) {
   const [state, setState] = useState<WorkspaceState | null>(null);
   const [sourcePath, setSourcePath] = useState('');
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => { let current = true; void api.read(ticketId).then(value => { if (current) { setState(value); setSourcePath(value.workspace?.sourcePath ?? ''); } }, () => { if (current) setError('Could not read the coding workspace.'); }); return () => { current = false; }; }, [ticketId]);
+  useEffect(() => {
+    let current = true;
+    void projectSettings(projectId).then(settings => {
+      if (current && settings.sourcePath) setSourcePath(path => path || settings.sourcePath);
+    }).catch(() => {});
+    return () => { current = false; };
+  }, [projectId]);
   useEffect(() => { onLock(busy); return () => onLock(false); }, [busy,onLock]);
   async function act(action: string) {
     if (busy) return;
     setBusy(true); setError('');
-    try { setState(await api.act(ticketId, action, { sourcePath, confirm, headSha: state?.inspection?.headSha })); setConfirm(false); }
+    try {
+      if (action === 'prepare-saved') {
+        const inspected = await api.act(ticketId, 'inspect', { sourcePath });
+        if (!inspected.inspection) throw new Error('The repository could not be inspected.');
+        setState(await api.act(ticketId, 'prepare', { sourcePath, confirm: true, headSha: inspected.inspection.headSha }));
+      } else setState(await api.act(ticketId, action, { sourcePath, confirm, headSha: state?.inspection?.headSha }));
+      setConfirm(false);
+    }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Repository preparation failed.'); }
     finally { setBusy(false); }
   }
@@ -24,7 +39,10 @@ export function CodingWorkspacePanel({ ticketId, disabled, onLock }: { ticketId:
     {error && <p role="alert" className="error">{error}</p>}
     <label>Local repository folder<input value={sourcePath} maxLength={2000} disabled={busy || disabled || state?.workspace?.state === 'ready'}
       onChange={event => { setSourcePath(event.target.value); setConfirm(false); setState(current => current ? { ...current, inspection: null } : null); }} placeholder="C:\Projects\my-project" /></label>
-    <button disabled={busy || disabled || !sourcePath.trim()} onClick={() => void act('inspect')}>Inspect repository</button>
+    {state?.workspace?.state !== 'ready' && <>
+      <button className="primary" disabled={busy || disabled || !sourcePath.trim()} onClick={() => void act('prepare-saved')}>Prepare worktree</button>
+      <button disabled={busy || disabled || !sourcePath.trim()} onClick={() => void act('inspect')}>Inspect repository</button>
+    </>}
     {state?.inspection && <div>
       <p>{state.inspection.repository.fullName} / {state.inspection.branch || 'Detached revision'}</p>
       <p>Base commit: <code>{state.inspection.headSha}</code></p>

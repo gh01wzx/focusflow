@@ -1,3 +1,4 @@
+import type { CompatibleService } from './compatible.ts';
 import type { AiService } from './service.ts';
 import { DshFailure } from './dsh.ts';
 import type { DshService } from './dsh.ts';
@@ -11,10 +12,12 @@ export function matchAiRoute(method: string | undefined, path: string) {
     if (path === '/api/ai/dsh-status') return 'dsh-status';
     if (path === '/api/ai/providers') return 'providers';
     if (path === '/api/ai/providers/codex/models') return 'codex-models';
+    if (path === '/api/ai/compatible') return 'compatible-status';
+    if (path === '/api/ai/providers/compatible/models') return 'compatible-models';
     if (path === '/api/ai/providers/dsh/models') return 'dsh-models';
   }
   if (method === 'POST') {
-    for (const action of ['check', 'sign-in', 'cancel-sign-in', 'verify', 'dsh-check', 'dsh-verify'] as const) {
+    for (const action of ['check', 'sign-in', 'cancel-sign-in', 'verify', 'dsh-check', 'dsh-verify', 'dsh-key', 'compatible'] as const) {
       if (path === '/api/ai/' + action) return action;
     }
   }
@@ -22,16 +25,27 @@ export function matchAiRoute(method: string | undefined, path: string) {
 }
 
 export async function dispatchAiRoute(action: NonNullable<ReturnType<typeof matchAiRoute>>, input: unknown, service: AiService,
-  providers: AiProviders, dsh?: DshService) {
+  providers: AiProviders, dsh?: DshService, compatible?: CompatibleService) {
   const confirmed = typeof input === 'object' && input !== null && 'confirmAllowance' in input ? input.confirmAllowance : false;
   if (action === 'dsh-status' || action === 'dsh-check' || action === 'dsh-verify') {
     if (!dsh) return { ready: false, verified: false, message: 'DeepSeek Harness requires the desktop app.' };
     if (action === 'dsh-status') return dsh.status();
     return action === 'dsh-check' ? dsh.check() : dsh.verify(confirmed);
   }
+  if (action === 'compatible-status') return compatible?.status() ?? { connected: false, endpoint: '' };
+  if (action === 'compatible') {
+    if (!compatible) throw new HttpError(400, 'Open the Windows app to save a provider.');
+    try { return await compatible.connect(input); }
+    catch { throw new HttpError(400, 'Could not connect. Check the endpoint, API key and model listing.'); }
+  }
+  if (action === 'dsh-key') {
+    if (!dsh || !input || typeof input !== 'object' || !('key' in input)) throw new HttpError(400, 'Enter your DeepSeek API key.');
+    try { return await dsh.saveKey(input.key); }
+    catch (error) { throw new HttpError(400, error instanceof DshFailure ? error.message : 'Could not save the DeepSeek key.'); }
+  }
   if (action === 'providers') return providers.connections();
-  if (action === 'codex-models' || action === 'dsh-models') {
-    try { return await providers.models(action === 'codex-models' ? 'codex' : 'dsh', AbortSignal.timeout(30_000)); }
+  if (action === 'codex-models' || action === 'dsh-models' || action === 'compatible-models') {
+    try { return await providers.models(action === 'codex-models' ? 'codex' : action === 'dsh-models' ? 'dsh' : 'compatible', AbortSignal.timeout(30_000)); }
     catch (error) {
       throw new HttpError(400, error instanceof AiProviderError || error instanceof DshFailure
         ? error.message : 'Could not load models. Check AI connection and try again.');

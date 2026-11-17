@@ -6,10 +6,13 @@ interface TaskRowProps {
   task: Task;
   today: string;
   busy: boolean;
+  // A duration habit is recorded with Log minutes on its day, not with a checkbox.
+  completable?: boolean;
   onResolve(id: string, status: TaskResolution): Promise<void>;
+  onReopen?(id: string): void;
 }
 
-export function TaskRow({ task, today, busy, onResolve }: TaskRowProps) {
+export function TaskRow({ task, today, busy, completable = true, onResolve, onReopen }: TaskRowProps) {
   const pending = task.status === 'pending';
   const late = pending && !task.frequency && task.plannedDate < today;
   const statusLabel = task.status === 'completed' ? 'Completed'
@@ -17,7 +20,7 @@ export function TaskRow({ task, today, busy, onResolve }: TaskRowProps) {
 
   return (
     <li className={`task ${pending ? '' : 'resolved'}`}>
-      {pending ? (
+      {pending ? completable ? (
         <input
           className="task-check"
           type="checkbox"
@@ -26,7 +29,8 @@ export function TaskRow({ task, today, busy, onResolve }: TaskRowProps) {
           disabled={busy}
           onChange={() => void onResolve(task.id, 'completed')}
         />
-      ) : (
+      ) : <span className="task-check placeholder" aria-hidden="true" />
+        : (
         <span className={`resolved-mark ${task.status}`}>
           {task.status === 'completed' ? <CheckIcon /> : <span aria-hidden="true">-</span>}
         </span>
@@ -36,6 +40,7 @@ export function TaskRow({ task, today, busy, onResolve }: TaskRowProps) {
         <div className="task-meta">
           <span>Planned {dateText(task.plannedDate)}</span>
           {task.frequency && <span>{task.frequency === 'daily' ? 'Daily' : 'Weekly'}</span>}
+          {pending && !completable && <span>Log minutes on the day</span>}
           {late && <span className="overdue">Overdue</span>}
           {!pending && (
             <>
@@ -57,6 +62,16 @@ export function TaskRow({ task, today, busy, onResolve }: TaskRowProps) {
           onClick={() => void onResolve(task.id, 'cancelled')}
         >
           Cancel
+        </button>
+      )}
+      {!pending && onReopen && (
+        <button
+          className="cancel"
+          disabled={busy}
+          aria-label={`Reopen ${task.title}`}
+          onClick={() => onReopen(task.id)}
+        >
+          Reopen
         </button>
       )}
     </li>

@@ -5,43 +5,76 @@ const entryColumns = 'id,kind,subject,title,day,logged_at AS loggedAt,minutes,ra
 const rewardColumns = 'r.id,r.title,r.cost,r.note,r.once_only AS onceOnly,r.archived';
 const activeRedemption = `p.kind='redeem' AND p.subject=r.id AND NOT EXISTS (
   SELECT 1 FROM personal_entries x WHERE x.reference=p.id AND x.kind='reverse')`;
+// Scoring subjects that the current Personal view can show: open one-off tasks,
+// active schedules and schedules that still have an open occurrence.
+const currentSubjects = `SELECT id FROM tasks WHERE status='pending' AND recurrence_id IS NULL
+  UNION SELECT recurrence_id FROM tasks WHERE status='pending' AND recurrence_id IS NOT NULL
+  UNION SELECT id FROM recurrence_rules WHERE stopped_at IS NULL`;
 
 export function createPersonalRepository(db: DatabaseSync) {
   const rewardsQuery = `SELECT ${rewardColumns}, EXISTS(SELECT 1 FROM personal_entries p WHERE ${activeRedemption}) AS used FROM personal_rewards r`;
+  const ruleBySubject = db.prepare('SELECT * FROM personal_scoring WHERE subject=?');
+  const currentRules = db.prepare(`SELECT * FROM personal_scoring WHERE subject IN (${currentSubjects})`);
+  const rewardById = db.prepare(rewardsQuery + ' WHERE r.id=?');
+  const allRewards = db.prepare(rewardsQuery + ' ORDER BY r.title,r.id');
+  const entryById = db.prepare('SELECT ' + entryColumns + ' FROM personal_entries WHERE id=?');
+  const entryAdjustments = db.prepare('SELECT ' + entryColumns + ' FROM personal_entries WHERE reference=? ORDER BY rowid');
+  const recentEntries = db.prepare('SELECT ' + entryColumns + ' FROM personal_entries ORDER BY logged_at DESC, rowid DESC LIMIT 150');
+  const completionCredit = db.prepare(`SELECT ${entryColumns} FROM personal_entries e
+    WHERE e.subject=? AND e.kind='earn' AND e.minutes=0
+      AND NOT EXISTS (SELECT 1 FROM personal_entries x WHERE x.reference=e.id AND x.kind='reverse')
+    ORDER BY e.rowid DESC LIMIT 1`);
+  const weekMinutes = db.prepare(`SELECT COALESCE(t.recurrence_id,p.subject) AS habit, p.day, SUM(p.minutes) AS minutes
+    FROM personal_entries p JOIN tasks t ON t.id=p.subject
+    WHERE p.day BETWEEN ? AND ? AND p.minutes<>0
+    GROUP BY habit,p.day HAVING SUM(p.minutes)>0`);
+  const dayTotals = db.prepare(`SELECT COALESCE(SUM(amount),0) AS balance,
+    COALESCE(SUM(CASE WHEN day=? AND (kind IN ('earn','edit') OR
+      (kind='reverse' AND reference IN (SELECT id FROM personal_entries WHERE kind='earn'))) THEN amount ELSE 0 END),0) AS earned
+    FROM personal_entries`);
+  const subjectMinutes = db.prepare(`SELECT COALESCE(SUM(minutes),0) AS total FROM personal_entries
+    WHERE subject=? AND kind IN ('earn','edit','reverse')`);
+  const openProgress = db.prepare(`SELECT subject,SUM(minutes) AS minutes FROM personal_entries
+    WHERE subject IN (SELECT id FROM tasks WHERE status='pending')
+      AND kind IN ('earn','edit','reverse') AND minutes<>0
+    GROUP BY subject HAVING SUM(minutes)>0`);
+  const storedPreferences = db.prepare("SELECT value FROM personal_preferences WHERE key='settings'");
   function reward(row: Record<string, unknown>): Reward {
     return { id: String(row.id), title: String(row.title), cost: Number(row.cost), note: String(row.note),
       onceOnly: !!row.onceOnly, archived: !!row.archived, used: !!row.used };
   }
   return {
     rule(subject: string) {
-      return db.prepare('SELECT * FROM personal_scoring WHERE subject=?').get(subject) as ScoringRule | undefined;
+      return ruleBySubject.get(subject) as ScoringRule | undefined;
     },
-    rules() { return db.prepare('SELECT * FROM personal_scoring').all() as unknown as ScoringRule[]; },
+    rules() { return currentRules.all() as unknown as ScoringRule[]; },
     saveRule(rule: ScoringRule) {
       db.prepare(`INSERT INTO personal_scoring VALUES (?,?,?,?,?) ON CONFLICT(subject) DO UPDATE SET
         mode=excluded.mode,rate=excluded.rate,target=excluded.target,cue=excluded.cue`)
         .run(rule.subject, rule.mode, rule.rate, rule.target, rule.cue);
     },
     reward(id: string) {
-      const row = db.prepare(rewardsQuery + ' WHERE r.id=?').get(id);
+      const row = rewardById.get(id);
       return row ? reward(row) : undefined;
     },
-    rewards() { return db.prepare(rewardsQuery + ' ORDER BY r.title,r.id').all().map(reward); },
+    rewards() { return allRewards.all().map(reward); },
     saveReward(value: Omit<Reward, 'used'>) {
       db.prepare(`INSERT INTO personal_rewards VALUES (?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
         title=excluded.title,cost=excluded.cost,note=excluded.note,once_only=excluded.once_only,archived=excluded.archived`)
         .run(value.id, value.title, value.cost, value.note, Number(value.onceOnly), Number(value.archived));
     },
     entry(id: string) {
-      return db.prepare('SELECT ' + entryColumns + ' FROM personal_entries WHERE id=?').get(id) as ActivityEntry | undefined;
+      return entryById.get(id) as ActivityEntry | undefined;
     },
     adjustments(id: string) {
-      return db.prepare('SELECT ' + entryColumns + ' FROM personal_entries WHERE reference=? ORDER BY rowid')
-        .all(id) as unknown as ActivityEntry[];
+      return entryAdjustments.all(id) as unknown as ActivityEntry[];
     },
     entries() {
-      return db.prepare('SELECT ' + entryColumns + ' FROM personal_entries ORDER BY logged_at DESC, rowid DESC LIMIT 150')
-        .all() as unknown as ActivityEntry[];
+      return recentEntries.all() as unknown as ActivityEntry[];
+    },
+    // The latest completion credit for a task that has not been undone.
+    activeCompletion(subject: string) {
+      return completionCredit.get(subject) as ActivityEntry | undefined;
     },
     insert(entry: ActivityEntry, now: Date) {
       db.prepare('INSERT INTO personal_entries VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
@@ -53,32 +86,23 @@ export function createPersonalRepository(db: DatabaseSync) {
       db.prepare('INSERT INTO personal_date_corrections VALUES (?,?,?)').run(operation, entry.day, entry.subject);
     },
     week(start: string, end: string) {
-      const rows = db.prepare(`SELECT COALESCE(t.recurrence_id,p.subject) AS habit, p.day, SUM(p.minutes) AS minutes
-        FROM personal_entries p JOIN tasks t ON t.id=p.subject
-        WHERE p.day BETWEEN ? AND ? AND p.minutes<>0
-        GROUP BY habit,p.day HAVING SUM(p.minutes)>0`).all(start, end);
       const result: Record<string, Record<string, number>> = {};
-      for (const row of rows) (result[String(row.habit)] ??= {})[String(row.day)] = Number(row.minutes);
+      for (const row of weekMinutes.all(start, end)) (result[String(row.habit)] ??= {})[String(row.day)] = Number(row.minutes);
       return result;
     },
     totals(day: string) {
-      const row = db.prepare(`SELECT COALESCE(SUM(amount),0) AS balance,
-        COALESCE(SUM(CASE WHEN day=? AND (kind IN ('earn','edit') OR
-          (kind='reverse' AND reference IN (SELECT id FROM personal_entries WHERE kind='earn'))) THEN amount ELSE 0 END),0) AS earned
-        FROM personal_entries`).get(day)!;
+      const row = dayTotals.get(day)!;
       return { balance: Number(row.balance), earned: Number(row.earned) };
     },
     minutes(subject: string) {
-      return Number(db.prepare(`SELECT COALESCE(SUM(minutes),0) AS total FROM personal_entries
-        WHERE subject=? AND kind IN ('earn','edit','reverse')`).get(subject)?.total);
+      return Number(subjectMinutes.get(subject)?.total);
     },
+    // Minutes logged against open occurrences. Resolved occurrences keep their entries in History.
     progress() {
-      return Object.fromEntries(db.prepare(`SELECT subject,SUM(minutes) AS minutes FROM personal_entries
-        WHERE kind IN ('earn','edit','reverse') AND minutes<>0 GROUP BY subject HAVING SUM(minutes)>0`).all()
-        .map(row => [String(row.subject), Number(row.minutes)]));
+      return Object.fromEntries(openProgress.all().map(row => [String(row.subject), Number(row.minutes)]));
     },
     preferences() {
-      return db.prepare("SELECT value FROM personal_preferences WHERE key='settings'").get()?.value;
+      return storedPreferences.get()?.value;
     },
     savePreferences(json: string) {
       db.prepare("INSERT INTO personal_preferences VALUES ('settings',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(json);

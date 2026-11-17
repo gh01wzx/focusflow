@@ -11,6 +11,8 @@ import {CodingReviewPanel} from './CodingReviewPanel.tsx';
 const api=createRunClient();
 export function CodingRunPanel({ticketId,projectId,disabled,onChanged}:{ticketId:string;projectId:string;disabled:boolean;onChanged():void}){
   const[state,setState]=useState<CodingState|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  // Refresh failures are separate from action errors and clear after the next successful read.
+  const[readError,setReadError]=useState('');
   const [selection,setSelection]=useState(defaultAiModelSelection);
   const [files,setFiles]=useState('');
   const [picker,setPicker]=useState(false);
@@ -24,8 +26,8 @@ export function CodingRunPanel({ticketId,projectId,disabled,onChanged}:{ticketId
   const sequence=useRef(0),alive=useRef(true),requestBusy=useRef(false);
   useEffect(()=>{alive.current=true;let reading=false;
     const read=async()=>{if(reading||requestBusy.current)return;reading=true;const version=sequence.current;
-      try{const next=await api.read(ticketId);if(alive.current&&version===sequence.current)setState(next);}catch{if(alive.current)setError('Could not refresh the saved coding run.');}finally{reading=false;}};
-    void read();const timer=setInterval(()=>void read(),2000);return()=>{alive.current=false;clearInterval(timer);sequence.current++;};
+      try{const next=await api.read(ticketId);if(alive.current&&version===sequence.current){setState(next);setReadError('');}}catch{if(alive.current)setReadError('Could not refresh the saved coding run. Retrying.');}finally{reading=false;}};
+    void read();const timer=setInterval(()=>{if(!document.hidden)void read();},2000);return()=>{alive.current=false;clearInterval(timer);sequence.current++;};
   },[ticketId]);
   async function act(action:string){if(requestBusy.current)return;requestBusy.current=true;sequence.current++;setBusy(true);setError('');
     try{const next=await api.act(ticketId,action,{confirm:true,runId:state?.run?.id,confirmScope:true,confirmAllowance:true,selection,files,requirementsToken:state?.requirementsToken,feedback,allowChecks:checks,headSha:state?.linkedHeadSha});if(alive.current){setState(next);setRevisionPreview(null);onChanged();}}
@@ -33,7 +35,7 @@ export function CodingRunPanel({ticketId,projectId,disabled,onChanged}:{ticketId
     finally{requestBusy.current=false;if(alive.current)setBusy(false);}
   }
   return <section className="coding-run" aria-label="Coding run"><h3>Execute with AI</h3>
-    {error&&<p role="alert">{error}</p>}
+    {error&&<p role="alert" className="error">{error}</p>}{readError&&<p role="status" className="feedback">{readError}</p>}
     {state?.externalPull&&<p>This PR was linked for review only. This worktree cannot publish or revise it; no replacement PR will be created.</p>}
     {state?.activeTicketId&&state.activeTicketId!==ticketId&&<p>Another coding task is active or uncertain. Open it from Action center before starting more work.</p>}
     {state&&(state.canStart||state.canResume)&&<div>

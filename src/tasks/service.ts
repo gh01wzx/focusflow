@@ -1,5 +1,6 @@
 import { localDay } from '../shared/calendar.ts';
-import { firstSelectedDate, nextScheduledDate } from '../shared/weekdays.ts';
+import { firstSelectedDate, nextScheduledDate, periodEnd } from '../shared/weekdays.ts';
+import { HISTORY_LIMIT } from '../shared/tasks.ts';
 import type { RecurrenceRule, Task } from '../shared/tasks.ts';
 import type { TaskRepository } from './repository.ts';
 import { recurrenceInput, taskInput, TaskInputError } from './validation.ts';
@@ -9,10 +10,11 @@ export type TaskTransaction = <T>(operation: (now: Date) => T) => T;
 
 export function createTaskService(repository: TaskRepository, transaction: TaskTransaction, nextId: () => string,
   onComplete: (task: Task, now: Date) => void = () => {},
-  onCreate: (subject: string, repeating: boolean, input: unknown) => void = () => {}) {
+  onCreate: (subject: string, repeating: boolean, input: unknown) => void = () => {},
+  onReopen: (task: Task, now: Date) => void = () => {}) {
   return {
     view: () => transaction(now => buildTaskView(
-      localDay(now), repository.listTasks(), repository.listActiveRules(),
+      localDay(now), repository.listPendingTasks(), repository.listRecentHistory(HISTORY_LIMIT), repository.listActiveRules(),
     )),
     add: (input: unknown): Task => transaction(now => {
       const { title, plannedDate } = taskInput(input);
@@ -56,6 +58,25 @@ export function createTaskService(repository: TaskRepository, transaction: TaskT
       }
       if (task.status === 'pending' && status === 'completed') onComplete(task, now);
       repository.resolveTask(id, status, now.toISOString());
+      return repository.findTask(id);
+    }),
+    // Undo a completion or cancellation. A repeating occurrence can return only while its
+    // period is current, and a stopped schedule never brings back a future occurrence.
+    reopen: (id: string): Task | undefined => transaction(now => {
+      const task = repository.findTask(id);
+      if (!task) return undefined;
+      if (task.status === 'pending') return task;
+      if (task.status === 'missed') throw new TaskInputError('A missed occurrence stays in History.');
+      if (task.recurrenceId !== null) {
+        const today = localDay(now);
+        const rule = repository.findRule(task.recurrenceId);
+        const end = rule ? periodEnd(task.plannedDate, rule.frequency, rule.weekdays) : today;
+        if (!rule || (end !== null && end <= today) || (rule.stoppedAt !== null && task.plannedDate > today)) {
+          throw new TaskInputError('Only the current occurrence of a repeating task can be reopened.');
+        }
+      }
+      if (task.status === 'completed') onReopen(task, now);
+      repository.reopenResolvedTask(id);
       return repository.findTask(id);
     }),
   };

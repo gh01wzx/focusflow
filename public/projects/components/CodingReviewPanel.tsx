@@ -7,6 +7,8 @@ import {createReviewClient} from '../../../src/client/review.ts';
 const api=createReviewClient();
 export function CodingReviewPanel({ticketId,projectId,disabled,onChanged}:{ticketId:string;projectId:string;disabled:boolean;onChanged():void}){
   const[state,setState]=useState<ReviewState|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  // Refresh failures clear after the next successful read; action errors stay until the next action.
+  const[readError,setReadError]=useState('');
   const[question,setQuestion]=useState(''),[allowance,setAllowance]=useState(false),[confirm,setConfirm]=useState(false),[unverified,setUnverified]=useState(false),[closeIssue,setCloseIssue]=useState(false);
   const [selection, setSelection] = useState(defaultAiModelSelection);
   const [picker, setPicker] = useState(false);
@@ -18,8 +20,8 @@ export function CodingReviewPanel({ticketId,projectId,disabled,onChanged}:{ticke
   const generation=useRef(0),alive=useRef(true),owned=useRef(false);
   useEffect(()=>{alive.current=true;let reading=false,ticks=0;
     const read=async()=>{if(reading||owned.current)return;reading=true;const version=generation.current;
-      try{const next=(++ticks%10===0)?await api.act(ticketId,'observe'):await api.read(ticketId);if(alive.current&&version===generation.current)setState(next);}catch{if(alive.current)setError('Could not refresh review state. Saved evidence is retained.');}finally{reading=false;}};
-    void read();const timer=setInterval(()=>void read(),2000);return()=>{alive.current=false;clearInterval(timer);generation.current++;};
+      try{const next=(++ticks%10===0)?await api.act(ticketId,'observe'):await api.read(ticketId);if(alive.current&&version===generation.current){setState(next);setReadError('');}}catch{if(alive.current)setReadError('Could not refresh review state. Saved evidence is retained.');}finally{reading=false;}};
+    void read();const timer=setInterval(()=>{if(!document.hidden)void read();},2000);return()=>{alive.current=false;clearInterval(timer);generation.current++;};
   },[ticketId]);
   async function act(action:string,kind?:'summary'|'independent'|'question'){
     if(owned.current)return;owned.current=true;generation.current++;setBusy(true);setError('');
@@ -30,7 +32,7 @@ export function CodingReviewPanel({ticketId,projectId,disabled,onChanged}:{ticke
   }
   const evidence=state?.evidence,head=evidence?.pull.headSha;
   return <section className="coding-review" aria-label="PR review"><h3>Understand and review this PR</h3>
-    {error&&<p role="alert">{error}</p>}{state?.error&&<p role="alert">{state.error}</p>}
+    {error&&<p role="alert" className="error">{error}</p>}{readError&&<p role="status" className="feedback">{readError}</p>}{state?.error&&<p role="alert" className="error">{state.error}</p>}
     <button disabled={busy||disabled} onClick={()=>void act('refresh')}>Refresh PR evidence</button>{' '}
     <button disabled={busy||disabled} onClick={()=>void act('observe')}>Check merge state</button>
     {state&&<p><a href={state.pullUrl} target="_blank" rel="noreferrer">Open PR on GitHub to inspect or merge</a></p>}

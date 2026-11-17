@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { usePersonal } from './usePersonal.ts';
 import { ActivityHistory, HabitRow, PointsJar, RewardShop, ScoringEditor } from './components/PersonalRewards.tsx';
 import { points } from '../../src/shared/personal.ts';
+import type { ScoringRule } from '../../src/shared/personal.ts';
+import { HISTORY_LIMIT } from '../../src/shared/tasks.ts';
 import { localDay } from '../../src/shared/calendar.ts';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
 import { useTodayController } from './useTodayController.ts';
-import { labels, tabText } from './view-options.ts';
+import { canReopen, labels, tabText } from './view-options.ts';
 import { TaskComposer } from './components/TaskComposer.tsx';
 import { TaskRow } from './components/TaskRow.tsx';
 import { RepeatingTasks } from './components/RepeatingTasks.tsx';
@@ -14,15 +16,16 @@ import { CheckIcon } from './components/CheckIcon.tsx';
 
 export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const state = useTodayController();
-  const { view, tab, setTab, busy, error, message, refresh } = state;
+  const { view, tab, setTab, busy, error, message, undo, refresh } = state;
   const personal = usePersonal(view, refresh);
   const [rewards, setRewards] = useState(false);
   const rows = view?.[tab] ?? [];
   const overdue = view?.due.filter(task => !task.frequency && task.plannedDate < view.today).length ?? 0;
   const text = tabText[tab];
   const saving = busy || personal.busy;
-  const completedToday = view?.history.filter(task => task.status === 'completed' && task.resolvedAt
-    && localDay(new Date(task.resolvedAt)) === view.today) ?? [];
+  const rules = useMemo(() => new Map<string, ScoringRule>(personal.data?.rules.map(rule => [rule.subject, rule])), [personal.data]);
+  const completedToday = useMemo(() => view?.history.filter(task => task.status === 'completed' && task.resolvedAt
+    && localDay(new Date(task.resolvedAt)) === view.today) ?? [], [view]);
 
   return (
     <WorkspaceShell workspace="personal" busy={saving} onWorkspaceChange={onWorkspaceChange} navigation={
@@ -35,13 +38,15 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               disabled={saving}
               onClick={() => { setRewards(false); setTab(key); }}
             >
-              <span className="nav-symbol" aria-hidden="true">{key === 'due' ? '\u25cf' : key === 'history' ? '\u21ba' : '\u25cb'}</span>
+              <span className="nav-symbol" aria-hidden="true">{key === 'due' ? '●' : key === 'history' ? '↺' : '○'}</span>
               {labels[key]}
               <span className="count">{view?.[key].length ?? '-'}</span>
             </button>
           ))}
           <button className={`nav-item ${rewards ? 'active' : ''}`} aria-current={rewards ? 'page' : undefined}
-            disabled={saving} onClick={() => setRewards(true)}>Rewards</button>
+            disabled={saving} onClick={() => setRewards(true)}>
+            <span className="nav-symbol" aria-hidden="true">{'★'}</span>Rewards
+          </button>
         </nav>
     }>
       <main>
@@ -50,7 +55,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
             <p className="eyebrow">
               {view ? new Intl.DateTimeFormat('en', {
                 weekday: 'long', month: 'long', day: 'numeric',
-              }).format(new Date(view.today + 'T12:00:00')) : 'PERSONAL TASKS'}
+              }).format(new Date(view.today + 'T12:00:00')) : 'Personal tasks'}
             </p>
             <h1>{rewards ? 'Rewards' : labels[tab]}</h1>
           </div>
@@ -73,9 +78,13 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
                 <button onClick={() => void refresh()} disabled={busy}>Retry</button>
               </div>
             )}
-            <p className="feedback" role="status" aria-live="polite">
-              {message || (!view && !error ? 'Loading your tasks.' : '')}
-            </p>
+            <div className="feedback-row">
+              <p className="feedback" role="status" aria-live="polite">
+                {message || (!view && !error ? 'Loading your tasks.' : '')}
+              </p>
+              {undo && <button className="text-button" disabled={saving} onClick={() => void state.reopen(undo.id)}
+                aria-label={`Undo ${undo.status === 'completed' ? 'completing' : 'cancelling'} ${undo.title}`}>Undo</button>}
+            </div>
             <section className="task-section" aria-busy={saving} aria-label={labels[tab] + ' tasks'}>
               <div className="section-heading">
                 <h2>{tab === 'due' ? 'Your task list' : labels[tab]}<span>{rows.length}</span></h2>
@@ -84,19 +93,24 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               {view && rows.length > 0 && (
                 <ul className="task-list">
                   {rows.map(task => {
-                    const rule = personal.data?.rules.find(item => item.subject === (task.recurrenceId ?? task.id));
-                    return tab === 'due' && rule?.mode === 'minutes' ? <HabitRow key={task.id} task={task} rule={rule} state={personal} />
-                      : <li className="task-with-scoring" key={task.id}>
-                        <ul><TaskRow task={task} today={view.today} busy={saving || !!task.recurrenceId && !personal.data}
-                          onResolve={(_id, status) => personal.resolve(task, status, state.resolve)} /></ul>
-                        {tab === 'due' && personal.data && <div className="task-points">
-                          {!!rule?.rate && <span>+{points(rule.rate)} points</span>}
-                          <ScoringEditor key={String(rule?.rate) + rule?.mode} task={task} {...(rule ? { rule } : {})} state={personal} />
-                        </div>}
-                      </li>;
+                    const rule = rules.get(task.recurrenceId ?? task.id);
+                    if (tab === 'due' && rule?.mode === 'minutes') return <HabitRow key={task.id} task={task} rule={rule} state={personal} />;
+                    const row = <TaskRow task={task} today={view.today} busy={saving || !!task.recurrenceId && !personal.data}
+                      completable={rule?.mode !== 'minutes'}
+                      onResolve={(_id, status) => personal.resolve(task, status, state.resolve)}
+                      {...(tab === 'history' && canReopen(task, view) ? { onReopen: (id: string) => void state.reopen(id) } : {})} />;
+                    return tab === 'due' ? <li className="task-with-scoring" key={task.id}>
+                      <ul>{row}</ul>
+                      {personal.data && <div className="task-points">
+                        {!!rule?.rate && <span>+{points(rule.rate)} points</span>}
+                        <ScoringEditor key={String(rule?.rate) + rule?.mode} task={task} {...(rule ? { rule } : {})} state={personal} />
+                      </div>}
+                    </li> : <li className="task-with-scoring" key={task.id}><ul>{row}</ul></li>;
                   })}
                 </ul>
               )}
+              {tab === 'history' && rows.length >= HISTORY_LIMIT && <p className="list-note">
+                Showing the latest {HISTORY_LIMIT} entries. Older history stays saved on this computer.</p>}
               {view && rows.length === 0 && (
                 <div className="empty">
                   <span className="empty-icon"><CheckIcon /></span>

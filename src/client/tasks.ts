@@ -23,7 +23,8 @@ export function createTaskClient(transport: typeof fetch = fetch) {
   return {
     read: () => request('/api/tasks'),
     add: (draft: TaskDraft) => request(draft.frequency === 'none' ? '/api/tasks' : '/api/recurrences', draft),
-    resolve: (id: string, status: TaskResolution) => request(`/api/tasks/${id}/resolve`, { status }),
-    stopRecurrence: (id: string) => request(`/api/recurrences/${id}/stop`, {}),
+    resolve: (id: string, status: TaskResolution) => request(`/api/tasks/${encodeURIComponent(id)}/resolve`, { status }),
+    reopen: (id: string) => request(`/api/tasks/${encodeURIComponent(id)}/reopen`, {}),
+    stopRecurrence: (id: string) => request(`/api/recurrences/${encodeURIComponent(id)}/stop`, {}),
   };
 }

@@ -16,8 +16,14 @@ export function useProjectsController(initialProjectId?: string, initialTicketId
   const busyRef = useRef(false);
   const generation = useRef(0);
   const mounted = useRef(true);
+  const shown = useRef('');
 
   function apply(next: ProjectView, newMilestone = '') {
+    // An unchanged background refresh keeps the current object, so open cards and
+    // panels are not re-rendered every 30 seconds.
+    const serialized = JSON.stringify(next);
+    if (serialized === shown.current && !newMilestone && openingTicket.current === undefined) return;
+    shown.current = serialized;
     const requested = next.tickets.find(ticket => ticket.id === openingTicket.current)?.milestoneId;
     openingTicket.current = undefined;
     const sameProject = selectedProject.current === next.selectedProjectId;

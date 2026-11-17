@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { RecurrenceRule } from '../../../src/shared/tasks.ts';
 import { dateText } from '../view-options.ts';
 import { WEEKDAYS } from '../../../src/shared/weekdays.ts';
@@ -9,6 +10,8 @@ interface RepeatingTasksProps {
 }
 
 export function RepeatingTasks({ rules, busy, onStop }: RepeatingTasksProps) {
+  // Stopping cancels every future occurrence and cannot be undone, so it takes a second click.
+  const [confirming, setConfirming] = useState<string | null>(null);
   if (rules.length === 0) return null;
   return (
     <details className="recurrences">
@@ -25,14 +28,20 @@ export function RepeatingTasks({ rules, busy, onStop }: RepeatingTasksProps) {
                   : WEEKDAYS.filter(day => rule.weekdays!.includes(day.value)).map(day => day.label).join(', ')}
               </div>}
             </div>
-            <button
+            {confirming === rule.id ? <div className="confirm-actions" role="group" aria-label={`Stop repeating ${rule.title}?`}>
+              <span>Stop all future repeats?</span>
+              <button className="danger-button" disabled={busy} aria-label={`Confirm stop repeating ${rule.title}`}
+                onClick={() => { setConfirming(null); void onStop(rule.id); }}>Stop</button>
+              <button className="cancel" disabled={busy} aria-label={`Keep repeating ${rule.title}`}
+                onClick={() => setConfirming(null)}>Keep</button>
+            </div> : <button
               className="cancel"
               disabled={busy}
               aria-label={`Stop repeating ${rule.title}`}
-              onClick={() => void onStop(rule.id)}
+              onClick={() => setConfirming(rule.id)}
             >
               Stop repeating
-            </button>
+            </button>}
           </li>
         ))}
       </ul>

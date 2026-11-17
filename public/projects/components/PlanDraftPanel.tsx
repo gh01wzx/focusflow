@@ -117,7 +117,7 @@ export function PlanDraftPanel({ projectId, disabled, onOpenChange, onApproved }
           disabled={state.busy || state.state?.busy || mode !== 'view'} onChange={event => state.setGoal(event.target.value)} />
         <label className="plan-consent"><input type="checkbox" checked={state.confirmed} disabled={choosing || !model}
           onChange={event => state.setConfirmed(event.target.checked)} />I understand that generating this draft uses {
-            provider === 'codex' ? 'Codex allowance' : 'my DeepSeek API balance'}.</label>
+            provider === 'codex' ? 'Codex allowance' : provider === 'dsh' ? 'my DeepSeek API balance' : 'my compatible API balance'}.</label>
         <p>The previous saved draft stays available until a valid replacement is saved. Reopening a draft does not call a model.</p>
         <div className="plan-actions">
           <button className="primary" disabled={!canGenerate}>Generate draft</button>

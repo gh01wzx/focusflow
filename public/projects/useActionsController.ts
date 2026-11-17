@@ -10,12 +10,20 @@ export function useActionsController() {
   const pending = useRef(false);
   const generation = useRef(0);
   const mounted = useRef(true);
+  const shown = useRef('');
+  // Keep the current lists when a background refresh returns the same projects.
+  function show(next: ProjectView[]) {
+    const serialized = JSON.stringify(next);
+    if (serialized === shown.current) return;
+    shown.current = serialized;
+    setViews(next);
+  }
   async function refresh() {
     if (pending.current) return;
     const token = ++generation.current;
     try {
       const next = await client.read();
-      if (mounted.current && token === generation.current) { setViews(next); setError(''); }
+      if (mounted.current && token === generation.current) { show(next); setError(''); }
     } catch { if (mounted.current && token === generation.current) setError('Could not load project actions. Try again.'); }
   }
   useEffect(() => {
@@ -33,7 +41,7 @@ export function useActionsController() {
     pending.current = true; ++generation.current; setBusy(true); setError(''); setMessage('');
     try {
       const next = await client.start(id);
-      if (mounted.current) { setViews(next); setMessage('Ticket started.'); }
+      if (mounted.current) { show(next); setMessage('Ticket started.'); }
     } catch (failure) {
       if (mounted.current) setError(failure instanceof Error ? failure.message : 'Could not start this ticket.');
     } finally { pending.current = false; if (mounted.current) setBusy(false); }

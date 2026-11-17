@@ -4,14 +4,15 @@ import { emptyPlan, points } from '../../../src/shared/personal.ts';
 import type { HabitPlan, ScoringRule } from '../../../src/shared/personal.ts';
 import type { Frequency, Task, TaskDraft, Weekday } from '../../../src/shared/tasks.ts';
 import { WEEKDAYS } from '../../../src/shared/weekdays.ts';
-import { cueLine } from '../../../src/shared/habits.ts';
+import { HABIT_LIMIT, cueLine } from '../../../src/shared/habits.ts';
 import { dateText } from '../view-options.ts';
 import { WeekdayPicker } from './WeekdayPicker.tsx';
 import { CloseIcon } from './Icons.tsx';
 
 type Kind = 'once' | 'repeat' | 'timed';
-// A guided request walks through a new habit one question at a time.
-export type SheetRequest = { mode: 'create'; id: string; guided?: boolean; title?: string }
+// A guided request walks through a new habit one question at a time. A cue starts the
+// "After I" field, for example when stacking a new habit after a steady one.
+export type SheetRequest = { mode: 'create'; id: string; guided?: boolean; title?: string; cue?: string }
   | { mode: 'edit'; id: string; task: Task; rule: ScoringRule | undefined };
 export interface PlanUpdate extends HabitPlan { mode: 'minutes' | 'complete'; rate: number; target: number }
 
@@ -22,6 +23,8 @@ interface SheetProps {
   reward: { title: string; remaining: number } | null;
   // Moments the user already relies on, offered as one-tap cues.
   anchors: string[];
+  // Repeating habits already scheduled, for a gentle note when adding more than a few.
+  habits: number;
   // Each returns an error message, or an empty string after saving.
   onCreate(draft: TaskDraft): Promise<string>;
   onSavePlan(task: Task, update: PlanUpdate): Promise<string>;
@@ -68,7 +71,7 @@ function planOf(rule: ScoringRule | undefined): HabitPlan {
   return { cue: rule.cue, identity: rule.identity, time: rule.time, place: rule.place, starter: rule.starter, bundle: rule.bundle };
 }
 
-function SheetForm({ request, today, busy, reward, anchors, onCreate, onSavePlan, onClose }: SheetProps & { request: SheetRequest }) {
+function SheetForm({ request, today, busy, reward, anchors, habits, onCreate, onSavePlan, onClose }: SheetProps & { request: SheetRequest }) {
   const editing = request.mode === 'edit' ? request : null;
   const guided = request.mode === 'create' && !!request.guided;
   const rule = editing?.rule;
@@ -84,7 +87,7 @@ function SheetForm({ request, today, busy, reward, anchors, onCreate, onSavePlan
   const [donePoints, setDonePoints] = useState(rule?.mode === 'complete' ? String(rule.rate / 100) : '5');
   const [minutePoints, setMinutePoints] = useState(rule?.mode === 'minutes' ? String(rule.rate / 100) : '1');
   const [target, setTarget] = useState(rule?.mode === 'minutes' ? String(rule.target) : '5');
-  const [plan, setPlan] = useState<HabitPlan>(planOf(rule));
+  const [plan, setPlan] = useState<HabitPlan>(request.mode === 'create' && request.cue ? { ...emptyPlan, cue: request.cue } : planOf(rule));
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const repeating = kind !== 'once';
@@ -191,6 +194,8 @@ function SheetForm({ request, today, busy, reward, anchors, onCreate, onSavePlan
           </div>}
           {repeating && frequency === 'weekly' && <WeekdayPicker selected={weekdays} disabled={saving} onChange={setWeekdays} />}
         </section>}
+        {!editing && repeating && habits >= HABIT_LIMIT && <p className="soft-note">You are already building {habits} habits.
+          New habits stick better one at a time, so you might add this one when another feels easy.</p>}
       </>}
 
       {shownStep(1) && <section className="sheet-group" aria-labelledby="law-obvious">

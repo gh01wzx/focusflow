@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { localDay, validDate } from '../shared/calendar.ts';
+import { addDays, localDay, validDate } from '../shared/calendar.ts';
 import { periodEnd } from '../shared/weekdays.ts';
 import { PLAN_LIMITS, personalDefaults } from '../shared/personal.ts';
 import type { ActivityEntry, HabitPlan, PersonalPreferences, PersonalView } from '../shared/personal.ts';
@@ -47,12 +47,9 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
   };
   const view = (now: Date): PersonalView => {
     const day = localDay(now);
-    const days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(day + 'T12:00:00Z');
-      date.setUTCDate(date.getUTCDate() + i - 6);
-      return date.toISOString().slice(0, 10);
-    });
+    const days = Array.from({ length: 7 }, (_, i) => addDays(day, i - 6));
     return { day, week: { days, minutes: repository.week(days[0]!, day), points: repository.weekPoints(days[0]!, day) },
+      recent: repository.recent(addDays(day, -14), addDays(day, -1)), votes: repository.votes(),
       ...repository.totals(day), rules: repository.rules(), entries: repository.entries(),
       rewards: repository.rewards().filter(item => !item.archived), preferences: preferences(), progress: repository.progress() };
   };

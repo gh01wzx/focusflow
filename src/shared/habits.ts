@@ -1,8 +1,9 @@
-import type { HabitPlan, ScoringRule } from './personal.ts';
-import type { Task, TaskView } from './tasks.ts';
+import { addDays, daysBetween } from './calendar.ts';
+import type { HabitPlan, Outcome, ScoringRule } from './personal.ts';
+import type { RecurrenceRule, Task, TaskStatus, TaskView } from './tasks.ts';
 
 // Habit-tracking views derived from saved tasks. These rules never change data.
-export type Mark = 'done' | 'started' | 'missed' | 'rest' | 'open';
+export type Mark = Outcome | 'open';
 export interface HabitInsight {
   // Recent occurrences, oldest first, ending with today's state.
   marks: Mark[];
@@ -86,4 +87,72 @@ export function nextUp(due: Task[], rules: Map<string, ScoringRule>, minutes: Re
     return !(rule?.mode === 'minutes' && (minutes[task.id] ?? 0) >= rule.target);
   }).sort((a, b) => rank(a.task) - rank(b.task) || time(a.task).localeCompare(time(b.task)) || a.index - b.index)
     .map(({ task }) => task);
+}
+
+// Votes add up per identity, ignoring letter case, so "A reader" and "a reader" count together.
+export const identityKey = (identity: string) => identity.trim().toLowerCase();
+
+// How a resolved occurrence ended. An open occurrence has no outcome yet.
+export function outcomeOf(status: TaskStatus, minutes: number): Outcome | null {
+  if (status === 'completed') return 'done';
+  if (status === 'cancelled') return 'rest';
+  if (status === 'missed') return minutes > 0 ? 'started' : 'missed';
+  return null;
+}
+
+// Weekly review. Two steady weeks (85% or more) suggest a next step, a week under half suggests
+// making the habit easier, and about 66 days (the median in Lally et al. 2010) suggests it may be
+// automatic enough to graduate. More than three habits at once gets a gentle note.
+export const HABIT_LIMIT = 3;
+export const GRADUATE_DAYS = 66;
+export const TARGET_STEPS = [2, 5, 10, 15, 20, 30, 45, 60, 90, 120];
+const STEADY = 0.85, HARD = 0.5;
+
+export type Suggestion = { kind: 'new' } | { kind: 'keep' } | { kind: 'steady' } | { kind: 'stack' }
+  | { kind: 'grow'; target: number } | { kind: 'ease'; target: number | null } | { kind: 'graduate'; days: number };
+export interface HabitReview {
+  id: string;
+  title: string;
+  identity: string;
+  // Outcomes in the last seven days, oldest first. Days without an occurrence are left out.
+  marks: Outcome[];
+  // Shown up out of scheduled occurrences, rest days aside: the last seven days and the seven before.
+  week: Progress;
+  before: Progress;
+  suggestion: Suggestion;
+}
+
+export function reviewHabits(today: string, schedules: RecurrenceRule[], rules: Map<string, ScoringRule>,
+  recent: Record<string, Record<string, Outcome>>): HabitReview[] {
+  const lastWeek = Array.from({ length: 7 }, (_, index) => addDays(today, index - 7));
+  const weekBefore = lastWeek.map(day => addDays(day, -7));
+  const shown = (outcome: Outcome) => outcome === 'done' || outcome === 'started';
+  const met = (outcome: Outcome) => outcome === 'done';
+  const steady = (progress: Progress) => progress.total > 0 && progress.done / progress.total >= STEADY;
+  const started = schedules.filter(schedule => schedule.startDate <= today);
+  return started.map(schedule => {
+    const rule = rules.get(schedule.id);
+    const outcomes = recent[schedule.id] ?? {};
+    const held = (days: string[]) => days.map(day => outcomes[day]).filter((outcome): outcome is Outcome => !!outcome);
+    const tally = (days: string[], counts: (outcome: Outcome) => boolean): Progress => {
+      const scheduled = held(days).filter(outcome => outcome !== 'rest');
+      return { done: scheduled.filter(counts).length, total: scheduled.length };
+    };
+    const week = tally(lastWeek, shown), before = tally(weekBefore, shown);
+    const age = daysBetween(schedule.startDate, today);
+    const enough = week.total > 0 && before.total > 0 && week.total + before.total >= 4;
+    const twoSteadyWeeks = enough && steady(week) && steady(before);
+    let suggestion: Suggestion;
+    if (age < 7 || (!enough && age < 14)) suggestion = { kind: 'new' };
+    else if (twoSteadyWeeks && age >= GRADUATE_DAYS) suggestion = { kind: 'graduate', days: age };
+    else if (twoSteadyWeeks && rule?.mode === 'minutes') {
+      // Growing needs the target met, not only showing up.
+      const next = TARGET_STEPS.find(step => step > rule.target);
+      suggestion = next && steady(tally(lastWeek, met)) && steady(tally(weekBefore, met)) ? { kind: 'grow', target: next } : { kind: 'steady' };
+    } else if (twoSteadyWeeks) suggestion = started.length < HABIT_LIMIT ? { kind: 'stack' } : { kind: 'steady' };
+    else if (week.total >= 3 && week.done / week.total < HARD) {
+      suggestion = { kind: 'ease', target: rule?.mode === 'minutes' ? TARGET_STEPS.findLast(step => step < rule.target) ?? null : null };
+    } else suggestion = { kind: 'keep' };
+    return { id: schedule.id, title: schedule.title, identity: rule?.identity ?? '', marks: held(lastWeek), week, before, suggestion };
+  });
 }

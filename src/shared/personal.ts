@@ -64,8 +64,15 @@ export interface PersonalView {
   progress: Record<string, number>;
   // minutes: habit -> day -> logged minutes; points: day -> points earned that day.
   week: { days: string[]; minutes: Record<string, Record<string, number>>; points: Record<string, number> };
+  // Repeating habit -> day -> outcome, for occurrences in the 14 days before today.
+  recent: Record<string, Record<string, Outcome>>;
+  // Identity votes by identity key: occurrences completed or with logged minutes, today included.
+  votes: Record<string, number>;
   preferences: PersonalPreferences;
 }
+
+// How a past habit occurrence ended. Minutes below the target still count as showing up (started).
+export type Outcome = 'done' | 'started' | 'missed' | 'rest';
 
 export const personalDefaults: PersonalPreferences = {
   sound: true, volume: 0.25, reducedMotion: false, pinnedReward: '',

@@ -1,5 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { ActivityEntry, Reward, ScoringRule } from '../shared/personal.ts';
+import { identityKey, outcomeOf } from '../shared/habits.ts';
+import type { ActivityEntry, Outcome, Reward, ScoringRule } from '../shared/personal.ts';
+import type { TaskStatus } from '../shared/tasks.ts';
 
 const entryColumns = 'id,kind,subject,title,day,logged_at AS loggedAt,minutes,rate,amount,reference';
 const ruleColumns = 'subject,mode,rate,target,cue,identity,plan_time AS time,place,starter,bundle';
@@ -47,6 +49,17 @@ export function createPersonalRepository(db: DatabaseSync) {
     WHERE subject IN (SELECT id FROM tasks WHERE status='pending')
       AND kind IN ('earn','edit','reverse') AND minutes<>0
     GROUP BY subject HAVING SUM(minutes)>0`);
+  // Net minutes per occurrence: logs plus corrections and undos, the same sum as subjectMinutes.
+  const netMinutes = `SELECT subject, SUM(minutes) AS minutes FROM personal_entries
+    WHERE kind IN ('earn','edit','reverse') GROUP BY subject`;
+  const recentOccurrences = db.prepare(`SELECT t.recurrence_id AS habit, t.planned_date AS day, t.status, COALESCE(m.minutes,0) AS minutes
+    FROM tasks t LEFT JOIN (${netMinutes}) m ON m.subject=t.id
+    WHERE t.recurrence_id IS NOT NULL AND t.status<>'pending' AND t.planned_date BETWEEN ? AND ?`);
+  // A vote is an occurrence completed or with logged minutes, for every habit that names an identity.
+  const identityVotes = db.prepare(`SELECT s.identity, COUNT(*) AS votes
+    FROM tasks t JOIN personal_scoring s ON s.subject=t.recurrence_id LEFT JOIN (${netMinutes}) m ON m.subject=t.id
+    WHERE s.identity<>'' AND (t.status='completed' OR (t.status<>'cancelled' AND COALESCE(m.minutes,0)>0))
+    GROUP BY s.identity`);
   const storedPreferences = db.prepare("SELECT value FROM personal_preferences WHERE key='settings'");
   function reward(row: Record<string, unknown>): Reward {
     return { id: String(row.id), title: String(row.title), cost: Number(row.cost), note: String(row.note),
@@ -96,6 +109,23 @@ export function createPersonalRepository(db: DatabaseSync) {
     week(start: string, end: string) {
       const result: Record<string, Record<string, number>> = {};
       for (const row of weekMinutes.all(start, end)) (result[String(row.habit)] ??= {})[String(row.day)] = Number(row.minutes);
+      return result;
+    },
+    // Habit -> day -> outcome for resolved occurrences planned between the two dates.
+    recent(start: string, end: string) {
+      const result: Record<string, Record<string, Outcome>> = {};
+      for (const row of recentOccurrences.all(start, end)) {
+        const outcome = outcomeOf(String(row.status) as TaskStatus, Number(row.minutes));
+        if (outcome) (result[String(row.habit)] ??= {})[String(row.day)] = outcome;
+      }
+      return result;
+    },
+    votes() {
+      const result: Record<string, number> = {};
+      for (const row of identityVotes.all()) {
+        const key = identityKey(String(row.identity));
+        result[key] = (result[key] ?? 0) + Number(row.votes);
+      }
       return result;
     },
     weekPoints(start: string, end: string) {

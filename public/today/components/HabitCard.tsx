@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { points } from '../../../src/shared/personal.ts';
 import type { ScoringRule } from '../../../src/shared/personal.ts';
 import type { Task } from '../../../src/shared/tasks.ts';
-import { cueLine } from '../../../src/shared/habits.ts';
+import { cueLine, identityKey } from '../../../src/shared/habits.ts';
 import type { HabitInsight, Mark } from '../../../src/shared/habits.ts';
 import type { PersonalController } from '../usePersonal.ts';
 import { spring } from './Animated.tsx';
@@ -25,12 +25,19 @@ export function HabitTrack({ insight }: { insight: HabitInsight }) {
   </div>;
 }
 
+// "· 23 votes" after an identity: every day done or started so far, across habits with that identity.
+export function VoteCount({ votes }: { votes: number }) {
+  return votes > 0 ? <span className="votes">{' · ' + votes + (votes === 1 ? ' vote' : ' votes')}</span> : null;
+}
+
 export function HabitCard({ task, rule, insight, state, onEdit, onRest, onLogged }: {
   task: Task; rule: ScoringRule; insight: HabitInsight; state: PersonalController;
-  onEdit(task: Task): void; onRest(task: Task): void; onLogged(task: Task, minutes: number): void;
+  // first: this log is the first today, so it also casts a vote.
+  onEdit(task: Task): void; onRest(task: Task): void; onLogged(task: Task, minutes: number, first: boolean): void;
 }) {
   const [draft, setDraft] = useState<{ id: string; day: string; minutes: string }>();
   const total = state.data?.progress[task.id] ?? 0;
+  const votes = rule.identity ? state.data?.votes[identityKey(rule.identity)] ?? 0 : 0;
   const met = total >= rule.target;
   const cue = cueLine(rule);
   function open(minutes = rule.target) {
@@ -40,16 +47,17 @@ export function HabitCard({ task, rule, insight, state, onEdit, onRest, onLogged
     event.preventDefault();
     if (!draft) return;
     const minutes = Number(draft.minutes);
+    const first = total === 0;
     if (await state.mutate('log', { ...draft, subject: task.id, minutes }, rule.target)) {
       setDraft(undefined);
-      onLogged(task, minutes);
+      onLogged(task, minutes, first);
     }
   }
   return <article className={`habit-card ${met ? 'met' : ''}`} aria-label={task.title}>
     <div className="habit-top">
       <div className="habit-heading">
         <strong className="task-title">{task.title}</strong>
-        {rule.identity && <p className="identity"><span>Vote for </span>{rule.identity}</p>}
+        {rule.identity && <p className="identity"><span>Vote for </span>{rule.identity}<VoteCount votes={votes} /></p>}
         {cue && <p className="cue">{cue}</p>}
       </div>
       <button className="icon-button" disabled={state.busy} aria-label={`Edit plan for ${task.title}`} title="Edit plan"

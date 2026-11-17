@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { points } from '../../../src/shared/personal.ts';
-import type { Progress } from '../habit-insights.ts';
+import type { Progress } from '../../../src/shared/habits.ts';
 import type { PersonalController } from '../usePersonal.ts';
 import { AnimatedNumber, spring } from './Animated.tsx';
 

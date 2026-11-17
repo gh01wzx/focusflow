@@ -102,12 +102,13 @@ export function useTodayController() {
     add: (draft: TaskDraft) => change(() => client.add(draft), 'Task added.', { draft, inline: true }),
     async resolve(id: string, status: TaskResolution) {
       const task = view && [...view.due, ...view.upcoming].find(item => item.id === id);
-      const failure = await change(
-        () => client.resolve(id, status), status === 'completed' ? 'Task completed.' : 'Task cancelled.',
-      );
+      const failure = await change(() => client.resolve(id, status), status === 'completed' ? 'Task completed.'
+        : task?.recurrenceId ? 'Rest day recorded. Your chain stays intact.' : 'Task cancelled.');
       if (!failure && task && mounted.current) setUndo({ id, title: task.title, status });
       return !failure;
     },
+    // Replaces the status line, for feedback from Personal points actions such as a habit log.
+    announce: (text: string) => { if (mounted.current) setMessage(text); },
     reopen: (id: string) => change(() => client.reopen(id), 'Task reopened.'),
     async stopRecurrence(id: string) {
       await change(() => client.stopRecurrence(id), 'Repeating stopped. Current-period tasks stay available.');

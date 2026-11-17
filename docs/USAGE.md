@@ -6,7 +6,9 @@ Open `Start-FocusFlow.cmd` to build and open your everyday workspace. Personal a
 
 **Today** groups repeating **Habits** above one-off **Tasks**. Use **Upcoming** for future tasks and **History** for resolved tasks. A missed one-off task keeps its original date and stays open until you complete or cancel it.
 
-Choose **New task** to open the task window. Pick **One-off**, **Repeating** (checked off once per day or chosen weekday) or **Timed habit** (minutes logged toward a daily target). The window follows the four habit laws from *Atomic Habits*:
+The **Next** card at the top shows one thing to do now: planned times that have arrived come first, then habits and tasks without a time, then later planned times. Choose **Start 2 minutes** to begin with the smallest step; the timer keeps running while you switch views. **Done** logs the minutes for a timed habit or completes the task. **Later** sets it aside for the rest of the day.
+
+Type in **Add a task for today** and press Enter for a quick task. Choose **New habit** to build a habit in four short steps: what and when, the moment it follows, the two-minute version, and the reward and identity. **New task** and **More options** open the same window with every field on one page. Pick **One-off**, **Repeating** (checked off once per day or chosen weekday) or **Timed habit** (minutes logged toward a daily target). The window follows the four habit laws from *Atomic Habits*:
 
 - **Make it obvious:** a cue such as "After I pour my morning coffee", plus a time and a place.
 - **Make it attractive:** the points it earns, something you enjoy to pair it with, and the reward you are working toward.
@@ -15,7 +17,7 @@ Choose **New task** to open the task window. Pick **One-off**, **Repeating** (ch
 
 Only the title is required. The summary at the bottom shows the whole plan. Use the pencil on a task or habit to edit its plan later; the title and schedule stay as created.
 
-Tick the circle to complete a task. A timed habit card shows minutes against its target, a **Log 2 min** button for its two-minute version, recent occurrences and how many it has done in a row. After a missed occurrence it reminds you never to miss twice. A future habit occurrence in **Upcoming** is logged on its day.
+Tick the circle to complete a task. A timed habit card shows minutes against its target and a **Log 2 min** button for its two-minute version. Every habit shows its recent occurrences, how many of the latest seven you showed up for, and its chain. Any logged minutes count as showing up. One miss does not break the chain; two misses in a row do, and the card reminds you never to miss twice. Choose **Rest today** for a planned day off; a rest day never counts as a miss. A future habit occurrence in **Upcoming** is logged on its day.
 
 After you complete or cancel a task, choose **Undo** next to the message to reopen it. **History** and **Completed today** also offer **Reopen** for one-off tasks and for a repeating occurrence while its period is current. Reopening a completed task returns the points it earned. History shows the latest 200 resolved tasks; older records stay saved.
 

@@ -5,7 +5,8 @@ import type { TaskRepository } from './repository.ts';
 export function reconcileRecurrences(repository: TaskRepository, now: Date, nextId: () => string, reachedTarget: (task: ReturnType<TaskRepository['listPendingOccurrences']>[number]) => boolean = () => false): void {
   const today = localDay(now);
   const timestamp = now.toISOString();
-  for (const task of repository.listPendingOccurrences()) {
+  // An occurrence planned for today or later cannot have reached the end of its period.
+  for (const task of repository.listPendingOccurrences(today)) {
     if (task.frequency === null) throw new Error('Repeating task has no frequency.');
     const rule = repository.findRule(task.recurrenceId!);
     if (!rule) throw new Error('Repeating task has no schedule.');

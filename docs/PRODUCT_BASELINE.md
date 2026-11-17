@@ -4,8 +4,8 @@ Source: the owner's Personal & Projects Tracker brief v0.1 and later approvals. 
 
 ## Product
 
-- Windows first, personal use, single user, local data, no Tracker account.
-- Run from source through one Start-FocusFlow.cmd entry. Personal data uses a stable profile; --review NAME opens a separate workspace that starts empty.
+- Windows first with macOS source support, personal use, single user, local data, no Tracker account.
+- Run from source with Start-FocusFlow.cmd on Windows or Start-FocusFlow.command on macOS. Personal data uses a stable profile; --review NAME opens a separate workspace that starts empty.
 - Low effort daily use: open easily, show the next action, reveal detail when needed.
 - Personal opens Today. Projects opens an action center with Review, running work and the next eligible Ticket.
 - Source and published development records are public; personal data and credentials remain private.
@@ -43,7 +43,7 @@ Do not control existing Codex App UI/sessions or automatically start the next Ti
 
 The target is a useful local tool for the owner, not a distributed app. Formal installers, signing, public releases, update feeds, update installation and installer rollback are outside scope. They do not block feature completion or personal use.
 
-Start-FocusFlow.cmd builds source and opens the fixed personal profile. Named review workspaces are separate and start empty. Existing personal data retains verified migration snapshots and separate-path recovery; these remain necessary for personal use.
+Each platform launcher builds source and opens the fixed personal profile. Named review workspaces are separate and start empty. Existing personal data retains verified migration snapshots and separate-path recovery; these remain necessary for personal use.
 
 The owner requested implementation first and unified manual acceptance later. Do not run test suites or live model trials for this batch. Keep source, Issues/PRs and concise usage/architecture docs readable, and distinguish source delivery from verified behavior.
 

@@ -1,7 +1,7 @@
 // Explicit developer commands only. Ordinary tests never execute this file.
 import { spawn } from 'node:child_process';
 import { mkdir, readFile } from 'node:fs/promises';
-import { homedir } from 'node:os';
+import { localDataDirectory } from '../src/runtime/profile.ts';
 import { join, dirname, basename, isAbsolute } from 'node:path';
 import { once } from 'node:events';
 import { CodexFailure, record } from '../src/codex/client.ts';
@@ -19,14 +19,12 @@ if (!['install', 'login', 'status', 'live', 'cancel'].includes(mode ?? '') ||
   process.exit(2);
 }
 
-const root = join(process.platform === 'win32'
-  ? (process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local'))
-  : join(homedir(), '.local', 'share'), 'FocusFlow', product ? 'codex-product' : 'codex-phase0');
+const root = join(localDataDirectory(), 'FocusFlow', product ? 'codex-product' : 'codex-phase0');
 const profile = join(root, 'profile');
 const runtime = join(root, 'runtime');
 const cli = join(runtime, 'node_modules', '@openai', 'codex', 'bin', 'codex.js');
 const environment: NodeJS.ProcessEnv = {};
-for (const key of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'USERPROFILE', 'HOME', 'HOMEDRIVE', 'HOMEPATH', 'LOCALAPPDATA', 'APPDATA']) {
+for (const key of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'TMPDIR', 'USERPROFILE', 'HOME', 'HOMEDRIVE', 'HOMEPATH', 'LOCALAPPDATA', 'APPDATA']) {
   const value = process.env[key];
   if (value) environment[key] = value;
 }
@@ -47,7 +45,7 @@ async function verify(): Promise<void> {
     if (!npm || !isAbsolute(npm) || basename(npm) !== 'npm-cli.js') throw new ProbeFailure('RUN_WITH_NPM');
     // Separate runtime avoids making the desktop installer depend on the development CLI.
     await interactive(npm, ['install', '--prefix', runtime, '--no-save', '--package-lock=false',
-      '--ignore-scripts', '--no-audit', '--no-fund', `@openai/codex@${VERSION}`], root);
+      '--include=optional', '--ignore-scripts', '--no-audit', '--no-fund', `@openai/codex@${VERSION}`], root);
     console.log(`Official Codex CLI ${VERSION} installed for ${product ? 'FocusFlow AI' : 'the Phase 0 probe'}.`);
     return;
   }

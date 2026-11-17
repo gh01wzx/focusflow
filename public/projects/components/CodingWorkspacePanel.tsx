@@ -38,7 +38,7 @@ export function CodingWorkspacePanel({ ticketId, projectId, disabled, onLock }: 
     <p>Choose the connected repository on this computer. Inspection reads Git metadata; preparing creates a separate worktree without resetting your original files.</p>
     {error && <p role="alert" className="error">{error}</p>}
     <label>Local repository folder<input value={sourcePath} maxLength={2000} disabled={busy || disabled || state?.workspace?.state === 'ready'}
-      onChange={event => { setSourcePath(event.target.value); setConfirm(false); setState(current => current ? { ...current, inspection: null } : null); }} placeholder="C:\Projects\my-project" /></label>
+      onChange={event => { setSourcePath(event.target.value); setConfirm(false); setState(current => current ? { ...current, inspection: null } : null); }} placeholder="Absolute path to the repository" /></label>
     {state?.workspace?.state !== 'ready' && <>
       <button className="primary" disabled={busy || disabled || !sourcePath.trim()} onClick={() => void act('prepare-saved')}>Prepare worktree</button>
       <button disabled={busy || disabled || !sourcePath.trim()} onClick={() => void act('inspect')}>Inspect repository</button>

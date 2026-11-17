@@ -28,7 +28,7 @@ export function createAiRuntime(localDataDirectory: string, electron = false, se
         if (!info?.isFile()) throw new Error('Codex did not return a fresh account model catalog.');
       }
       const environment: NodeJS.ProcessEnv = {};
-      for (const key of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH', 'LOCALAPPDATA', 'APPDATA']) {
+      for (const key of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'TMPDIR', 'HOME', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH', 'LOCALAPPDATA', 'APPDATA']) {
         if (process.env[key]) environment[key] = process.env[key];
       }
       environment.CODEX_HOME = profile;

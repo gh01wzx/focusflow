@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
+import { basename, delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
 import { record } from '../codex/client.ts';
 import { withCodexProcess } from '../codex/process.ts';
 import { DSH_VERSION, supportsSelection } from '../shared/ai.ts';
@@ -18,15 +18,25 @@ export class DshFailure extends Error {}
 
 async function locateDsh(): Promise<string> {
   const override = process.env.FOCUSFLOW_DSH_DIR;
-  const directory = override || (process.env.APPDATA ? join(process.env.APPDATA, 'npm', 'node_modules', '@deepseek-ai', 'dsh') : '');
-  const installMessage = `Install @deepseek-ai/dsh@${DSH_VERSION} with npm, or set FOCUSFLOW_DSH_DIR to that package directory.`;
-  if (!isAbsolute(directory)) throw new DshFailure(installMessage);
-  const bin = join(directory, 'lib', 'bin.js');
-  try {
-    const manifest = record(JSON.parse(await readFile(join(directory, 'package.json'), 'utf8')));
-    if (manifest.name === '@deepseek-ai/dsh' && manifest.version === DSH_VERSION && (await stat(bin)).isFile()) return bin;
-  } catch { /* The same setup instruction covers absent and unreadable installations. */ }
-  throw new DshFailure(installMessage);
+  let directories: string[];
+  if (override) directories = [override];
+  else if (process.platform === 'win32') {
+    directories = process.env.APPDATA ? [join(process.env.APPDATA, 'npm', 'node_modules', '@deepseek-ai', 'dsh')] : [];
+  } else {
+    // npm links global commands in PREFIX/bin and installs their packages in PREFIX/lib/node_modules.
+    const bins = (process.env.PATH ?? '').split(delimiter).filter(path => isAbsolute(path) && basename(path) === 'bin');
+    const prefixes = [process.env.npm_config_global_prefix ?? '', ...bins.map(path => dirname(path))].filter(isAbsolute);
+    directories = [...new Set(prefixes)].map(prefix => join(prefix, 'lib', 'node_modules', '@deepseek-ai', 'dsh'));
+  }
+  for (const directory of directories) {
+    if (!isAbsolute(directory)) continue;
+    const bin = join(directory, 'lib', 'bin.js');
+    try {
+      const manifest = record(JSON.parse(await readFile(join(directory, 'package.json'), 'utf8')));
+      if (manifest.name === '@deepseek-ai/dsh' && manifest.version === DSH_VERSION && (await stat(bin)).isFile()) return bin;
+    } catch { /* Try the next npm prefix. */ }
+  }
+  throw new DshFailure(`Install @deepseek-ai/dsh@${DSH_VERSION} with npm, or set FOCUSFLOW_DSH_DIR to that package directory.`);
 }
 
 async function invoke(bin: string, key: string, selection: AiModelSelection, signal: AbortSignal,
@@ -38,7 +48,7 @@ async function invoke(bin: string, key: string, selection: AiModelSelection, sig
     signal.throwIfAborted();
     const env: NodeJS.ProcessEnv = { DEEPSEEK_API_KEY: key, DSH_HOME: join(root, 'home'),
       DSH_TELEMETRY_DISABLED: '1', DSH_SYSTEM_PROMPT: 'Respond in text using only the supplied request.' };
-    for (const name of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'USERPROFILE', 'LOCALAPPDATA', 'APPDATA']) {
+    for (const name of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'TMPDIR', 'HOME', 'USERPROFILE', 'LOCALAPPDATA', 'APPDATA']) {
       if (process.env[name]) env[name] = process.env[name];
     }
     if (process.versions.electron) env.ELECTRON_RUN_AS_NODE = '1';

@@ -1,6 +1,6 @@
 # Development
 
-Use Node.js 24.12 or a later 24.x version. Install exact dependencies with `npm ci`. Open the app from source with `Start-FocusFlow.cmd`. Packaging, distribution and app updates are outside the personal-use scope.
+Use Node.js 24.12 or a later 24.x version. Install exact dependencies with `npm ci`. Open the app from source with `Start-FocusFlow.cmd` on Windows or `./Start-FocusFlow.command` on Mac. Packaging, distribution and app updates are outside the personal-use scope.
 
 ## Where information belongs
 
@@ -21,28 +21,30 @@ Use the [task template](../.github/ISSUE_TEMPLATE/task.md) and [PR template](../
 
 | Command | Purpose |
 | --- | --- |
-| `Start-FocusFlow.cmd` | Build and open the everyday app |
-| `Start-FocusFlow.cmd --review NAME` | Build and open a named, separate workspace |
+| `Start-FocusFlow.cmd` / `./Start-FocusFlow.command` | Build and open the everyday app |
+| Add `--review NAME` to either launcher | Build and open a named, separate workspace |
 | `npm start` / `npm run start:web` | Open a development workspace in Electron or a browser |
 | `npm run typecheck` | Check module boundaries and compile all TypeScript without writing output |
 | `npm run check:language` | Check maintained source and documentation language |
 | `npm run build` | Rebuild the ignored `dist` directory |
-| `npm run diagnose:desktop` | Try the built Windows runtime once without opening task data |
+| `npm run diagnose:desktop` | Try the built desktop runtime once without opening task data |
 | `npm run ai:install` | Install the pinned Codex runtime before first use |
 | `npm test` / `npm run test:source` | Run compiled tests or source tests when authorized |
 | `npm run codex:write-trial -- --sandbox-only` | Check a disposable Windows write using the existing trial setup without a model |
 
-Use [Codex commands](CODEX.md) for runtime diagnostics and [GitHub connection](GITHUB_CONNECTION.md) for authorization. GitHub verification workflows are manual-only. Tests use disposable storage, simulated providers and no personal data. Record build checks, hosted results, Windows owner acceptance and live provider evidence separately.
+Use [Codex commands](CODEX.md) for runtime diagnostics and [GitHub connection](GITHUB_CONNECTION.md) for authorization. GitHub verification workflows are manual-only. With owner authorization, select **Desktop checks > mac-source** to open a fresh review workspace on a standard public macOS runner. It records native window readiness, the selected database and preview shutdown. Tests use disposable storage, simulated providers and no personal data. Record build checks, hosted results, Windows owner acceptance and live provider evidence separately.
 
 ## Data paths
 
-| Launch | Directory under `%LOCALAPPDATA%\FocusFlow` |
-| --- | --- |
-| `Start-FocusFlow.cmd` or source with `--personal` | `desktop` |
-| `npm start` or browser development default | `workspaces\development\CHECKOUT_ID\schema-N` |
-| `--review NAME` | `workspaces\reviews\NAME\schema-N` |
+The root is `%LOCALAPPDATA%\FocusFlow` on Windows and `~/Library/Application Support/FocusFlow` on Mac.
 
-Each directory stores `data\tracker.db` and its own connection settings. The development ID comes from the checkout path. A named workspace is shared across checkouts that use the same name and format. Open another name for a fresh workspace. Previous `development` and `reviews` folders stay on disk. Launch uses the current paths in the table.
+| Launch | Directory under the platform root |
+| --- | --- |
+| Platform launcher or source with `--personal` | `desktop` |
+| `npm start` or browser development default | `workspaces/development/CHECKOUT_ID/schema-N` |
+| `--review NAME` | `workspaces/reviews/NAME/schema-N` |
+
+Each directory stores `data/tracker.db` and its own connection settings. The development ID comes from the checkout path. A named workspace is shared across checkouts that use the same name and format. Open another name for a fresh workspace. Previous `development` and `reviews` folders stay on disk. Launch uses the current paths in the table.
 
 `FOCUSFLOW_TEST_PROFILE` overrides the desktop test directory. The browser development service accepts `FOCUSFLOW_DATA_DIR`. Use disposable directories for these overrides. The desktop rejects combinations of test, personal and review modes that would make the selected directory ambiguous.
 

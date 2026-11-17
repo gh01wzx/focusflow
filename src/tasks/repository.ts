@@ -28,7 +28,9 @@ export function createTaskRepository(db: DatabaseSync) {
   const ruleById = db.prepare(ruleColumns + ' WHERE id=?');
   const activeRules = db.prepare(ruleColumns + ' WHERE stopped_at IS NULL ORDER BY created_at,id');
   const dueRules = db.prepare(ruleColumns + ' WHERE stopped_at IS NULL AND next_date<=?');
-  const pendingOccurrences = db.prepare(taskColumns + " WHERE t.status='pending' AND t.recurrence_id IS NOT NULL");
+  const pendingOccurrenceSql = taskColumns + " WHERE t.status='pending' AND t.recurrence_id IS NOT NULL";
+  const pendingOccurrences = db.prepare(pendingOccurrenceSql);
+  const pastPendingOccurrences = db.prepare(pendingOccurrenceSql + ' AND t.planned_date<?');
   const insertTask = db.prepare('INSERT INTO tasks(id,title,planned_date,status,created_at,resolved_at,recurrence_id) VALUES(?,?,?,?,?,?,?)');
   const insertRule = db.prepare('INSERT INTO recurrence_rules(id,title,frequency,start_date,next_date,created_at,stopped_at,weekdays_mask) VALUES(?,?,?,?,?,?,?,?)');
   const expire = db.prepare("UPDATE tasks SET status='missed',resolved_at=? WHERE id=?");
@@ -48,7 +50,8 @@ export function createTaskRepository(db: DatabaseSync) {
     listRecentHistory: (limit: number) => recentHistory.all(limit).map(parseTask),
     listActiveRules: () => activeRules.all().map(storedRule),
     listDueRules: (today: string) => dueRules.all(today).map(storedRule),
-    listPendingOccurrences: () => pendingOccurrences.all().map(parseTask),
+    listPendingOccurrences: (before?: string) =>
+      (before === undefined ? pendingOccurrences.all() : pastPendingOccurrences.all(before)).map(parseTask),
     occurrenceAt(recurrenceId: string, day: string): Task | undefined {
       const row = db.prepare(taskColumns + ' WHERE t.recurrence_id=? AND t.planned_date<=? ORDER BY t.planned_date DESC LIMIT 1')
         .get(recurrenceId, day);

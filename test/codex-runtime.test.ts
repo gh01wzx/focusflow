@@ -42,3 +42,21 @@ test('Windows resolves the pinned native process and refuses missing or mismatch
   await writeFile(join(root, 'package.json'), JSON.stringify({ version: '0.0.0' }));
   await assert.rejects(resolveCodexCommand(runtime, 'linux', 'x64'));
 });
+
+test('Mac resolves the installed binary for the selected architecture', async t => {
+  const runtime = await mkdtemp(join(tmpdir(), 'focusflow-codex-mac-'));
+  t.after(() => rm(runtime, { recursive: true, force: true }));
+  const packages = join(runtime, 'node_modules', '@openai');
+  await mkdir(join(packages, 'codex'), { recursive: true });
+  await writeFile(join(packages, 'codex', 'package.json'), JSON.stringify({ version: CODEX_VERSION }));
+  for (const [arch, cpu] of [['arm64', 'aarch64'], ['x64', 'x86_64']] as const) {
+    const native = join(packages, 'codex-darwin-' + arch);
+    const bin = join(native, 'vendor', cpu + '-apple-darwin', 'bin');
+    await mkdir(bin, { recursive: true });
+    await writeFile(join(native, 'package.json'), JSON.stringify({ version: CODEX_VERSION + '-darwin-' + arch }));
+    await assert.rejects(resolveCodexCommand(runtime, 'darwin', arch));
+    const executable = join(bin, 'codex');
+    await writeFile(executable, 'Resolver fixture only.', { mode: 0o700 });
+    assert.equal((await resolveCodexCommand(runtime, 'darwin', arch)).executable, executable);
+  }
+});

@@ -21,7 +21,7 @@ export function CodingApprovalPanel({ticketId,disabled}:{ticketId: string;disabl
     <p>{approval.reason||'Codex requested permission for the following action.'}</p>
     <p>{approval.kind==='command'?'Command':'File change'} in <code>{approval.workingDirectory}</code></p>
     {approval.command&&<pre>{approval.command}</pre>}{approval.paths.map(path=><p key={path}><code>{path}</code></p>)}
-    <p>Allow applies once to this request. Denying does not undo earlier changes. This preview does not establish private-file read isolation or verified Windows sandbox enforcement.</p>
+    <p>Allow applies once to this request. Denying does not undo earlier changes. This preview does not establish private-file read isolation or verified operating system sandbox enforcement.</p>
     <button disabled={busy||disabled} onClick={()=>void decide('accept')}>Allow once</button>{' '}
     <button disabled={busy} onClick={()=>void decide('decline')}>Deny</button>
     {readError&&<p role="status" className="feedback">{readError}</p>}{error&&<p role="alert" className="error">{error}</p>}

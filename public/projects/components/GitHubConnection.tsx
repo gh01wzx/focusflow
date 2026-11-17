@@ -138,7 +138,7 @@ export function GitHubConnection({ projectId, onRepository }: { projectId: strin
               <p><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Create a fine-grained token at GitHub</a></p>
               <p>Choose only the intended repositories in GitHub. Reading needs metadata; code publication needs Contents, Issues and Pull requests access. No permission is added automatically.</p>
               <label>Fine-grained token<input type="password" value={personalToken} autoComplete="off" maxLength={1100} spellCheck={false} onChange={event=>setPersonalToken(event.target.value)} /></label>
-              <label><input type="checkbox" checked={tokenConsent} onChange={event=>setTokenConsent(event.target.checked)} />Store this token locally using Windows-protected encryption.</label>
+              <label><input type="checkbox" checked={tokenConsent} onChange={event=>setTokenConsent(event.target.checked)} />Protect this token with my operating system and save it on this computer.</label>
               <button disabled={!personalToken||!tokenConsent} onClick={()=>{const token=personalToken;setPersonalToken('');setTokenConsent(false);void act('token',{token,confirmed:true});}}>Connect with token</button>
             </details>
           </div>

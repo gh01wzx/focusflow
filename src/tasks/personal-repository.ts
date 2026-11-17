@@ -21,10 +21,11 @@ export function createPersonalRepository(db: DatabaseSync) {
   const upsertRule = db.prepare(`INSERT INTO personal_scoring(subject,mode,rate,target,cue,identity,plan_time,place,starter,bundle)
     VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(subject) DO UPDATE SET mode=excluded.mode,rate=excluded.rate,target=excluded.target,
     cue=excluded.cue,identity=excluded.identity,plan_time=excluded.plan_time,place=excluded.place,starter=excluded.starter,bundle=excluded.bundle`);
-  // Same earning rule as today's total: earned and corrected entries, plus undone earnings.
-  const dailyPoints = db.prepare(`SELECT day, SUM(amount) AS points FROM personal_entries
-    WHERE day BETWEEN ? AND ? AND (kind IN ('earn','edit') OR
-      (kind='reverse' AND reference IN (SELECT id FROM personal_entries WHERE kind='earn')))
+  // Reversing an earning reduces earned points. Reversing a redemption does not.
+  const earnedEntry = `kind IN ('earn','edit') OR (kind='reverse' AND EXISTS (
+    SELECT 1 FROM personal_entries original WHERE original.id=p.reference AND original.kind='earn'))`;
+  const dailyPoints = db.prepare(`SELECT day, SUM(amount) AS points FROM personal_entries p
+    WHERE day BETWEEN ? AND ? AND (${earnedEntry})
     GROUP BY day`);
   const rewardById = db.prepare(rewardsQuery + ' WHERE r.id=?');
   const allRewards = db.prepare(rewardsQuery + ' ORDER BY r.title,r.id');
@@ -40,25 +41,27 @@ export function createPersonalRepository(db: DatabaseSync) {
     WHERE p.day BETWEEN ? AND ? AND p.minutes<>0
     GROUP BY habit,p.day HAVING SUM(p.minutes)>0`);
   const dayTotals = db.prepare(`SELECT COALESCE(SUM(amount),0) AS balance,
-    COALESCE(SUM(CASE WHEN day=? AND (kind IN ('earn','edit') OR
-      (kind='reverse' AND reference IN (SELECT id FROM personal_entries WHERE kind='earn'))) THEN amount ELSE 0 END),0) AS earned
-    FROM personal_entries`);
+    COALESCE(SUM(CASE WHEN day=? AND (${earnedEntry}) THEN amount ELSE 0 END),0) AS earned
+    FROM personal_entries p`);
   const subjectMinutes = db.prepare(`SELECT COALESCE(SUM(minutes),0) AS total FROM personal_entries
     WHERE subject=? AND kind IN ('earn','edit','reverse')`);
   const openProgress = db.prepare(`SELECT subject,SUM(minutes) AS minutes FROM personal_entries
     WHERE subject IN (SELECT id FROM tasks WHERE status='pending')
       AND kind IN ('earn','edit','reverse') AND minutes<>0
     GROUP BY subject HAVING SUM(minutes)>0`);
-  // Net minutes per occurrence: logs plus corrections and undos, the same sum as subjectMinutes.
-  const netMinutes = `SELECT subject, SUM(minutes) AS minutes FROM personal_entries
-    WHERE kind IN ('earn','edit','reverse') GROUP BY subject`;
-  const recentOccurrences = db.prepare(`SELECT t.recurrence_id AS habit, t.planned_date AS day, t.status, COALESCE(m.minutes,0) AS minutes
-    FROM tasks t LEFT JOIN (${netMinutes}) m ON m.subject=t.id
-    WHERE t.recurrence_id IS NOT NULL AND t.status<>'pending' AND t.planned_date BETWEEN ? AND ?`);
-  // A vote is an occurrence completed or with logged minutes, for every habit that names an identity.
+  // Only missed or still-open occurrences need their logs to decide the outcome.
+  // The subject index finds their entries, including corrections and undos.
+  const occurrenceMinutes = `(SELECT SUM(p.minutes) FROM personal_entries p
+    WHERE p.subject=t.id AND p.kind IN ('earn','edit','reverse'))`;
+  const recentOccurrences = db.prepare(`SELECT t.recurrence_id AS habit, t.planned_date AS day, t.status,
+      CASE WHEN t.status='missed' THEN COALESCE(${occurrenceMinutes},0) ELSE 0 END AS minutes
+    FROM tasks t WHERE t.recurrence_id IS NOT NULL AND t.status IN ('completed','cancelled','missed')
+      AND t.planned_date BETWEEN ? AND ?`);
+  // Visit only occurrences of rules with an identity. CROSS JOIN keeps this index
+  // lookup inside the rule loop even on a database without planner statistics.
   const identityVotes = db.prepare(`SELECT s.identity, COUNT(*) AS votes
-    FROM tasks t JOIN personal_scoring s ON s.subject=t.recurrence_id LEFT JOIN (${netMinutes}) m ON m.subject=t.id
-    WHERE s.identity<>'' AND (t.status='completed' OR (t.status<>'cancelled' AND COALESCE(m.minutes,0)>0))
+    FROM personal_scoring s CROSS JOIN tasks t ON t.recurrence_id=s.subject
+    WHERE s.identity<>'' AND (t.status='completed' OR (t.status IN ('pending','missed') AND ${occurrenceMinutes}>0))
     GROUP BY s.identity`);
   const storedPreferences = db.prepare("SELECT value FROM personal_preferences WHERE key='settings'");
   function reward(row: Record<string, unknown>): Reward {

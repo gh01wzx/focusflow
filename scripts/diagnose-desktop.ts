@@ -1,11 +1,12 @@
 import { resolve } from 'node:path';
 import { diagnoseDesktopRuntime } from '../src/runtime/diagnostic.ts';
 
-if (process.platform !== 'win32') {
-  console.error(JSON.stringify({ status: 'failed', reason: 'WINDOWS_DIAGNOSTIC_ONLY' })); process.exitCode = 1;
+if (process.platform !== 'win32' && process.platform !== 'darwin') {
+  console.error(JSON.stringify({ status: 'failed', reason: 'DESKTOP_DIAGNOSTIC_ONLY' })); process.exitCode = 1;
 } else {
   const installed = process.argv[2];
-  const executable = installed ? resolve(installed) : resolve('node_modules/electron/dist/electron.exe');
+  const binary = process.platform === 'darwin' ? 'Electron.app/Contents/MacOS/Electron' : 'electron.exe';
+  const executable = installed ? resolve(installed) : resolve('node_modules/electron/dist', binary);
   try {
     const result = await diagnoseDesktopRuntime(executable, installed ? ['--runtime-diagnostic'] : [resolve('.'), '--runtime-diagnostic']);
     console.log(JSON.stringify(result));

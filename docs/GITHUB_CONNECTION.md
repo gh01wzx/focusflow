@@ -15,7 +15,7 @@ Repository metadata read access is sufficient for connection. Issue publication 
 
 ## Try with your own App
 
-1. Use the source desktop build and a separate review profile: `.\Start-FocusFlow.cmd --review github-connection`.
+1. Use the source desktop build and a separate review profile: `.\Start-FocusFlow.cmd --review github-connection` on Windows or `./Start-FocusFlow.command --review github-connection` on Mac.
 2. At GitHub App settings, register an App you control, enable Device Flow, and select read-only Repository metadata. Do not add repository content or Issue write permissions for this step. Install it on selected repositories you intend to inspect.
 3. In Projects, open a project, expand **GitHub connection**, expand **Connection settings**, paste the App client ID and choose **Authorize GitHub**.
 4. Open the official device page and enter the displayed code. Inspect the App name, permissions and repository selection before approving. Return to FocusFlow.
@@ -29,7 +29,7 @@ Alternatively, expand Connection settings, follow the official fine-grained toke
 
 ## Storage and failures
 
-The Windows desktop uses Electron's asynchronous safeStorage API (Windows DPAPI). Only encrypted bytes are written to `github/connection.bin` within the selected profile, outside `data/tracker.db`. No token is returned to the renderer. Unavailable OS protection refuses connection rather than writing plaintext. If saved credentials cannot be opened while OS protection is available, local disconnect remains available to reset only the GitHub connection. Protection is against other Windows users; it does not protect against another process already running as the same user.
+The desktop uses Electron's asynchronous safeStorage API with Windows DPAPI or the macOS Keychain. On a Mac, allow Keychain access when prompted to save or reopen a connection. Only encrypted bytes are written to `github/connection.bin` within the selected profile, outside `data/tracker.db`. No token is returned to the renderer. Unavailable OS protection refuses connection rather than writing plaintext. If saved credentials cannot be opened while OS protection is available, local disconnect remains available to reset only the GitHub connection. Protection is against other operating system users; it does not protect against another process already running as the same user.
 
 Device codes are memory-only. The encrypted vault retains supported device-flow refresh tokens and rotates them with the access token. An older connection may require one authorization to acquire a refresh token. Revoked access and failed renewal require explicit authorization. Local disconnect clears credentials and keeps project links for reconnection. GitHub App settings handle remote revocation separately.
 

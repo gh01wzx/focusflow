@@ -1,9 +1,17 @@
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
+import { homedir } from 'node:os';
 
 export interface LaunchProfile {
   directory: string;
   workspaceLabel: string | null;
+}
+
+// The desktop, browser development server and CLI installer must agree on the product data root.
+export function localDataDirectory(fallback?: string): string {
+  if (process.platform === 'darwin') return join(homedir(), 'Library', 'Application Support');
+  if (process.platform === 'win32') return process.env.LOCALAPPDATA ?? fallback ?? join(homedir(), 'AppData', 'Local');
+  return fallback ?? join(homedir(), '.local', 'share');
 }
 
 export function selectProfile(options: {

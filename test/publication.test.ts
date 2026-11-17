@@ -147,7 +147,7 @@ test('publication HTTP enforces origin and project identity, and unavailable Git
   f.onCleanup(() => server.close());
   const transport: typeof fetch = (path, input) => fetch(server.origin + String(path), { ...input, headers: { ...input?.headers, Origin: server.origin } });
   const client = createPublicationClient(transport);
-  assert.equal((await client.read(f.project.id)).batch, null); await assert.rejects(client.preview(f.project.id), /Windows GitHub/);
+  assert.equal((await client.read(f.project.id)).batch, null); await assert.rejects(client.preview(f.project.id), /desktop GitHub/);
   const response = await fetch(server.origin + `/api/projects/${f.project.id}/publication/publish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
   assert.equal(response.status, 403); await assert.rejects(client.read(randomUUID()), /not found/);
 });

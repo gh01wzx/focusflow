@@ -1,20 +1,30 @@
 # FocusFlow
 
-FocusFlow is a local Windows app for personal tasks, habits and project work. Use it without an account. Connect AI and GitHub when you want help planning a ticket, writing code or reviewing a pull request.
+FocusFlow is a local Windows and macOS app for personal tasks, habits and project work. Use it without an account. Connect AI and GitHub when you want help planning a ticket, writing code or reviewing a pull request.
 
 ## Open FocusFlow
 
-Use Node.js 24.12 or a later 24.x version. In the checkout, run:
+Install Git and Node.js 24.12 or a later 24.x version with npm. On Windows, double-click `Start-FocusFlow.cmd` or run this from the checkout.
 
 ~~~powershell
 .\Start-FocusFlow.cmd
 ~~~
 
-The launcher prepares the pinned desktop dependencies when needed. It opens your everyday profile in `%LOCALAPPDATA%\FocusFlow\desktop`. A new profile starts empty. If dependencies changed after a Git update, run `npm ci` once from the checkout.
+On a MacBook, use macOS 13.5 or later and the Node.js build for your Mac (Apple silicon or Intel). In Terminal:
+
+~~~sh
+git clone https://github.com/gh01wzx/focusflow.git
+cd focusflow
+./Start-FocusFlow.command
+~~~
+
+After cloning, you can also double-click `Start-FocusFlow.command` in Finder. The first launch downloads the pinned dependencies and builds the app. The Mac launcher refreshes dependencies when the lockfile changes. On Windows, run `npm ci` if dependencies change after a Git update.
+
+Everyday data stays outside the checkout, in `~/Library/Application Support/FocusFlow/desktop` on Mac and `%LOCALAPPDATA%\FocusFlow\desktop` on Windows. New profiles start empty.
 
 Personal opens on **Today**. Add a one-off task or a repeating habit, track points and redeem your own rewards. In **Projects**, the Action center lists tickets to review, work in progress and the next eligible ticket. Open a project for its milestones and status board.
 
-To try a change with separate data, run `.\Start-FocusFlow.cmd --review my-review`. A new review workspace starts empty. Opening the same name with the same database format retains its changes.
+To try a change with separate data, run `./Start-FocusFlow.command --review my-review` on Mac or `.\Start-FocusFlow.cmd --review my-review` on Windows. A new review workspace starts empty. Opening the same name with the same database format retains its changes.
 
 ## Optional connections
 

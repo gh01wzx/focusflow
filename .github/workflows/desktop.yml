@@ -1,6 +1,15 @@
-name: Windows desktop checks
+name: Desktop checks
 on:
   workflow_dispatch:
+    inputs:
+      target:
+        description: Desktop operation
+        type: choice
+        required: true
+        default: windows-installed
+        options:
+          - windows-installed
+          - mac-source
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -8,7 +17,7 @@ permissions:
   contents: read
 jobs:
   desktop:
-    if: github.event.repository.private == false
+    if: github.event.repository.private == false && inputs.target == 'windows-installed'
     runs-on: windows-latest
     timeout-minutes: 16
     steps:
@@ -80,3 +89,18 @@ jobs:
               if (Test-Path -LiteralPath $report) { Get-Content -LiteralPath $report }
             }
           }
+  mac-source:
+    if: github.event.repository.private == false && inputs.target == 'mac-source'
+    runs-on: macos-15
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: Mac checkout
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.12.0'
+      - name: Open the source launcher in a fresh review workspace
+        working-directory: Mac checkout
+        run: node scripts/diagnose-mac-start.ts

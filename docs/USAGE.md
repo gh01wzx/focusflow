@@ -1,6 +1,6 @@
 # Using FocusFlow
 
-Open `Start-FocusFlow.cmd` to build and open your everyday workspace. Personal and manual project work are available as soon as the local app opens. See [the README](../README.md) for setup.
+Open `Start-FocusFlow.cmd` on Windows or `Start-FocusFlow.command` on macOS to build and open your everyday workspace. Personal and manual project work are available as soon as the local app opens. See [the README](../README.md) for setup.
 
 ## Personal
 
@@ -43,7 +43,7 @@ To remove a project, choose **Delete project** and type its name. This permanent
 
 ## Optional connections
 
-Open **Settings > AI connection**. For Codex, run `npm run ai:install` from the source checkout and follow **Sign in with ChatGPT**. Uses are charged to the selected ChatGPT Codex allowance. For DeepSeek, install the CLI shown in the dialog and save a key there, or supply the existing `DEEPSEEK_API_KEY` environment setting. Compatible API connections can use a configured endpoint and key. These requests use the selected API balance. The desktop protects saved API keys with the Windows user credential mechanism.
+Open **Settings > AI connection**. For Codex, run `npm run ai:install` from the source checkout and follow **Sign in with ChatGPT**. Uses are charged to the selected ChatGPT Codex allowance. For DeepSeek, install the CLI shown in the dialog and save a key there, or supply the existing `DEEPSEEK_API_KEY` environment setting. Compatible API connections can use a configured endpoint and key. These requests use the selected API balance. The desktop protects saved API keys with Windows encryption or the macOS Keychain.
 
 Open **GitHub connection** in the project to authorize an account and link a repository. The app prompts for explicit approval before publishing. [GitHub setup and permissions](GITHUB_CONNECTION.md)
 
@@ -59,6 +59,6 @@ Open **GitHub connection** in the project to authorize an account and link a rep
 
 ## Review workspaces and recovery
 
-Run `.\Start-FocusFlow.cmd --review my-review` in the checkout to open a separate workspace. New names start empty. Reopen the same name and database format to keep your changes. The window displays **Separate workspace**. Run the launcher without arguments to open everyday data.
+Run `./Start-FocusFlow.command --review my-review` on Mac or `.\Start-FocusFlow.cmd --review my-review` on Windows to open a separate workspace. New names start empty. Reopen the same name and database format to keep your changes. The window displays **Separate workspace**. Run the launcher without arguments to open everyday data.
 
 Existing everyday data is retained across checkouts. Review and development paths are documented in [Development](DEVELOPMENT.md#data-paths). Schema upgrades take a verified backup first. See [Backup and recovery](DEVELOPMENT.md#backup-and-recovery) if you need to recover a database.

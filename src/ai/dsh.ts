@@ -102,7 +102,7 @@ async function invoke(bin: string, key: string, selection: AiModelSelection, sig
   }
 }
 
-export function createDshService() {
+export function createDshService(credential?: { read(): Promise<string | undefined>; write(value: string): Promise<void> }) {
   let state: DshStatus = { ready: false, verified: false, message: 'Check the installed DeepSeek Harness CLI and DeepSeek API key.' };
   const shutdown = new AbortController();
   let active: Promise<unknown> | null = null;
@@ -110,9 +110,9 @@ export function createDshService() {
   async function run<T>(signal: AbortSignal, operation: (key: string, signal: AbortSignal) => Promise<T>): Promise<T> {
     if (active) throw new DshFailure('Another DeepSeek Harness request is active.');
     const combined = AbortSignal.any([signal, shutdown.signal, AbortSignal.timeout(150_000)]);
-    const key = process.env.DEEPSEEK_API_KEY?.trim();
+    const key = (await credential?.read() ?? process.env.DEEPSEEK_API_KEY)?.trim();
     if (!key) {
-      state = { ready: false, verified: false, message: 'Set DEEPSEEK_API_KEY before opening FocusFlow.' };
+      state = { ready: false, verified: false, message: 'Save your DeepSeek API key in AI connection.' };
       throw new DshFailure(state.message);
     }
     combined.throwIfAborted();
@@ -163,6 +163,14 @@ export function createDshService() {
 
   return {
     status: () => state,
+    async restore() { if (await credential?.read() || process.env.DEEPSEEK_API_KEY?.trim()) await check(false); },
+    async saveKey(value: unknown) {
+      if (!credential || typeof value !== 'string' || !/^[A-Za-z0-9_-]{12,300}$/.test(value.trim())) throw new DshFailure('Enter a valid DeepSeek API key.');
+      if (active) throw new DshFailure('Wait for the current DeepSeek request to finish.');
+      try { await readDeepSeekModels(value.trim(), AbortSignal.timeout(15_000)); await credential.write(value.trim()); }
+      catch { throw new DshFailure('Could not verify or securely save the DeepSeek key. Check your connection and key.'); }
+      return check(false);
+    },
     check: () => check(false),
     verify: (confirmed: unknown) => confirmed === true ? check(true)
       : Promise.resolve({ ...state, message: 'Confirm that this check uses your DeepSeek API balance.' }),

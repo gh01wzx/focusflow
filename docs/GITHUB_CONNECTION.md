@@ -31,7 +31,7 @@ Alternatively, expand Connection settings, follow the official fine-grained toke
 
 The Windows desktop uses Electron's asynchronous safeStorage API (Windows DPAPI). Only encrypted bytes are written to `github/connection.bin` within the selected profile, outside `data/tracker.db`. No token is returned to the renderer. Unavailable OS protection refuses connection rather than writing plaintext. If saved credentials cannot be opened while OS protection is available, local disconnect remains available to reset only the GitHub connection. Protection is against other Windows users; it does not protect against another process already running as the same user.
 
-Device codes are memory-only. Only the access token is retained; refresh tokens are discarded. Expired or revoked access needs explicit authorization again. Local disconnect removes all GitHub credentials and project links for this profile without deleting tasks. GitHub App settings handle remote revocation separately.
+Device codes are memory-only. The encrypted vault retains supported device-flow refresh tokens and rotates them with the access token. An older connection may require one authorization to acquire a refresh token. Revoked access and failed renewal require explicit authorization. Local disconnect clears credentials and keeps project links for reconnection. GitHub App settings handle remote revocation separately.
 
 The connection panel separates the account, repository selection and expandable connection settings. Setup is expanded when disconnected and collapsed after connection. All actions use the shared button styles; repository confirmation uses an explicit toggle card.
 

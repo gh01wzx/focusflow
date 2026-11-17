@@ -1,3 +1,4 @@
+import type { AiModelSelection } from './ai.ts';
 import { executionRecord } from './execution.ts';
 
 export const CODING_STAGES=['starting','coding','permission','cancelling','ready','publishing','review','stopped','failed','interrupted','uncertain','merged'] as const;
@@ -9,6 +10,9 @@ export interface CodingRun {
   summary:string;errorCode:string;message:string;commands:CodingCommand[];events:{at:string;text:string}[];
   feedback:string;previousRunId:string|null;allowChecks:boolean;
   requirementsToken?:string;
+  selection?: AiModelSelection;
+  inputEstimate?: number;
+  usage?: { input: number; output: number; reasoning: number; cached: number; total: number };
   feedbackHeadSha?:string|null;
 }
 export interface CodingState {

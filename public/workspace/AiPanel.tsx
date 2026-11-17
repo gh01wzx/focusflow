@@ -12,6 +12,8 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
   const [confirmed, setConfirmed] = useState(false);
   const [provider, setProvider] = useState<AiProvider>('codex');
   const [dsh, setDsh] = useState<DshStatus | null>(null);
+  const [key, setKey] = useState('');
+  const [endpoint, setEndpoint] = useState('');
   const [dshBusy, setDshBusy] = useState(false);
   const [dshConfirmed, setDshConfirmed] = useState(false);
   const mounted = useRef(true);
@@ -48,14 +50,14 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
     if (dshBusy) return;
     setDshBusy(true); setDshConfirmed(false); setError('');
     try { const next = await operation(); if (mounted.current) setDsh(next); }
-    catch { if (mounted.current) setError('Could not contact the local DeepSeek Harness service.'); }
+    catch (error) { if (mounted.current) setError(error instanceof Error ? error.message : 'Could not contact DeepSeek.'); }
     finally { if (mounted.current) setDshBusy(false); }
   }
   return <>
     <button className="nav-item ai-entry" disabled={disabled} onClick={() => {
       setConfirmed(false); setDshConfirmed(false); dialog.current?.showModal();
       if (provider === 'codex') void run(client.status);
-      else void runDsh(client.dshStatus);
+      else if (provider === 'dsh') void runDsh(client.dshStatus);
     }}>AI connection</button>
     <dialog className="ai-dialog" ref={dialog} aria-labelledby="ai-title">
       <h2 id="ai-title">AI connection</h2>
@@ -66,6 +68,10 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
         <button aria-pressed={provider === 'dsh'} disabled={busy || dshBusy} onClick={() => {
           setProvider('dsh'); setConfirmed(false); void runDsh(client.dshStatus);
         }}>DeepSeek Harness</button>
+        <button aria-pressed={provider === 'compatible'} onClick={() => {
+          setProvider('compatible'); setKey(''); setError('');
+          void client.compatibleStatus().then(value => setEndpoint(value.endpoint)).catch(() => {});
+        }}>Compatible API</button>
       </div>
       {provider === 'codex' ? <>
       <p>FocusFlow uses the official Codex runtime with a separate ChatGPT sign-in. It does not copy Codex App sessions.</p>
@@ -89,16 +95,35 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
         onChange={event => setConfirmed(event.target.checked)} />I understand that this read-only check uses Codex allowance.</label>
       <button className="primary" disabled={busy || !confirmed || status?.mode !== 'chatgpt'}
         onClick={() => void run(() => client.verify(confirmed))}>Run read-only AI check</button>
-      </> : <>
+      </> : provider === 'dsh' ? <>
         <p>Connect DeepSeek Harness to FocusFlow. Model requests use your DeepSeek API balance.</p>
-        <p>Install the CLI with <code>npm install -g @deepseek-ai/dsh@{DSH_VERSION}</code>. Set <code>DEEPSEEK_API_KEY</code> in the environment used to launch FocusFlow, then reopen it.</p>
+        <p>Install the CLI with <code>npm install -g @deepseek-ai/dsh@{DSH_VERSION}</code>.</p>
+        <form onSubmit={event => {
+          event.preventDefault();
+          const submitted = key;
+          setKey('');
+          void runDsh(() => client.saveDshKey(submitted));
+        }}>
+          <label>DeepSeek API key <input type="password" autoComplete="off" value={key} onChange={event => setKey(event.target.value)} /></label>
+          <button className="primary" disabled={!key.trim() || dshBusy}>Save on this computer</button>
+        </form>
         <p role="status">{dsh?.message}</p>
         <button disabled={dshBusy} onClick={() => void runDsh(client.dshCheck)}>Check DeepSeek Harness</button>
         <label className="ai-consent"><input type="checkbox" checked={dshConfirmed} disabled={dshBusy || !dsh?.ready}
           onChange={event => setDshConfirmed(event.target.checked)} />I understand that this check uses my DeepSeek API balance.</label>
         <button className="primary" disabled={dshBusy || !dshConfirmed || !dsh?.ready}
           onClick={() => void runDsh(() => client.dshVerify(dshConfirmed))}>Run read-only DeepSeek check</button>
-      </>}
+      </> : <form className="inline-settings" onSubmit={async event => {
+        event.preventDefault(); setDshBusy(true); setError('');
+        const secret = key; setKey('');
+        try { const result = await client.saveCompatible(endpoint, secret); setEndpoint(result.endpoint); setError('Connection saved.'); }
+        catch (error) { setError(error instanceof Error ? error.message : 'The connection could not be saved.'); }
+        finally { setDshBusy(false); }
+      }}>
+        <label>API base URL <input value={endpoint} onChange={event => setEndpoint(event.target.value)} placeholder="https://provider.example/v1" required /></label>
+        <label>API key <input type="password" autoComplete="off" value={key} onChange={event => setKey(event.target.value)} /></label>
+        <button className="primary" disabled={!endpoint.trim() || dshBusy}>Connect and save</button>
+      </form>}
       {error && <p role="alert" className="error">{error}</p>}
       <form method="dialog"><button className="ai-close">Close</button></form>
     </dialog>

@@ -35,4 +35,5 @@ export interface TaskDraft {
   plannedDate: string;
   frequency: 'none' | Frequency;
   weekdays?: Weekday[];
+  habit?: boolean;
 }

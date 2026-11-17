@@ -3,6 +3,7 @@ import { ProjectDialog } from './ProjectDialog.tsx';
 import { usePlanController } from '../usePlanController.ts';
 import { PlanDraftEditor, PlanApprovalPreview } from './PlanDraftEditor.tsx';
 import { createAiClient } from '../../../src/client/ai.ts';
+import { projectSettings } from '../../../src/client/project-settings.ts';
 import { aiProviderNames, defaultAiModelSelection, supportsSelection } from '../../../src/shared/ai.ts';
 import type { AiConnection, AiModel, AiModelSelection, AiProvider } from '../../../src/shared/ai.ts';
 
@@ -14,6 +15,11 @@ export function PlanDraftPanel({ projectId, disabled, onOpenChange, onApproved }
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'view' | 'edit' | 'preview'>('view');
   const [selection, setSelection] = useState<AiModelSelection>(defaultAiModelSelection);
+  useEffect(() => {
+    let current = true;
+    void projectSettings(projectId).then(value => { if (current && value.planning) setSelection(value.planning); }).catch(() => {});
+    return () => { current = false; };
+  }, [projectId]);
   const [connections, setConnections] = useState<AiConnection[] | null>(null);
   const [catalog, setCatalog] = useState<{ provider: AiProvider; models: AiModel[] } | null>(null);
   const [revision, refresh] = useState(0);

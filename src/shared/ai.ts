@@ -29,7 +29,7 @@ export function isAiSignInUrl(value: string) {
   } catch { return false; }
 }
 
-export type AiProvider = 'codex' | 'dsh';
+export type AiProvider = 'codex' | 'dsh' | 'compatible';
 
 export interface AiConnection {
   provider: AiProvider;
@@ -40,14 +40,14 @@ export function parseAiConnections(value: unknown): AiConnection[] {
   if (!Array.isArray(value)) throw new Error('Could not read AI connections.');
   return value.map((entry: unknown) => {
     if (!entry || typeof entry !== 'object' || !('provider' in entry) || !('connected' in entry)
-        || (entry.provider !== 'codex' && entry.provider !== 'dsh') || typeof entry.connected !== 'boolean') {
+        || (entry.provider !== 'codex' && entry.provider !== 'dsh' && entry.provider !== 'compatible') || typeof entry.connected !== 'boolean') {
       throw new Error('Could not read an AI connection.');
     }
     return { provider: entry.provider, connected: entry.connected };
   });
 }
 
-export const aiProviderNames: Record<AiProvider, string> = { codex: 'Codex', dsh: 'DeepSeek Harness' };
+export const aiProviderNames: Record<AiProvider, string> = { codex: 'Codex', dsh: 'DeepSeek Harness', compatible: 'Compatible API' };
 
 export interface AiModelSelection {
   provider: AiProvider;
@@ -68,10 +68,10 @@ export const DSH_VERSION = '0.2.2-rc.3';
 export function parseAiModelSelection(value: unknown): AiModelSelection {
   if (value === undefined) return { ...defaultAiModelSelection };
   if (!value || typeof value !== 'object' || !('provider' in value) || !('model' in value) || !('effort' in value)
-      || (value.provider !== 'codex' && value.provider !== 'dsh')
-      || typeof value.model !== 'string' || !/^[a-z0-9._-]{0,120}$/i.test(value.model)
+      || (value.provider !== 'codex' && value.provider !== 'dsh' && value.provider !== 'compatible')
+      || typeof value.model !== 'string' || !/^[a-z0-9._:/-]{0,120}$/i.test(value.model)
       || typeof value.effort !== 'string' || !/^[a-z0-9_-]{0,30}$/i.test(value.effort)
-      || (!value.model && (value.effort || value.provider === 'dsh'))) {
+      || (!value.model && (value.effort || value.provider !== 'codex'))) {
     throw new Error('Choose a valid AI provider, model and reasoning effort.');
   }
   return { provider: value.provider, model: value.model, effort: value.effort };

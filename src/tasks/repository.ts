@@ -59,6 +59,9 @@ export function createTaskRepository(db: DatabaseSync) {
     advanceRule: (id: string, date: string | null) => { advance.run(date, id); },
     stopRule: (id: string, at: string) => { stop.run(at, id); },
     cancelFutureTasks: (id: string, today: string, at: string) => { cancelFuture.run(at, id, today); },
+    reopenTask: (id: string) => {
+      db.prepare("UPDATE tasks SET status='pending',resolved_at=NULL WHERE id=? AND status='completed'").run(id);
+    },
     resolveTask: (id: string, status: TaskResolution, at: string) => { resolve.run(status, at, id); },
   };
 }

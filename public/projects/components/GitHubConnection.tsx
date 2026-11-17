@@ -78,7 +78,15 @@ export function GitHubConnection({ projectId, onRepository }: { projectId: strin
             <h3>Project repository</h3>
             <button type="button" className="secondary-button" onClick={() => void act('check')}>Check account and repositories</button>
           </div>
-          <label htmlFor={'github-repository-' + projectId}>Repository owner/name</label>
+          <label htmlFor={'github-repository-' + projectId}>GitHub URL or owner/name</label>
+          {!status.repository && <button type="button" className="secondary-button" disabled={busy} onClick={async () => {
+            try {
+              const response = await fetch('/api/projects/' + projectId + '/repository-suggestion');
+              const item = await response.json() as { name?: string };
+              if (response.ok && item.name) setName(item.name);
+              else setError('Save a local GitHub repository folder in project settings or enter its URL.');
+            } catch { setError('Could not read the local Git remote.'); }
+          }}>Use local Git remote</button>}
           <div className="github-input-row">
             <input id={'github-repository-' + projectId} value={name} maxLength={140} placeholder="owner/repository"
               autoCapitalize="none" spellCheck={false} onChange={event => {

@@ -19,8 +19,8 @@ export function createWorkspaceService(repository: ExecutionRepository, projects
     }
     return value as ProjectTicket & { coding: { repository: GitHubRepository; issueNumber: number } };
   }
-  async function inspect(id: string, input: unknown): Promise<RepositoryInspection> {
-    const value = ticket(id), fields = executionRecord(input);
+  async function inspect(id: string, input: unknown, destination?: GitHubRepository): Promise<RepositoryInspection> {
+    const target = destination ?? ticket(id).coding.repository, fields = executionRecord(input);
     const entered = executionText(fields.sourcePath, 2000, 'Enter the absolute path of a local Git repository.');
     if (!isAbsolute(entered)) throw new ExecutionFailure('ABSOLUTE_PATH_REQUIRED', 'Choose an absolute local folder path.');
     const sourcePath = await realpath(entered).catch(() => { throw new ExecutionFailure('MISSING_FOLDER', 'The local repository folder is unavailable.'); });
@@ -28,14 +28,14 @@ export function createWorkspaceService(repository: ExecutionRepository, projects
     if (top.toLowerCase() !== sourcePath.toLowerCase()) throw new ExecutionFailure('NOT_REPOSITORY_ROOT', 'Choose the repository root, not a subfolder.');
     const remoteUrl = await runGit(sourcePath, ['remote', 'get-url', 'origin']);
     const match = /^(?:https:\/\/github\.com\/|git@github\.com:)([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+?)(?:\.git)?\/?$/.exec(remoteUrl);
-    if (!match || match[1]!.toLowerCase() !== value.coding.repository.fullName.toLowerCase()) {
+    if (!match || match[1]!.toLowerCase() !== target.fullName.toLowerCase()) {
       throw new ExecutionFailure('REMOTE_MISMATCH', 'The origin remote must match this ticket\'s connected GitHub repository.');
     }
     const headSha = await runGit(sourcePath, ['rev-parse', '--verify', 'HEAD']);
     if (!/^[a-f0-9]{40}$/.test(headSha)) throw new ExecutionFailure('MISSING_BASE', 'Commit a base revision before preparing coding work.');
     const branch = await runGit(sourcePath, ['branch', '--show-current']);
     const dirty = !!await runGit(sourcePath, ['status', '--porcelain=v1', '--untracked-files=normal']);
-    return { sourcePath, headSha, branch, dirty, remote: match[1]!, repository: value.coding.repository,
+    return { sourcePath, headSha, branch, dirty, remote: match[1]!, repository: target,
       notice: dirty ? 'Your uncommitted files stay in the original folder. The coding workspace starts from the displayed committed revision and excludes those edits.'
         : 'The original folder is retained. Coding uses a separate worktree at the displayed commit.' };
   }

@@ -18,6 +18,9 @@ export function createAiClient(transport: typeof fetch = fetch) {
     models: async (provider: AiProvider, signal?: AbortSignal) =>
       parseAiModels(await request('providers/' + provider + '/models', undefined, signal)),
     dshStatus: async () => parseDshStatus(await request('dsh-status')),
+    compatibleStatus: async () => await request('compatible') as { connected: boolean; endpoint: string },
+    saveCompatible: async (endpoint: string, key: string) => await request('compatible', { endpoint, key }) as { connected: boolean; endpoint: string },
+    saveDshKey: async (key: string) => parseDshStatus(await request('dsh-key', { key })),
     dshCheck: async () => parseDshStatus(await request('dsh-check', {})),
     dshVerify: async (confirmAllowance: boolean) => parseDshStatus(await request('dsh-verify', { confirmAllowance })),
   };

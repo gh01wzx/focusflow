@@ -1,10 +1,20 @@
+import { ModelPicker } from './ModelPicker.tsx';
+import { defaultAiModelSelection } from '../../../src/shared/ai.ts';
+import { projectSettings } from '../../../src/client/project-settings.ts';
 import {useEffect,useRef,useState} from 'react';
 import type {ReviewState} from '../../../src/shared/review.ts';
 import {createReviewClient} from '../../../src/client/review.ts';
 const api=createReviewClient();
-export function CodingReviewPanel({ticketId,disabled,onChanged}:{ticketId:string;disabled:boolean;onChanged():void}){
+export function CodingReviewPanel({ticketId,projectId,disabled,onChanged}:{ticketId:string;projectId:string;disabled:boolean;onChanged():void}){
   const[state,setState]=useState<ReviewState|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const[question,setQuestion]=useState(''),[allowance,setAllowance]=useState(false),[confirm,setConfirm]=useState(false),[unverified,setUnverified]=useState(false),[closeIssue,setCloseIssue]=useState(false);
+  const [selection, setSelection] = useState(defaultAiModelSelection);
+  const [picker, setPicker] = useState(false);
+  useEffect(() => {
+    let current = true;
+    void projectSettings(projectId).then(value => { if (current && value.review) setSelection(value.review); }).catch(() => {});
+    return () => { current = false; };
+  }, [projectId]);
   const generation=useRef(0),alive=useRef(true),owned=useRef(false);
   useEffect(()=>{alive.current=true;let reading=false,ticks=0;
     const read=async()=>{if(reading||owned.current)return;reading=true;const version=generation.current;
@@ -13,7 +23,7 @@ export function CodingReviewPanel({ticketId,disabled,onChanged}:{ticketId:string
   },[ticketId]);
   async function act(action:string,kind?:'summary'|'independent'|'question'){
     if(owned.current)return;owned.current=true;generation.current++;setBusy(true);setError('');
-    try{const next=await api.act(ticketId,action,{kind,question,confirmAllowance:allowance,scope:state?.scope,headSha:state?.evidence?.pull.headSha,confirm:action==='close-issue'?closeIssue:confirm,confirmUnverified:unverified});
+    try{const next=await api.act(ticketId,action,{kind,question,selection:selection.model ? selection : undefined,confirmAllowance:allowance,scope:state?.scope,headSha:state?.evidence?.pull.headSha,confirm:action==='close-issue'?closeIssue:confirm,confirmUnverified:unverified});
       if(alive.current){setState(next);setConfirm(false);setAllowance(false);setCloseIssue(false);onChanged();}}
     catch(cause){if(alive.current)setError(cause instanceof Error?cause.message:'The review action failed.');}
     finally{owned.current=false;if(alive.current)setBusy(false);}
@@ -35,7 +45,9 @@ export function CodingReviewPanel({ticketId,disabled,onChanged}:{ticketId:string
       <details><summary>Actual changed files and diff</summary>{evidence.files.map(file=><article key={file.path}><h4>{file.path}</h4><p>{file.status} / +{file.additions} / -{file.deletions} / {file.complete?'Diff available':'Incomplete or omitted'}</p><pre>{file.patch??'No inline patch is available.'}</pre></article>)}</details>
       <details><summary>Dependency/import edits</summary>{evidence.files.flatMap(file=>(file.patch??'').split('\n').filter(line=>/^[+-].*(?:import |require\(|from |dependencies|devDependencies)/.test(line)).slice(0,20).map((line,index)=><p key={file.path+index}><code>{file.path}: {line}</code></p>))}</details>
       <details><summary>GitHub check sources</summary>{evidence.checks.map((check,index)=><p key={index}>{check.name}: {check.conclusion??check.status} / {check.source} {check.url&&<a href={check.url} target="_blank" rel="noreferrer">Open check</a>}</p>)}</details>
-      <div><label><input type="checkbox" checked={allowance} disabled={busy||disabled||state?.busy} onChange={event=>setAllowance(event.target.checked)} />Use ChatGPT Codex allowance for one read-only answer using this PR's requirements, diff and bounded source excerpts.</label>
+      <button type="button" onClick={() => setPicker(value => !value)}>Review model and effort</button>
+      {picker && <ModelPicker value={selection} onChange={setSelection} disabled={busy || disabled} />}
+      <div><label><input type="checkbox" checked={allowance} disabled={busy||disabled||state?.busy} onChange={event=>setAllowance(event.target.checked)} />Use the selected AI allowance for one read-only answer using this PR's requirements, diff and bounded source excerpts.</label>
         <button disabled={busy||disabled||state?.busy||state?.stale||!allowance} onClick={()=>void act('ask','summary')}>Explain this change</button>{' '}
         <button disabled={busy||disabled||state?.busy||state?.stale||!allowance} onClick={()=>void act('ask','independent')}>Run a separate AI review</button>
         <label>Question about this code or library<textarea value={question} maxLength={4000} disabled={busy||disabled} onChange={event=>setQuestion(event.target.value)} /></label>

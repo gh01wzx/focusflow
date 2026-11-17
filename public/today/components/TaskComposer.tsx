@@ -4,7 +4,7 @@ import { WeekdayPicker } from './WeekdayPicker.tsx';
 
 type ComposerState = Pick<TodayController,
   'title' | 'plannedDate' | 'frequency' | 'busy' | 'titleInput' | 'add'
-  | 'setTitle' | 'setPlannedDate' | 'setFrequency' | 'weekdays' | 'setWeekdays' | 'view'>;
+  | 'setTitle' | 'setPlannedDate' | 'setFrequency' | 'habit' | 'setHabit' | 'weekdays' | 'setWeekdays' | 'view'>;
 
 export function TaskComposer({ state }: { state: ComposerState }) {
   const { view, title, plannedDate, frequency, busy } = state;
@@ -54,9 +54,11 @@ export function TaskComposer({ state }: { state: ComposerState }) {
           </div>
           <button className="primary" type="submit"
             disabled={disabled || !title.trim() || (frequency === 'weekly' && state.weekdays.length === 0)}>
-            {busy ? 'Saving.' : 'Add task'}<span aria-hidden="true">?</span>
+            {busy ? 'Saving...' : state.habit && frequency !== 'none' ? 'Add habit' : 'Add task'}
           </button>
         </div>
+        {frequency !== 'none' && <label className="repeat-help"><input type="checkbox" checked={state.habit}
+          disabled={disabled} onChange={event => state.setHabit(event.target.checked)} /> Log minutes each day</label>}
         {frequency === 'weekly' && <WeekdayPicker selected={state.weekdays} disabled={disabled} onChange={state.setWeekdays} />}
       </form>
       {frequency !== 'none' && (

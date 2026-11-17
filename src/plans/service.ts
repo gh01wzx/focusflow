@@ -13,7 +13,7 @@ export { PlanInputError } from './approval.ts';
 export type PlanProgress = 'checking' | 'waiting' | 'responding' | 'retrying';
 export interface PlanGenerator {
   isConnected?(provider: AiProvider): boolean;
-  generate(goal: string, signal: AbortSignal, progress: (kind: PlanProgress) => void, selection?: AiModelSelection): Promise<SuggestedPlan>;
+  generate(goal: string, signal: AbortSignal, progress: (kind: PlanProgress) => void, selection?: AiModelSelection, context?: string): Promise<SuggestedPlan>;
 }
 export class PlanGenerationError extends Error {
   readonly code: string;
@@ -29,7 +29,8 @@ function failure(error: unknown) {
   if (code === 'RATE_LIMITED' || code === 'CONNECTION_FAILED') return 'AI could not connect or is rate limited. Retry explicitly when ready.';
   return 'AI could not return a valid plan. The previous draft and project tasks are unchanged. Retry explicitly when ready.';
 }
-export function createPlanService(repository: PlanRepository, generator: PlanGenerator, approval?: PlanApprovalService) {
+export function createPlanService(repository: PlanRepository, generator: PlanGenerator, approval?: PlanApprovalService,
+  projectContext: (id: string) => string = () => '') {
   const messages = new Map<string, string>();
   let active: { projectId: string; abort: AbortController; promise: Promise<void> } | null = null;
   let closed = false;
@@ -73,7 +74,7 @@ export function createPlanService(repository: PlanRepository, generator: PlanGen
             if (active !== owned || owned.abort.signal.aborted) return;
             messages.set(projectId, { checking: 'Checking the AI account.', waiting: 'Waiting for an AI draft.',
               responding: 'AI is responding.', retrying: 'The provider is retrying the current request.' }[kind]);
-          }, selection));
+          }, selection, projectContext(projectId)));
           if (owned.abort.signal.aborted || closed) return;
           repository.save({ id: randomUUID(), projectId, goal, createdAt: new Date().toISOString(), plan });
           messages.set(projectId, 'Draft saved locally. Suggestions are not approved tasks.');

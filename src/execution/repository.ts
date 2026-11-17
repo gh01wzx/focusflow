@@ -16,6 +16,11 @@ export function createExecutionRepository(db: DatabaseSync) {
       const row=db.prepare('SELECT run_json FROM coding_runs WHERE ticket_id=? ORDER BY rowid DESC LIMIT 1').get(id);
       return row?JSON.parse(String(row.run_json)) as CodingRun:null;
     },
+    recentChanges(projectId: string) {
+      return db.prepare(`SELECT t.title, r.run_json AS value FROM coding_runs r JOIN project_tickets t ON t.id=r.ticket_id
+        JOIN milestones m ON m.id=t.milestone_id WHERE m.project_id=? AND r.stage='merged' ORDER BY r.rowid DESC LIMIT 5`)
+        .all(projectId).map(row => ({ title: String(row.title), run: JSON.parse(String(row.value)) as CodingRun }));
+    },
     runs():CodingRun[] { return db.prepare('SELECT run_json FROM coding_runs ORDER BY rowid').all().map(row=>JSON.parse(String(row.run_json)) as CodingRun); },
     saveRun(run:CodingRun) {
       db.prepare('INSERT INTO coding_runs(id,ticket_id,stage,run_json) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET stage=excluded.stage,run_json=excluded.run_json')

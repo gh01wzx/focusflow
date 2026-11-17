@@ -60,7 +60,32 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
     method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams(fields).toString(),
   });
-  async function api(path: string, token = saved?.token ?? '', method = 'GET', body?: unknown) {
+  function refreshFields(reply: Record<string, unknown>) {
+    if (typeof reply.refresh_token !== 'string' || !/^ghr_[A-Za-z0-9_]+$/.test(reply.refresh_token)
+      || typeof reply.refresh_token_expires_in !== 'number' || !Number.isFinite(reply.refresh_token_expires_in)
+      || reply.refresh_token_expires_in <= 0) return {};
+    return { refreshToken: reply.refresh_token, refreshExpiresAt: now() + reply.refresh_token_expires_in * 1000 };
+  }
+  let attemptedToken = '';
+  async function renew() {
+    const current = saved;
+    if (!current || current.expiresAt === null || current.expiresAt > now() || !current.refreshToken
+      || !current.refreshExpiresAt || current.refreshExpiresAt <= now() || attemptedToken === current.refreshToken) return;
+    attemptedToken = current.refreshToken;
+    const reply = record(await oauth('oauth/access_token', { client_id: current.clientId,
+      grant_type: 'refresh_token', refresh_token: current.refreshToken }));
+    const refreshed = refreshFields(reply);
+    if (typeof reply.access_token !== 'string' || !/^ghu_[A-Za-z0-9_]+$/.test(reply.access_token)
+      || typeof reply.expires_in !== 'number' || !Number.isFinite(reply.expires_in) || reply.expires_in <= 0
+      || !refreshed.refreshToken) throw new GitHubFailure('GitHub could not renew this authorization. Authorize again to restore access.');
+    const next: StoredGitHub = { ...current, ...refreshed, token: reply.access_token, expiresAt: now() + reply.expires_in * 1000 };
+    await vault.write(next);
+    saved = next;
+    message = 'GitHub connection renewed.';
+  }
+  async function api(path: string, suppliedToken?: string, method = 'GET', body?: unknown) {
+    if (suppliedToken === undefined) await renew();
+    const token = suppliedToken ?? saved?.token ?? '';
     if (!token || (saved && token === saved.token && saved.expiresAt !== null && saved.expiresAt <= now())) {
       throw new GitHubFailure('GitHub access is missing or expired. Authorize GitHub again.');
     }
@@ -111,11 +136,11 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
     token: (projectId:string,token:unknown,confirmed:unknown)=>run(projectId,async()=>{
       if(confirmed!==true||typeof token!=='string'||!/^github_pat_[A-Za-z0-9_]{20,1000}$/.test(token))throw new GitHubFailure('Enter a fine-grained GitHub token and explicitly confirm protected local storage.');
       const login=await account(token);
-      const value:StoredGitHub={clientId:'',token,account:login,expiresAt:null,repositories:saved?.account===login?saved.repositories:{}};
+      const value:StoredGitHub={clientId:'',token,account:login,expiresAt:null,repositories:saved?.repositories??{}};
       await vault.write(value);saved=value;device=null;preview=null;repositories=[];
       message='GitHub token checked and stored using Windows encryption. Inspect and confirm this project repository; no Issue or code was published.';
     }),
-    status: (projectId: string) => run(projectId, async () => {}),
+    status: (projectId: string) => run(projectId, renew),
     start: (projectId: string, clientId: unknown) => run(projectId, async () => {
       if (typeof clientId !== 'string' || !/^[A-Za-z0-9_.-]{5,100}$/.test(clientId)) throw new GitHubFailure('Enter the client ID of your registered GitHub App with device flow enabled.');
       if (device && device.expiresAt > now()) throw new GitHubFailure('Finish or cancel the current authorization first.');
@@ -152,12 +177,13 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
       const expiresAt = typeof reply.expires_in === 'number' && Number.isFinite(reply.expires_in)
         ? now() + Math.max(0, reply.expires_in) * 1000 : null;
       const value: StoredGitHub = { clientId: current.clientId, token: reply.access_token, account: login, expiresAt,
-        repositories: saved?.account === login ? saved.repositories : {} };
+        repositories: saved?.repositories ?? {}, ...refreshFields(reply) };
       await vault.write(value); saved = value; device = null; preview = null; repositories = [];
       message = 'GitHub account checked. Select or inspect a repository before confirming its project link.';
     }),
     cancel: (projectId: string) => run(projectId, async () => { device = null; message = 'Authorization cancelled locally. Any code already issued expires at GitHub.'; }),
     check: (projectId: string) => run(projectId, async () => {
+      await renew();
       if (!saved?.token || (saved.expiresAt !== null && saved.expiresAt <= now())) throw new GitHubFailure('Authorize GitHub again; its access is missing or expired.');
       const login = await account(saved.token);
       if (login !== saved.account) throw new GitHubFailure('GitHub account changed. Disconnect and authorize again.');
@@ -189,9 +215,14 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
     disconnect: (projectId: string) => {
       const pending = queue.then(async () => {
         // Serialize deletion after any in-flight token write so disconnect wins.
-        await vault.clear();
-        device = null; saved = null; loaded = true; preview = null; repositories = [];
-        message = 'Local GitHub access and links removed for this profile. Task data is unchanged. Revoke the App at GitHub if desired.';
+        await load();
+        if (saved) {
+          const disconnected: StoredGitHub = { clientId: '', token: '', account: '', expiresAt: null, repositories: saved.repositories };
+          await vault.write(disconnected);
+          saved = disconnected;
+        }
+        device = null; loaded = true; preview = null; repositories = [];
+        message = 'GitHub disconnected. Saved project links are available after reconnecting.';
         return state(projectId);
       });
       queue = pending.catch(() => {});

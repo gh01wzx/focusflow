@@ -1,3 +1,6 @@
+import { createProjectSettings } from '../projects/settings.ts';
+import { createPersonalRepository } from '../tasks/personal-repository.ts';
+import { createPersonalService } from '../tasks/personal-service.ts';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -25,20 +28,23 @@ export async function openWorkspaceStore(path: string, clock: () => Date = () =>
     const repository = createTaskRepository(db);
     const taskTransaction: TaskTransaction = operation => inTransaction(db, () => {
       const now = clock();
-      reconcileRecurrences(repository, now, randomUUID);
+      reconcileRecurrences(repository, now, randomUUID, personal.reachedTarget);
       return operation(now);
     });
+    const personal = createPersonalService(createPersonalRepository(db), repository, taskTransaction);
     const projectTransaction: ProjectTransaction = operation => inTransaction(db, () => operation(clock()));
     const projectRepository = createProjectRepository(db);
     const planDrafts = createPlanRepository(db);
     return {
-      tasks: createTaskService(repository, taskTransaction, randomUUID),
+      tasks: createTaskService(repository, taskTransaction, randomUUID, personal.complete, personal.createRule),
+      personal,
       projects: createProjectService(projectRepository, projectTransaction, randomUUID),
       planDrafts,
       publications: createPublicationRepository(db),
       linkedWork: createLinkedWorkRepository(db),
       execution: createExecutionRepository(db),
       projectRepository,
+      projectSettings: createProjectSettings(db),
       projectTransaction,
       planApproval: createPlanApprovalService(planDrafts, createPlanApprovalRepository(db), projectRepository, projectTransaction, randomUUID),
       snapshot() {

@@ -1,3 +1,7 @@
+import { useState } from 'react';
+import { usePersonal } from './usePersonal.ts';
+import { ActivityHistory, HabitRow, PointsJar, RewardShop, ScoringEditor } from './components/PersonalRewards.tsx';
+import { points } from '../../src/shared/personal.ts';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
 import { useTodayController } from './useTodayController.ts';
@@ -10,6 +14,8 @@ import { CheckIcon } from './components/CheckIcon.tsx';
 export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const state = useTodayController();
   const { view, tab, setTab, busy, error, message, refresh } = state;
+  const personal = usePersonal(view, refresh);
+  const [rewards, setRewards] = useState(false);
   const rows = view?.[tab] ?? [];
   const overdue = view?.due.filter(task => !task.frequency && task.plannedDate < view.today).length ?? 0;
   const text = tabText[tab];
@@ -22,17 +28,18 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               key={key}
               className={`nav-item ${tab === key ? 'active' : ''}`}
               aria-current={tab === key ? 'page' : undefined}
-              onClick={() => setTab(key)}
+              onClick={() => { setRewards(false); setTab(key); }}
             >
-              <span className="nav-symbol" aria-hidden="true">?</span>
+              <span className="nav-symbol" aria-hidden="true">{key === 'due' ? '\u25cf' : key === 'history' ? '\u21ba' : '\u25cb'}</span>
               {labels[key]}
               <span className="count">{view?.[key].length ?? '-'}</span>
             </button>
           ))}
+          <button className={`nav-item ${rewards ? 'active' : ''}`} onClick={() => setRewards(true)}>Rewards</button>
         </nav>
     }>
       <main>
-        <div className="breadcrumb">Personal <span>/</span> {labels[tab]}</div>
+
         <header className="page-header">
           <div>
             <p className="eyebrow">
@@ -40,17 +47,19 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
                 weekday: 'long', month: 'long', day: 'numeric',
               }).format(new Date(view.today + 'T12:00:00')) : 'PERSONAL TASKS'}
             </p>
-            <h1>{labels[tab]}<span className="heading-dot">.</span></h1>
-            <p className="subtitle">{text.subtitle}</p>
+            <h1>{rewards ? 'Rewards' : labels[tab]}</h1>
           </div>
-          {view && (
+          {view && !rewards && (
             <div className="summary">
               <strong>{rows.length}</strong>
               <span>{tab === 'history' ? 'recorded' : 'pending'}</span>
             </div>
           )}
         </header>
-        <TaskComposer state={state} />
+        {personal.error && <p className="error" role="alert">{personal.error}</p>}
+        {rewards ? <RewardShop state={personal} /> : <div className={tab === 'due' ? 'personal-grid' : ''}>
+        <div>
+        {tab === 'due' && <TaskComposer state={state} />}
         {error && (
           <div className="error" role="alert">
             {error}
@@ -64,13 +73,22 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
           <div className="section-heading">
             <h2>{tab === 'due' ? 'Your task list' : labels[tab]}<span>{rows.length}</span></h2>
             {tab === 'due' && overdue > 0 && <span className="overdue-count">{overdue} overdue</span>}
-            {tab === 'due' && <span className="section-hint">Check a task to complete it</span>}
+
           </div>
           {view && rows.length > 0 && (
             <ul className="task-list">
-              {rows.map(task => (
-                <TaskRow key={task.id} task={task} today={view.today} busy={busy} onResolve={state.resolve} />
-              ))}
+              {rows.map(task => {
+                const rule = personal.data?.rules.find(item => item.subject === (task.recurrenceId ?? task.id));
+                return tab === 'due' && rule?.mode === 'minutes' ? <HabitRow key={task.id} task={task} rule={rule} state={personal} />
+                  : <li className="task-with-scoring" key={task.id}>
+                    <ul><TaskRow task={task} today={view.today} busy={busy || personal.busy}
+                      onResolve={(_id, status) => personal.resolve(task, status, state.resolve)} /></ul>
+                    {tab === 'due' && personal.data && <div className="task-points">
+                      {!!rule?.rate && <span>+{points(rule.rate)} points</span>}
+                      <ScoringEditor key={String(rule?.rate) + rule?.mode} task={task} {...(rule ? { rule } : {})} state={personal} />
+                    </div>}
+                  </li>;
+              })}
             </ul>
           )}
           {view && rows.length === 0 && (
@@ -86,10 +104,19 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
             </div>
           )}
         </section>
-        <RepeatingTasks rules={view?.recurrences ?? []} busy={busy} onStop={state.stopRecurrence} />
+        {tab === 'due' && <>
+          <RepeatingTasks rules={view?.recurrences ?? []} busy={busy} onStop={state.stopRecurrence} />
+          {!!view?.history.some(task => task.status === 'completed' && task.resolvedAt && new Date(task.resolvedAt).toDateString() === new Date().toDateString()) &&
+            <details><summary>Completed today</summary><ul>{view.history.filter(task => task.status === 'completed' && task.resolvedAt
+              && new Date(task.resolvedAt).toDateString() === new Date().toDateString()).map(task => <li key={task.id}>{task.title}</li>)}</ul></details>}
+        </>}
+        {tab === 'history' && <ActivityHistory state={personal} />}
+        </div>
+        {tab === 'due' && <PointsJar state={personal} openRewards={() => setRewards(true)} />}
+        </div>}
         <footer>
           <span className="local-dot" />Changes save automatically
-          <span className="footer-detail">Personal · Local tasks</span>
+          <span className="footer-detail">Personal ? Local tasks</span>
         </footer>
       </main>
     </WorkspaceShell>

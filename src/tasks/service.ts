@@ -7,7 +7,9 @@ import { buildTaskView } from './view.ts';
 
 export type TaskTransaction = <T>(operation: (now: Date) => T) => T;
 
-export function createTaskService(repository: TaskRepository, transaction: TaskTransaction, nextId: () => string) {
+export function createTaskService(repository: TaskRepository, transaction: TaskTransaction, nextId: () => string,
+  onComplete: (task: Task, now: Date) => void = () => {},
+  onCreate: (subject: string, repeating: boolean, input: unknown) => void = () => {}) {
   return {
     view: () => transaction(now => buildTaskView(
       localDay(now), repository.listTasks(), repository.listActiveRules(),
@@ -19,6 +21,7 @@ export function createTaskService(repository: TaskRepository, transaction: TaskT
         createdAt: now.toISOString(), resolvedAt: null, recurrenceId: null, frequency: null,
       };
       repository.insertTask(task);
+      onCreate(task.id, false, input);
       return task;
     }),
     addRecurrence: (input: unknown): RecurrenceRule => transaction(now => {
@@ -34,6 +37,7 @@ export function createTaskService(repository: TaskRepository, transaction: TaskT
         id: nextId(), title, plannedDate: firstDate, status: 'pending', createdAt: now.toISOString(),
         resolvedAt: null, recurrenceId: rule.id, frequency,
       });
+      onCreate(rule.id, true, input);
       return rule;
     }),
     stopRecurrence: (id: string): RecurrenceRule | undefined => transaction(now => {
@@ -50,6 +54,7 @@ export function createTaskService(repository: TaskRepository, transaction: TaskT
       if (task.status !== 'pending' && task.status !== status) {
         throw new TaskInputError('This task is already resolved. Refresh to see its current period.');
       }
+      if (task.status === 'pending' && status === 'completed') onComplete(task, now);
       repository.resolveTask(id, status, now.toISOString());
       return repository.findTask(id);
     }),

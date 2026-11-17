@@ -18,11 +18,11 @@ export function createPublicationService(repository: PublicationRepository, proj
   let active: { projectId: string; promise: Promise<void> } | null = null;
   let closing = false;
   const messages = new Map<string, string>();
-  function contents(projectId: string): IssueContent[] {
+  function contents(projectId: string, ids?: Set<string>): IssueContent[] {
     const view = projects.view(projectId);
     // Draft suggestions are separate records. Formal tickets were saved by the owner or approved from a plan.
     const coding = view.tickets.filter(ticket => ticket.executionMode === 'codex');
-    return coding.filter(ticket => !ticket.coding?.issueNumber).map(ticket => {
+    return coding.filter(ticket => !ticket.coding?.issueNumber && (!ids || ids.has(ticket.id))).map(ticket => {
       const prerequisites = view.dependencies.filter(link => link.ticketId === ticket.id).map(link => view.tickets.find(item => item.id === link.prerequisiteId)!);
       return { ticketId: ticket.id, title: ticket.title, description: ticket.description, acceptanceCriteria: ticket.acceptanceCriteria,
         prerequisites: prerequisites.filter(item => item.executionMode === 'codex').map(item => ({ ticketId: item.id, title: item.title, issueNumber: item.coding?.issueNumber ?? null })),
@@ -89,7 +89,8 @@ export function createPublicationService(repository: PublicationRepository, proj
   }
   return {
     state,
-    async preview(projectId: string) {
+    async wait(projectId: string) { if (active?.projectId === projectId) await active.promise; return state(projectId); },
+    async preview(projectId: string, ticketId?: string) {
       if (closing || active) throw new PublicationError('Wait for the current publication to finish.');
       if (!provider) throw new PublicationError('Publication needs the Windows GitHub connection and an App with Issues read/write permission.');
       const existing = repository.read(projectId);
@@ -97,7 +98,7 @@ export function createPublicationService(repository: PublicationRepository, proj
       let linked: GitHubRepository;
       try { linked = await provider.inspect(projectId); } catch { throw new PublicationError('Connect and inspect GitHub first. Check the App repository access; no permission is granted automatically.'); }
       if (closing || active) throw new PublicationError('Publication changed. Reopen before previewing.');
-      const items = contents(projectId);
+      const items = contents(projectId, ticketId ? new Set([ticketId]) : undefined);
       if (!items.length) throw new PublicationError('Create coding tickets or approve coding tasks from a plan first.');
       if (items.some(item => item.title.length > 200)) throw new PublicationError('Keep coding task titles within 200 characters before publication.');
       if (items.length > 200) throw new PublicationError('Publish a smaller approved plan first.');
@@ -117,7 +118,7 @@ export function createPublicationService(repository: PublicationRepository, proj
       if (!provider || closing || active || !batch || value.batchId !== batch.id || value.confirm !== true) throw new PublicationError('Preview this batch and explicitly approve its publication. Wait for any active publication first.');
       if (!batch.approvedAt) {
         // Compare outside a write transaction; synchronous execution prevents another local mutation here.
-        if (JSON.stringify(contents(projectId)) !== JSON.stringify(batch.items.map(item => item.content))) throw new PublicationError('The selected work changed. Preview it again before publication.');
+        if (JSON.stringify(contents(projectId, new Set(batch.items.map(item => item.content.ticketId)))) !== JSON.stringify(batch.items.map(item => item.content))) throw new PublicationError('The selected work changed. Preview it again before publication.');
         transaction(now => repository.approve(batch.id, now.toISOString()));
       }
       const owned = { projectId, promise: Promise.resolve() };

@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 16;
+export const SCHEMA_VERSION = 19;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -162,4 +162,31 @@ export const MIGRATIONS = [
   {version:16,sql:`CREATE TABLE coding_reviews (
       ticket_id TEXT PRIMARY KEY REFERENCES coding_tickets(ticket_id),review_json TEXT NOT NULL CHECK(json_valid(review_json))
     );`},
+  { version: 17, sql: `
+    CREATE TABLE personal_scoring (
+      subject TEXT PRIMARY KEY, mode TEXT NOT NULL CHECK(mode IN ('minutes','complete')),
+      rate INTEGER NOT NULL CHECK(rate>=0), target INTEGER NOT NULL, cue TEXT NOT NULL
+    );
+    CREATE TABLE personal_rewards (
+      id TEXT PRIMARY KEY, title TEXT NOT NULL, cost INTEGER NOT NULL CHECK(cost>0),
+      note TEXT NOT NULL, once_only INTEGER NOT NULL, archived INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE personal_entries (
+      id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK(kind IN ('earn','redeem','reverse','edit')),
+      subject TEXT NOT NULL, title TEXT NOT NULL, day TEXT NOT NULL, logged_at TEXT NOT NULL,
+      time_zone TEXT NOT NULL, offset_minutes INTEGER NOT NULL, minutes INTEGER NOT NULL,
+      rate INTEGER NOT NULL, amount INTEGER NOT NULL, reference TEXT REFERENCES personal_entries(id)
+    );
+    CREATE INDEX personal_entries_subject ON personal_entries(subject,day);
+    CREATE UNIQUE INDEX personal_reverse_once ON personal_entries(reference) WHERE kind='reverse';
+    CREATE TABLE personal_preferences (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+  ` },
+  { version: 18, sql: `CREATE TABLE project_settings (
+    project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+    settings_json TEXT NOT NULL CHECK(json_valid(settings_json))
+  );` },
+  { version: 19, sql: `CREATE TABLE ticket_ai (
+    ticket_id TEXT PRIMARY KEY REFERENCES project_tickets(id) ON DELETE CASCADE,
+    draft_json TEXT NOT NULL CHECK(json_valid(draft_json))
+  );` },
 ] as const;

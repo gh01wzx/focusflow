@@ -10,6 +10,7 @@ import { APPLICATION_ID, MIGRATIONS } from '../src/database/schema.ts';
 import { startWorkspaceServer } from '../src/workspace/server.ts';
 import { migrateDatabase } from '../src/database/migrate.ts';
 import { restoreSnapshot } from '../src/database/backup.ts';
+import { HISTORY_LIMIT } from '../src/shared/tasks.ts';
 import type { TaskView } from '../src/shared/tasks.ts';
 import { request as httpRequest } from 'node:http';
 
@@ -41,6 +42,54 @@ test('dated tasks keep original dates across midnight, status transitions and re
     assert.deepEqual(view.due.map(task => [task.id, task.title, task.plannedDate]), [[old.id, unicode, '2026-11-03']]);
     assert.equal(view.upcoming.length, 0); assert.equal(view.history.length, 2);
     assert.equal(store.tasks.resolve('missing', 'completed'), undefined);
+  } finally { store.close(); }
+});
+
+test('reopening returns one completion credit and keeps repeating occurrences to their current period', async t => {
+  const { path } = await fixture(t);
+  let now = new Date(2026, 10, 4, 9);
+  const store = await openWorkspaceStore(path, () => now);
+  try {
+    const task = store.tasks.add({ title: 'Five points', plannedDate: '2026-11-04' });
+    store.tasks.resolve(task.id, 'completed');
+    assert.equal(store.personal.view().balance, 500);
+    assert.equal(store.tasks.reopen(task.id)?.status, 'pending');
+    assert.equal(store.personal.view().balance, 0);
+    assert.equal(store.tasks.reopen(task.id)?.status, 'pending');
+    assert.equal(store.personal.view().balance, 0);
+    store.tasks.resolve(task.id, 'completed');
+    assert.equal(store.personal.view().balance, 500);
+    const cancelled = store.tasks.add({ title: 'Cancelled by mistake', plannedDate: '2026-11-03' });
+    store.tasks.resolve(cancelled.id, 'cancelled');
+    assert.equal(store.tasks.reopen(cancelled.id)?.plannedDate, '2026-11-03');
+    assert.ok(store.tasks.view().due.some(item => item.id === cancelled.id));
+    store.tasks.addRecurrence({ title: 'Daily', plannedDate: '2026-11-04', frequency: 'daily' });
+    const occurrence = store.tasks.view().due.find(item => item.title === 'Daily')!;
+    store.tasks.resolve(occurrence.id, 'cancelled');
+    assert.equal(store.tasks.reopen(occurrence.id)?.status, 'pending');
+    store.tasks.resolve(occurrence.id, 'completed');
+    now = new Date(2026, 10, 5, 9);
+    assert.throws(() => store.tasks.reopen(occurrence.id), /current occurrence/);
+    assert.equal(store.tasks.view().history.find(item => item.id === occurrence.id)?.status, 'completed');
+    assert.equal(store.tasks.reopen('missing'), undefined);
+  } finally { store.close(); }
+});
+
+test('history returns the latest resolved tasks within the display limit', async t => {
+  const { path } = await fixture(t);
+  let seconds = 0;
+  const store = await openWorkspaceStore(path, () => new Date(2026, 10, 4, 9, 0, seconds++));
+  try {
+    for (let index = 0; index < HISTORY_LIMIT + 5; index++) {
+      const task = store.tasks.add({ title: 'Resolved ' + index, plannedDate: '2026-11-04' });
+      store.tasks.resolve(task.id, 'cancelled');
+    }
+    const open = store.tasks.add({ title: 'Still open', plannedDate: '2026-11-04' });
+    const view = store.tasks.view();
+    assert.equal(view.history.length, HISTORY_LIMIT);
+    assert.equal(view.history[0]?.title, 'Resolved ' + (HISTORY_LIMIT + 4));
+    assert.equal(view.history.some(item => item.title === 'Resolved 4'), false);
+    assert.deepEqual(view.due.map(item => item.id), [open.id]);
   } finally { store.close(); }
 });
 

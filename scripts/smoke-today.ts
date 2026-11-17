@@ -239,6 +239,7 @@ try {
     await add('Future repeat', shift(1), 'weekly');
     await page.locator('.recurrences summary').click();
     await page.getByRole('button', { name: 'Stop repeating Future repeat', exact: true }).click();
+    await page.getByRole('button', { name: 'Confirm stop repeating Future repeat', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Repeating stopped.' }).waitFor();
     let repeatView = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
     assert.equal(repeatView.recurrences.length, 3);

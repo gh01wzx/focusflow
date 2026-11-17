@@ -19,8 +19,11 @@ export function useTodayController() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  // The last completion or cancellation, offered as Undo until the next change.
+  const [undo, setUndo] = useState<{ id: string; title: string; status: TaskResolution } | null>(null);
   const titleInput = useRef<HTMLInputElement>(null);
   const previousDay = useRef('');
+  const shown = useRef('');
   const busyRef = useRef(false);
   const generation = useRef(0);
   const mounted = useRef(true);
@@ -39,6 +42,11 @@ export function useTodayController() {
   }, [busy]);
 
   function apply(next: TaskView) {
+    // Background refreshes usually return the same tasks. Keeping the current object
+    // avoids re-rendering every row and re-reading points for an unchanged list.
+    const serialized = JSON.stringify(next);
+    if (serialized === shown.current) return;
+    shown.current = serialized;
     const oldDay = previousDay.current;
     setView(next);
     setPlannedDate(current => !current || current === oldDay ? next.today : current);
@@ -83,6 +91,7 @@ export function useTodayController() {
     setBusy(true);
     setError('');
     setMessage('');
+    setUndo(null);
     try {
       const next = await operation();
       if (!mounted.current) return false;
@@ -95,12 +104,12 @@ export function useTodayController() {
       }
       return true;
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Could not save. Please try again.');
+      if (mounted.current) setError(failure instanceof Error ? failure.message : 'Could not save. Please try again.');
       return false;
     } finally {
       focusAfterSave.current = added;
       busyRef.current = false;
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
   }
   function add(event: FormEvent) {
@@ -111,10 +120,16 @@ export function useTodayController() {
 
   return {
     view, tab, setTab, title, setTitle, plannedDate, setPlannedDate,
-    frequency, setFrequency, habit, setHabit, weekdays, setWeekdays, busy, error, message, titleInput, add, refresh,
-    resolve: (id: string, status: TaskResolution) => change(
-      () => client.resolve(id, status), status === 'completed' ? 'Task completed.' : 'Task cancelled.',
-    ),
+    frequency, setFrequency, habit, setHabit, weekdays, setWeekdays, busy, error, message, undo, titleInput, add, refresh,
+    async resolve(id: string, status: TaskResolution) {
+      const task = view && [...view.due, ...view.upcoming].find(item => item.id === id);
+      const saved = await change(
+        () => client.resolve(id, status), status === 'completed' ? 'Task completed.' : 'Task cancelled.',
+      );
+      if (saved && task && mounted.current) setUndo({ id, title: task.title, status });
+      return saved;
+    },
+    reopen: (id: string) => change(() => client.reopen(id), 'Task reopened.'),
     async stopRecurrence(id: string) {
       await change(() => client.stopRecurrence(id), 'Repeating stopped. Current-period tasks stay available.');
     },

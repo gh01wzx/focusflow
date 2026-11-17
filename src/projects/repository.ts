@@ -40,8 +40,10 @@ export function createProjectRepository(db: DatabaseSync) {
   const updateMilestone = db.prepare('UPDATE milestones SET title=?,description=? WHERE id=?');
   const updateTicket = db.prepare(`UPDATE project_tickets SET title=?,description=?,acceptance_criteria=?,updated_at=?
     WHERE id=? AND (title!=? OR description!=? OR acceptance_criteria!=?)`);
+  // Prepared once: every project view reads the coding link for each listed ticket.
+  const codingLink = db.prepare('SELECT repository_json,issue_number FROM coding_tickets WHERE ticket_id=?');
   function parseTicket(row: Record<string, unknown>) {
-    const link = db.prepare('SELECT repository_json,issue_number FROM coding_tickets WHERE ticket_id=?').get(String(row.id));
+    const link = codingLink.get(String(row.id));
     return parseProjectTicket(link ? { ...row, executionMode: 'codex', coding: {
       repository: link.repository_json === null ? null : JSON.parse(String(link.repository_json)) as unknown,
       issueNumber: link.issue_number,

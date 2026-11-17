@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { localDay, nextOccurrence, validDate } from '../shared/calendar.ts';
+import { localDay, validDate } from '../shared/calendar.ts';
+import { periodEnd } from '../shared/weekdays.ts';
 import { personalDefaults } from '../shared/personal.ts';
 import type { ActivityEntry, PersonalPreferences, PersonalView } from '../shared/personal.ts';
 import type { PersonalRepository } from './personal-repository.ts';
@@ -56,7 +57,7 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
     if (!target || target.status === 'cancelled' || !recurrence) {
       throw new TaskInputError('Choose a date when this habit was scheduled.');
     }
-    const end = nextOccurrence(target.plannedDate, recurrence.weekdays === null ? recurrence.frequency : 'daily');
+    const end = periodEnd(target.plannedDate, recurrence.frequency, recurrence.weekdays);
     if (end !== null && newDay >= end) throw new TaskInputError('Choose a date when this habit was scheduled.');
     return target.id;
   }
@@ -149,7 +150,13 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
       return { view: view(now), award };
     });
   }
-  return { view: () => transaction(view), mutate, complete,
+  // Reopening a completed task returns its active completion credit, the same as Undo in Points history.
+  function reopen(task: { id: string }, now: Date) {
+    const credit = repository.activeCompletion(task.id);
+    if (credit) record(now, { id: randomUUID(), kind: 'reverse', subject: credit.subject, title: credit.title,
+      minutes: 0, rate: credit.rate, amount: -credit.amount, reference: credit.id }, credit.day);
+  }
+  return { view: () => transaction(view), mutate, complete, reopen,
     createRule(subject: string, repeating: boolean, input: unknown) {
       const habit = repeating && fields(input).habit === true;
       repository.saveRule({ subject, mode: habit ? 'minutes' : 'complete', rate: habit ? 100 : 500,

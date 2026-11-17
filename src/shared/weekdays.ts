@@ -31,3 +31,9 @@ export function nextScheduledDate(date: string, frequency: Frequency, weekdays: 
   const tomorrow = nextOccurrence(date, 'daily');
   return tomorrow === null ? null : firstSelectedDate(tomorrow, weekdays);
 }
+
+// An occurrence stays current until this date. Selected-weekday occurrences last
+// one local day; older weekly schedules keep their seven-day periods.
+export function periodEnd(date: string, frequency: Frequency, weekdays: Weekday[] | null): string | null {
+  return nextOccurrence(date, weekdays === null ? frequency : 'daily');
+}

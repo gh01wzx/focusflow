@@ -32,7 +32,7 @@ export async function openWorkspaceStore(path: string, clock: () => Date = () =>
     const projectRepository = createProjectRepository(db);
     const planDrafts = createPlanRepository(db);
     return {
-      tasks: createTaskService(repository, taskTransaction, randomUUID, personal.complete, personal.createRule),
+      tasks: createTaskService(repository, taskTransaction, randomUUID, personal.complete, personal.createRule, personal.reopen),
       personal,
       projects: createProjectService(projectRepository, projectTransaction, randomUUID),
       planDrafts,

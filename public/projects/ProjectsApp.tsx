@@ -120,8 +120,9 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
               </div>
               {editor('project', project.id, project)}
               {project.description && <p className="project-description">{project.description}</p>}
-              <ProjectSettingsPanel key={project.id} projectId={project.id} />
-              <GitHubConnection key={project.id} projectId={project.id}
+              {/* Sibling keys must differ. A shared key made React keep a stale copy of the settings panel. */}
+              <ProjectSettingsPanel key={'settings-' + project.id} projectId={project.id} />
+              <GitHubConnection key={'github-' + project.id} projectId={project.id}
                 onRepository={value => setRepository(current => current?.projectId === project.id && JSON.stringify(current.value) === JSON.stringify(value)
                   ? current : { projectId: project.id, value })} />
               <div className="project-ticket-toolbar">

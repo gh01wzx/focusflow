@@ -30,6 +30,8 @@ export interface TaskView {
 }
 
 export type TaskResolution = 'completed' | 'cancelled';
+// History returns the most recent resolved tasks. Older records stay in the database.
+export const HISTORY_LIMIT = 200;
 export interface TaskDraft {
   title: string;
   plannedDate: string;

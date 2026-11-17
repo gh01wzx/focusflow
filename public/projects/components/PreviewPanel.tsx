@@ -36,7 +36,7 @@ export function PreviewPanel({ ticketId }: { ticketId: string }) {
     }
     setChecked(false);
     void read();
-    const timer = setInterval(() => void read(), 1500);
+    const timer = setInterval(() => { if (!document.hidden) void read(); }, 1500);
     return () => { abort.abort(); clearInterval(timer); };
   }, [ticketId]);
 

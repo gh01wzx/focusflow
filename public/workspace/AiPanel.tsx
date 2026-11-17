@@ -8,6 +8,7 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [status, setStatus] = useState<AiStatus | null>(null);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [provider, setProvider] = useState<AiProvider>('codex');
@@ -41,14 +42,14 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
     if (busyRef.current) return;
     busyRef.current = true;
     const token = ++generation.current;
-    setBusy(true); setError(''); setConfirmed(false);
+    setBusy(true); setError(''); setNotice(''); setConfirmed(false);
     try { const next = await operation(); if (mounted.current && token === generation.current) setStatus(next); }
     catch { if (mounted.current) setError('Could not contact the local AI service. Close and reopen FocusFlow, then retry.'); }
     finally { busyRef.current = false; if (mounted.current) setBusy(false); }
   }
   async function runDsh(operation: () => Promise<DshStatus>) {
     if (dshBusy) return;
-    setDshBusy(true); setDshConfirmed(false); setError('');
+    setDshBusy(true); setDshConfirmed(false); setError(''); setNotice('');
     try { const next = await operation(); if (mounted.current) setDsh(next); }
     catch (error) { if (mounted.current) setError(error instanceof Error ? error.message : 'Could not contact DeepSeek.'); }
     finally { if (mounted.current) setDshBusy(false); }
@@ -68,8 +69,8 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
         <button aria-pressed={provider === 'dsh'} disabled={busy || dshBusy} onClick={() => {
           setProvider('dsh'); setConfirmed(false); void runDsh(client.dshStatus);
         }}>DeepSeek Harness</button>
-        <button aria-pressed={provider === 'compatible'} onClick={() => {
-          setProvider('compatible'); setKey(''); setError('');
+        <button aria-pressed={provider === 'compatible'} disabled={busy || dshBusy} onClick={() => {
+          setProvider('compatible'); setKey(''); setError(''); setNotice('');
           void client.compatibleStatus().then(value => setEndpoint(value.endpoint)).catch(() => {});
         }}>Compatible API</button>
       </div>
@@ -114,9 +115,9 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
         <button className="primary" disabled={dshBusy || !dshConfirmed || !dsh?.ready}
           onClick={() => void runDsh(() => client.dshVerify(dshConfirmed))}>Run read-only DeepSeek check</button>
       </> : <form className="inline-settings" onSubmit={async event => {
-        event.preventDefault(); setDshBusy(true); setError('');
+        event.preventDefault(); setDshBusy(true); setError(''); setNotice('');
         const secret = key; setKey('');
-        try { const result = await client.saveCompatible(endpoint, secret); setEndpoint(result.endpoint); setError('Connection saved.'); }
+        try { const result = await client.saveCompatible(endpoint, secret); setEndpoint(result.endpoint); setNotice('Connection saved.'); }
         catch (error) { setError(error instanceof Error ? error.message : 'The connection could not be saved.'); }
         finally { setDshBusy(false); }
       }}>
@@ -124,6 +125,7 @@ export function AiPanel({ disabled }: { disabled: boolean }) {
         <label>API key <input type="password" autoComplete="off" value={key} onChange={event => setKey(event.target.value)} /></label>
         <button className="primary" disabled={!endpoint.trim() || dshBusy}>Connect and save</button>
       </form>}
+      {notice && <p role="status" className="feedback">{notice}</p>}
       {error && <p role="alert" className="error">{error}</p>}
       <form method="dialog"><button className="ai-close">Close</button></form>
     </dialog>

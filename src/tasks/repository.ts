@@ -21,7 +21,9 @@ export function createTaskRepository(db: DatabaseSync) {
   const ruleColumns = `SELECT id,title,frequency,start_date AS startDate,next_date AS nextDate,
     created_at AS createdAt,stopped_at AS stoppedAt,weekdays_mask AS weekdaysMask FROM recurrence_rules`;
 
-  const tasks = db.prepare(taskColumns + ' ORDER BY t.planned_date,t.created_at,t.id');
+  const pendingTasks = db.prepare(taskColumns + " WHERE t.status='pending' ORDER BY t.planned_date,t.created_at,t.id");
+  const recentHistory = db.prepare(taskColumns
+    + " WHERE t.status!='pending' ORDER BY t.resolved_at DESC,t.planned_date DESC,t.id DESC LIMIT ?");
   const taskById = db.prepare(taskColumns + ' WHERE t.id=?');
   const ruleById = db.prepare(ruleColumns + ' WHERE id=?');
   const activeRules = db.prepare(ruleColumns + ' WHERE stopped_at IS NULL ORDER BY created_at,id');
@@ -34,9 +36,11 @@ export function createTaskRepository(db: DatabaseSync) {
   const stop = db.prepare('UPDATE recurrence_rules SET stopped_at=? WHERE id=? AND stopped_at IS NULL');
   const cancelFuture = db.prepare("UPDATE tasks SET status='cancelled',resolved_at=? WHERE recurrence_id=? AND status='pending' AND planned_date>?");
   const resolve = db.prepare("UPDATE tasks SET status=?, resolved_at=? WHERE id=? AND status='pending'");
+  const reopenResolved = db.prepare("UPDATE tasks SET status='pending',resolved_at=NULL WHERE id=? AND status IN ('completed','cancelled')");
 
   return {
-    listTasks: () => tasks.all().map(parseTask),
+    listPendingTasks: () => pendingTasks.all().map(parseTask),
+    listRecentHistory: (limit: number) => recentHistory.all(limit).map(parseTask),
     listActiveRules: () => activeRules.all().map(storedRule),
     listDueRules: (today: string) => dueRules.all(today).map(storedRule),
     listPendingOccurrences: () => pendingOccurrences.all().map(parseTask),
@@ -71,6 +75,7 @@ export function createTaskRepository(db: DatabaseSync) {
     reopenTask: (id: string) => {
       db.prepare("UPDATE tasks SET status='pending',resolved_at=NULL WHERE id=? AND status='completed'").run(id);
     },
+    reopenResolvedTask: (id: string) => { reopenResolved.run(id); },
     resolveTask: (id: string, status: TaskResolution, at: string) => { resolve.run(status, at, id); },
   };
 }

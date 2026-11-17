@@ -12,8 +12,9 @@ function allowedDependency(from: string, to: string, typeOnly: boolean): boolean
   if (from.startsWith('src/shared/')) return to.startsWith('src/shared/');
   if (from.startsWith('src/client/')) return to.startsWith('src/shared/') || to.startsWith('src/client/');
   if (from.startsWith('public/')) {
+    // The renderer may use React and the Motion animation library; nothing else outside the app.
     return to.startsWith('public/') || to.startsWith('src/shared/') || to.startsWith('src/client/')
-      || /^react(?:-dom)?(?:\/|$)/.test(to);
+      || /^react(?:-dom)?(?:\/|$)/.test(to) || to === 'motion/react';
   }
   for (const layer of ['http', 'database', 'codex']) {
     if (from.startsWith(`src/${layer}/`) && to.startsWith('src/')) {

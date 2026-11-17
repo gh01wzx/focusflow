@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 20;
+export const SCHEMA_VERSION = 21;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -197,4 +197,11 @@ export const MIGRATIONS = [
     ticket_id TEXT PRIMARY KEY REFERENCES project_tickets(id) ON DELETE CASCADE,
     receipt_json TEXT NOT NULL CHECK(json_valid(receipt_json))
   );` },
+  // Habit plan fields: identity, implementation intention (time and place),
+  // two-minute starting version and a paired activity. Existing rules keep empty values.
+  { version: 21, sql: `ALTER TABLE personal_scoring ADD COLUMN identity TEXT NOT NULL DEFAULT '';
+    ALTER TABLE personal_scoring ADD COLUMN plan_time TEXT NOT NULL DEFAULT '';
+    ALTER TABLE personal_scoring ADD COLUMN place TEXT NOT NULL DEFAULT '';
+    ALTER TABLE personal_scoring ADD COLUMN starter TEXT NOT NULL DEFAULT '';
+    ALTER TABLE personal_scoring ADD COLUMN bundle TEXT NOT NULL DEFAULT '';` },
 ] as const;

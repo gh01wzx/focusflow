@@ -3,6 +3,7 @@ import type { Page, Request } from 'playwright-core';
 import type { ProjectView } from '../src/shared/projects.ts';
 import type { TaskView } from '../src/shared/tasks.ts';
 import { openTicket, closeTicket, setTicketStatus } from './project-edit-ui.ts';
+import { addPersonalTask } from './task-window-ui.ts';
 
 export const MANUAL_PROOF_PROJECT = 'Complete a reading exercise';
 const titles = ['Read the sample paragraph', 'Write a one-line summary', 'Review the summary'];
@@ -17,9 +18,7 @@ export async function completeManualProject(page: Page): Promise<ProjectView> {
   };
   page.on('request', observe);
   try {
-    await page.getByLabel('Task title', { exact: true }).fill(personalTitle);
-    await page.getByRole('button', { name: 'Add task', exact: true }).click();
-    await page.getByRole('status').filter({ hasText: 'Task added.' }).waitFor();
+    await addPersonalTask(page, personalTitle);
     const beforePersonal = (await personalView(page)).due;
     await page.getByRole('navigation', { name: 'Workspaces', exact: true }).getByRole('button', { name: 'Projects', exact: true }).click();
     await page.getByRole('button', { name: 'New project', exact: true }).click();

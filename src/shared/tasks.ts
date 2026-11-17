@@ -1,3 +1,5 @@
+import type { PlanDraft } from './personal.ts';
+
 export type TaskStatus = 'pending' | 'completed' | 'cancelled' | 'missed';
 export type Frequency = 'daily' | 'weekly';
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -38,4 +40,5 @@ export interface TaskDraft {
   frequency: 'none' | Frequency;
   weekdays?: Weekday[];
   habit?: boolean;
+  plan?: PlanDraft;
 }

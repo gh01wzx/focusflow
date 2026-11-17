@@ -10,13 +10,13 @@ import { DatabaseSync } from 'node:sqlite';
 import { MIGRATIONS, SCHEMA_VERSION, APPLICATION_ID } from '../src/database/schema.ts';
 import { restoreSnapshot } from '../src/database/backup.ts';
 import { localDay, nextOccurrence } from '../src/shared/calendar.ts';
-import type { TaskView } from '../src/shared/tasks.ts';
+import type { TaskView, Weekday } from '../src/shared/tasks.ts';
 import type { ProjectView } from '../src/shared/projects.ts';
 import { exerciseProjectUI } from './project-ui.ts';
 import { EDITED_PROJECT, EDITED_TICKET } from './project-edit-ui.ts';
 import { exerciseWeekdayUI } from './weekday-ui.ts';
-import { WEEKDAYS } from '../src/shared/weekdays.ts';
 import { completeManualProject, verifyCompletedManualProject } from './manual-project-ui.ts';
+import { addPersonalTask, fillTaskWindow, waitForPersonalReady } from './task-window-ui.ts';
 
 const argument = process.argv[2];
 assert.ok(argument, 'Provide the installed FocusFlow executable.');
@@ -87,8 +87,7 @@ async function launch() {
   const page = await application.firstWindow({ timeout: 15_000 });
   page.setDefaultTimeout(10_000);
   await page.getByRole('heading', { name: 'Today', exact: true }).waitFor();
-  await page.getByLabel('Task title').waitFor();
-  await page.waitForFunction(() => !(document.getElementById('task-title') as HTMLInputElement).disabled);
+  await waitForPersonalReady(page);
   assert.deepEqual(await page.evaluate(() => ({ requireType: typeof (globalThis as Record<string, unknown>).require,
     processType: typeof (globalThis as Record<string, unknown>).process })), { requireType: 'undefined', processType: 'undefined' });
   assert.equal(await application.evaluate(({ app }) => app.getPath('userData')), profile);
@@ -147,21 +146,11 @@ try {
     await verifyCompletedManualProject(page, saved);
   } else {
     await page.getByRole('heading', { name: "You're clear for today" }).waitFor();
-    const today = await page.getByLabel('Planned date').inputValue();
+    const today = (await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView).today;
     const shift = (days: number) => { const date = new Date(today + 'T12:00:00'); date.setDate(date.getDate() + days); return localDay(date); };
-    async function add(title: string, date = today, frequency = 'none') {
-      await page.getByLabel('Task title').fill(title);
-      await page.getByLabel('Repeat', { exact: true }).selectOption(frequency);
-      await page.getByLabel('Planned date').fill(date);
-      if (frequency === 'weekly') {
-        const picker = page.getByRole('group', { name: 'Repeat on', exact: true });
-        for (const day of WEEKDAYS) {
-          await picker.getByRole('checkbox', { name: day.name, exact: true })
-            .setChecked(day.value === new Date(date + 'T12:00:00Z').getUTCDay());
-        }
-      }
-      await page.getByRole('button', { name: 'Add task' }).click();
-      await page.getByRole('status').filter({ hasText: 'Task added.' }).waitFor();
+    async function add(title: string, date = today, frequency: 'none' | 'daily' | 'weekly' = 'none') {
+      await addPersonalTask(page, title, { date, frequency,
+        ...(frequency === 'weekly' ? { weekdays: [new Date(date + 'T12:00:00Z').getUTCDay() as Weekday] } : {}) });
       await page.getByText(title, { exact: true }).waitFor();
     }
     mark('save-failure-keeps-input');
@@ -170,15 +159,15 @@ try {
       await route.fulfill({ status: 500, contentType: 'application/json',
         body: JSON.stringify({ error: 'Could not save local data. Check disk space and try again.' }) });
     });
-    await page.getByLabel('Task title').fill('Review the first Today workflow');
-    await page.getByRole('button', { name: 'Add task' }).click();
-    await page.getByRole('alert').filter({ hasText: 'Could not save local data.' }).waitFor();
-    assert.equal(await page.getByLabel('Task title').inputValue(), 'Review the first Today workflow');
+    // A failed save keeps the window open with the typed title, and saving again succeeds.
+    const failed = await fillTaskWindow(page, 'Review the first Today workflow');
+    await failed.getByRole('button', { name: 'Add task', exact: true }).click();
+    await failed.getByRole('alert').filter({ hasText: 'Could not save local data.' }).waitFor();
+    assert.equal(await failed.getByLabel('Task title', { exact: true }).inputValue(), 'Review the first Today workflow');
     await page.unroute('**/api/tasks');
-    await page.getByRole('button', { name: 'Retry', exact: true }).click();
-    await page.getByRole('alert').waitFor({ state: 'hidden' });
-    assert.equal(await page.getByLabel('Task title').inputValue(), 'Review the first Today workflow');
-    await add('Review the first Today workflow');
+    await failed.getByRole('button', { name: 'Add task', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Task added.' }).waitFor();
+    await page.getByText('Review the first Today workflow', { exact: true }).waitFor();
     await add('Finish a small task');
     mark('stale-read-cannot-undo-completion');
     const beforeCompletion = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;

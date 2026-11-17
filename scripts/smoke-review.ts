@@ -1,4 +1,5 @@
 import { exerciseAiUI } from './ai-ui.ts';
+import { addPersonalTask, waitForPersonalReady } from './task-window-ui.ts';
 import { exerciseGitHubUI } from './github-ui.ts';
 import { _electron as electron } from 'playwright-core';
 import type { ElectronApplication } from 'playwright-core';
@@ -48,7 +49,7 @@ async function launch(args: string[]) {
   const page = await application.firstWindow({ timeout: 15_000 });
   page.setDefaultTimeout(10_000);
   await page.getByRole('heading', { name: 'Today', exact: true }).waitFor();
-  await page.waitForFunction(() => !(document.getElementById('task-title') as HTMLInputElement).disabled);
+  await waitForPersonalReady(page);
   assert.equal(await application.evaluate(({ app }) => app.getPath('userData')), profile(args).directory);
   return { application, page };
 }
@@ -92,13 +93,10 @@ try {
   await exerciseAiUI(review.page, join(artifacts, 'ai-connection-simulated.png'));
   assert.equal(await review.page.getByText('Everyday task stays here', { exact: true }).count(), 0);
   assert.equal(await review.page.getByRole('checkbox', { name: /^Complete / }).count(), 0);
-  await review.page.getByLabel('Task title', { exact: true }).fill('Review task');
-  await review.page.getByRole('button', { name: 'Add task', exact: true }).click();
+  await addPersonalTask(review.page, 'Review task');
   await review.page.getByRole('checkbox', { name: 'Complete Review task', exact: true }).click();
   await review.page.getByRole('status').filter({ hasText: 'Task completed.' }).waitFor();
-  await review.page.getByLabel('Task title', { exact: true }).fill('Review change persists');
-  await review.page.getByRole('button', { name: 'Add task', exact: true }).click();
-  await review.page.getByRole('status').filter({ hasText: 'Task added.' }).waitFor();
+  await addPersonalTask(review.page, 'Review change persists');
   const saved = await review.page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
   const reviewStore = await openWorkspaceStore(join(profile(['--review', 'pr-72']).directory, 'data', 'tracker.db'));
   try {

@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { localDay, validDate } from '../shared/calendar.ts';
 import { periodEnd } from '../shared/weekdays.ts';
-import { personalDefaults } from '../shared/personal.ts';
-import type { ActivityEntry, PersonalPreferences, PersonalView } from '../shared/personal.ts';
+import { PLAN_LIMITS, personalDefaults } from '../shared/personal.ts';
+import type { ActivityEntry, HabitPlan, PersonalPreferences, PersonalView } from '../shared/personal.ts';
 import type { PersonalRepository } from './personal-repository.ts';
 import type { TaskRepository } from './repository.ts';
 import type { TaskTransaction } from './service.ts';
@@ -24,6 +24,20 @@ function operationId(value: unknown) {
   if (typeof value !== 'string' || !/^[a-f0-9-]{36}$/i.test(value)) throw new TaskInputError('Open the action again.');
   return value;
 }
+const planLabels: Record<keyof HabitPlan, string> = {
+  cue: 'Keep the cue within 180 characters.', identity: 'Keep the identity within 120 characters.',
+  time: 'Choose a valid time.', place: 'Keep the place within 80 characters.',
+  starter: 'Keep the two-minute version within 180 characters.', bundle: 'Keep the pairing within 180 characters.',
+};
+// Every plan field is optional text. A time uses the 24-hour HH:MM form.
+function planInput(value: Record<string, unknown>): HabitPlan {
+  const plan = {} as HabitPlan;
+  for (const key of Object.keys(PLAN_LIMITS) as (keyof HabitPlan)[]) {
+    plan[key] = value[key] === undefined ? '' : string(value[key], PLAN_LIMITS[key], planLabels[key]);
+  }
+  if (plan.time && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(plan.time)) throw new TaskInputError(planLabels.time);
+  return plan;
+}
 
 export function createPersonalService(repository: PersonalRepository, tasks: TaskRepository, transaction: TaskTransaction) {
   const taskRule = (task: { id: string; recurrenceId: string | null }) => repository.rule(task.recurrenceId ?? task.id);
@@ -38,7 +52,8 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
       date.setUTCDate(date.getUTCDate() + i - 6);
       return date.toISOString().slice(0, 10);
     });
-    return { day, week: { days, minutes: repository.week(days[0]!, day) }, ...repository.totals(day), rules: repository.rules(), entries: repository.entries(),
+    return { day, week: { days, minutes: repository.week(days[0]!, day), points: repository.weekPoints(days[0]!, day) },
+      ...repository.totals(day), rules: repository.rules(), entries: repository.entries(),
       rewards: repository.rewards().filter(item => !item.archived), preferences: preferences(), progress: repository.progress() };
   };
   function record(now: Date, entry: Omit<ActivityEntry, 'day' | 'loggedAt'>, day = localDay(now)) {
@@ -83,7 +98,7 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
         }
         repository.saveRule({ subject, mode, rate: integer(value.rate, 0, 100000, 'Enter a valid point value.'),
           target: mode === 'minutes' ? integer(value.target, 1, 1440, 'Enter a target between 1 and 1440 minutes.') : 0,
-          cue: string(value.cue, 180, 'Keep the cue within 180 characters.') });
+          ...planInput(value) });
       } else if (action === 'reward') {
         const id = operationId(value.id), previous = repository.reward(id);
         const title = string(value.title, 160, 'Keep the reward name within 160 characters.');
@@ -157,10 +172,15 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
       minutes: 0, rate: credit.rate, amount: -credit.amount, reference: credit.id }, credit.day);
   }
   return { view: () => transaction(view), mutate, complete, reopen,
+    // Runs inside the task transaction, so an invalid plan also discards the new task.
     createRule(subject: string, repeating: boolean, input: unknown) {
-      const habit = repeating && fields(input).habit === true;
-      repository.saveRule({ subject, mode: habit ? 'minutes' : 'complete', rate: habit ? 100 : 500,
-        target: habit ? 5 : 0, cue: '' });
+      const value = fields(input);
+      const habit = repeating && value.habit === true;
+      const plan = value.plan === undefined ? {} : fields(value.plan);
+      repository.saveRule({ subject, mode: habit ? 'minutes' : 'complete',
+        rate: plan.rate === undefined ? (habit ? 100 : 500) : integer(plan.rate, 0, 100000, 'Enter a valid point value.'),
+        target: !habit ? 0 : plan.target === undefined ? 5 : integer(plan.target, 1, 1440, 'Enter a target between 1 and 1440 minutes.'),
+        ...planInput(plan) });
     },
     reachedTarget(task: NonNullable<ReturnType<TaskRepository['findTask']>>) {
       const rule = taskRule(task);

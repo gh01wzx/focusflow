@@ -30,7 +30,7 @@ test('architecture guard detects transitive runtime cycles and checks dynamic im
 
 test('architecture guard permits shared contracts and type-only repository dependencies', () => {
   assert.deepEqual(checkArchitecture([
-    { path: 'public/app.tsx', content: "import 'react'; import '../src/client/tasks.ts';" },
+    { path: 'public/app.tsx', content: "import 'react'; import { motion } from 'motion/react'; import '../src/client/tasks.ts';" },
     { path: 'src/client/tasks.ts', content: "import '../shared/tasks.ts';" },
     { path: 'src/shared/tasks.ts', content: '' },
     { path: 'src/tasks/service.ts', content: "import type { Repository } from './repository.ts';" },

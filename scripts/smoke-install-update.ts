@@ -15,6 +15,7 @@ import type { TaskView } from '../src/shared/tasks.ts';
 import type { ProjectView } from '../src/shared/projects.ts';
 import { installerEnvironment, runInstallerProcess } from './installer-process.ts';
 import { checkInstalledEntry, checkInvalidLaunch } from './installed-entry.ts';
+import { waitForPersonalReady } from './task-window-ui.ts';
 
 assert.equal(process.platform, 'win32', 'Run only on the disposable Windows Actions runner.');
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Installer registration and shortcuts require a disposable Actions runner.');
@@ -72,7 +73,7 @@ async function launch(version: string) {
   const page = await application.firstWindow({ timeout: 15000 });
   page.setDefaultTimeout(10000);
   await page.getByRole('heading', { name: 'Today', exact: true }).waitFor();
-  await page.waitForFunction(() => !(document.getElementById('task-title') as HTMLInputElement).disabled);
+  await waitForPersonalReady(page);
   await checkInstalledEntry(application, installation, environment);
   return page;
 }

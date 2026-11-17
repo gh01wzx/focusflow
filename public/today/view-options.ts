@@ -16,7 +16,7 @@ export const tabText: Record<Tab, { subtitle: string; emptyTitle: string; emptyD
   due: {
     subtitle: 'A clear view of what needs doing.',
     emptyTitle: "You're clear for today",
-    emptyDescription: 'Add a task above when something comes up.',
+    emptyDescription: 'Choose New task to plan a one-off task, a repeating task or a timed habit.',
   },
   upcoming: {
     subtitle: 'Your plans for the days ahead.',

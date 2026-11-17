@@ -1,15 +1,20 @@
 /* Workspace switch, settings and AI connection (shared by every page) */
-.workspace-nav { display: flex; gap: 4px; margin: 0 0 16px; padding: 3px; border-radius: 10px; background: var(--surface-muted); }
+.workspace-nav { display: flex; gap: 2px; margin: 0 0 16px; padding: 3px; border-radius: 11px; background: var(--fill-strong); }
 .workspace-nav button {
-  flex: 1; padding: 6px 8px; border: 0; border-radius: 7px; background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 500;
+  flex: 1; padding: 6px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 600;
 }
 .workspace-nav button:hover:not(:disabled) { color: var(--text); }
-.workspace-nav button[aria-current="page"] { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgb(15 23 42 / 12%); }
+.workspace-nav button[aria-current="page"] { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(15, 23, 42, .16), 0 1px 1px rgba(15, 23, 42, .06); }
 .ai-dialog {
-  width: min(620px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; padding: 24px; border: 1px solid var(--border);
-  border-radius: var(--radius); background: var(--surface); color: var(--text); box-shadow: var(--shadow-raised); line-height: 1.6;
+  width: min(620px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; padding: 24px;
+  border: 1px solid var(--glass-border); border-radius: 22px; color: var(--text); line-height: 1.6;
+  background: var(--glass-strong); -webkit-backdrop-filter: blur(34px) saturate(180%); backdrop-filter: blur(34px) saturate(180%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), var(--shadow-lg);
+  transition: opacity .26s var(--ease), transform .34s var(--ease), overlay .34s allow-discrete, display .34s allow-discrete;
 }
-.ai-dialog::backdrop, .project-dialog::backdrop { background: rgb(15 23 42 / 45%); }
+.ai-dialog:not([open]) { opacity: 0; transform: translateY(12px) scale(.97); }
+@starting-style { .ai-dialog[open] { opacity: 0; transform: translateY(16px) scale(.96); } }
+.ai-dialog::backdrop, .project-dialog::backdrop { background: rgba(17, 24, 39, .28); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
 .ai-dialog h2 { margin-bottom: 12px; font-size: 18px; }
 .ai-dialog dt { font-weight: 600; }
 .ai-dialog dd { margin: 0 0 12px; overflow-wrap: anywhere; }
@@ -49,7 +54,13 @@ nav[aria-label="Project list"] .nav-item { overflow-wrap: anywhere; }
 /* Action center */
 .actions-main.actions-main { max-width: 1000px; }
 .action-board { display: grid; gap: 16px; padding: 4px 0 20px; }
-.action-column { min-width: 0; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+/* Large project containers use the same solid glass as Personal. */
+.action-column, .status-column, .github-connection, .project-settings {
+  background: var(--glass); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 0 0 .5px rgba(15, 23, 42, .06), var(--shadow-md);
+}
+.action-column { min-width: 0; padding: 12px 18px; border-radius: var(--radius-lg); }
 .action-column-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .action-column-heading h2 { font-size: 15px; }
 .action-column-heading .count { margin-left: 0; }
@@ -72,20 +83,23 @@ nav[aria-label="Project list"] .nav-item { overflow-wrap: anywhere; }
 .detail-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .project-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .project-ticket-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 20px 0 12px; }
-.project-layout-buttons { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--surface-muted); }
-.project-layout-buttons button { min-height: 32px; padding: 5px 12px; border: 0; border-radius: 7px; background: transparent; color: var(--text-secondary); font-weight: 500; }
-.project-layout-buttons button[aria-pressed="true"] { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgb(15 23 42 / 12%); }
+.project-layout-buttons { display: flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--fill-strong); }
+.project-layout-buttons button { min-height: 32px; padding: 5px 14px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); font-weight: 600; }
+.project-layout-buttons button[aria-pressed="true"] { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(15, 23, 42, .16), 0 1px 1px rgba(15, 23, 42, .06); }
 .milestone-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .milestone-picker label { color: var(--text-secondary); font-size: 13px; font-weight: 500; }
 .milestone-picker select { width: auto; max-width: min(100%, 320px); }
 .ticket-list-heading { margin-top: 20px; }
 .project-ticket-list { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; list-style: none; }
 .manual-ticket { min-width: 0; }
+/* Cards are near-opaque instead of blurred, so long boards stay fast. */
 .ticket-card {
-  display: grid; gap: 8px; width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface); color: var(--text); text-align: left; box-shadow: var(--shadow);
+  display: grid; gap: 8px; width: 100%; padding: 14px 16px; border: 1px solid rgba(255, 255, 255, .8); border-radius: var(--radius);
+  background: rgba(255, 255, 255, .86); color: var(--text); text-align: left;
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 .5px rgba(15, 23, 42, .07), 0 6px 16px -10px rgba(30, 41, 59, .3);
+  transition: transform .22s var(--ease), box-shadow .22s var(--ease), background-color .22s;
 }
-.ticket-card:hover:not(:disabled) { border-color: var(--primary-border); box-shadow: 0 4px 14px rgb(15 23 42 / 8%); }
+.ticket-card:hover:not(:disabled) { background: #fff; transform: translateY(-1px); box-shadow: inset 0 1px 0 #fff, 0 0 0 .5px rgba(15, 23, 42, .08), 0 12px 24px -12px rgba(30, 41, 59, .4); }
 .ticket-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .ticket-title { min-width: 0; margin: 0; font-size: 15px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
 .ticket-excerpt {
@@ -104,13 +118,17 @@ nav[aria-label="Project list"] .nav-item { overflow-wrap: anywhere; }
 
 /* Detail panel */
 .project-dialog {
-  width: min(520px, 100vw); max-width: 100vw; height: 100%; max-height: 100%; margin: 0 0 0 auto; padding: 20px 24px 32px; overflow-y: auto;
-  border: 0; border-left: 1px solid var(--border); border-radius: var(--radius) 0 0 var(--radius);
-  background: var(--surface); color: var(--text); box-shadow: var(--shadow-raised);
+  width: min(540px, calc(100vw - 24px)); max-width: 100vw; height: calc(100% - 24px); max-height: calc(100% - 24px); margin: 12px 12px 12px auto;
+  padding: 20px 24px 32px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 22px; color: var(--text);
+  background: var(--glass-strong); -webkit-backdrop-filter: blur(34px) saturate(180%); backdrop-filter: blur(34px) saturate(180%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), var(--shadow-lg);
 }
+@starting-style { .project-dialog[open] { opacity: 0; transform: translateX(28px); } }
+.project-dialog[open] { transition: opacity .26s var(--ease), transform .38s var(--ease); }
 .dialog-heading {
   position: sticky; top: -20px; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-  margin: -20px -24px 16px; padding: 20px 24px 12px; border-bottom: 1px solid var(--border); background: var(--surface);
+  margin: -20px -24px 16px; padding: 20px 24px 12px; border-bottom: 1px solid var(--separator);
+  background: rgba(252, 252, 254, .94); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
 }
 .dialog-heading h2 { font-size: 18px; line-height: 1.4; overflow-wrap: anywhere; }
 .project-dialog h3 { margin: 20px 0 8px; font-size: 14px; }
@@ -168,7 +186,7 @@ nav[aria-label="Project list"] .nav-item { overflow-wrap: anywhere; }
   min-height: 34px; padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text);
 }
 .project-status-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; overflow-x: auto; padding: 4px 2px 16px; }
-.status-column { min-width: 0; padding: 12px 10px; border: 1px solid var(--border); border-top: 3px solid var(--border-strong); border-radius: var(--radius); background: var(--surface-subtle); }
+.status-column { min-width: 0; padding: 12px 10px; border-top: 3px solid var(--border-strong); border-radius: var(--radius-lg); }
 .status-column[data-status="in_progress"] { border-top-color: #93c5fd; }
 .status-column[data-status="review"] { border-top-color: var(--warning-border); }
 .status-column[data-status="done"] { border-top-color: #86efac; }
@@ -180,7 +198,7 @@ nav[aria-label="Project list"] .nav-item { overflow-wrap: anywhere; }
 @media (max-width: 1000px) { .project-status-board { grid-template-columns: repeat(4, minmax(200px, 1fr)); } }
 
 /* GitHub connection */
-.github-connection { max-width: 780px; margin: 12px 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); font-size: 13px; }
+.github-connection { max-width: 780px; margin: 12px 0; border-radius: var(--radius-lg); font-size: 13px; }
 .github-connection summary, .project-settings > summary, .ticket-ai > summary { cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
 .github-connection > summary { padding: 12px 16px; }
 .github-body { padding: 0 16px 16px; }
@@ -220,7 +238,7 @@ nav[aria-label="Project list"] .nav-item { overflow-wrap: anywhere; }
 .github-connection .github-disconnect-button { border-color: var(--danger-border); background: var(--danger-soft); color: var(--danger); }
 
 /* Plans, publication and AI work */
-.project-settings { max-width: 780px; margin: 12px 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); font-size: 13px; }
+.project-settings { max-width: 780px; margin: 12px 0; border-radius: var(--radius-lg); font-size: 13px; }
 .project-settings > summary { padding: 12px 16px; }
 .project-settings > form, .project-settings > p { margin: 0; padding: 0 16px 16px; }
 .ticket-ai { padding: 8px 0; }
@@ -250,7 +268,7 @@ nav[aria-label="Project list"] .nav-item { overflow-wrap: anywhere; }
 .run-scope dt { color: var(--muted); font-size: 12px; }
 .run-scope dd { margin: 2px 0 0; overflow-wrap: anywhere; }
 .preview-details { overflow-wrap: anywhere; }
-.coding-workspace, .coding-run, .coding-review { margin: 12px 0; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-subtle); }
+.coding-workspace, .coding-run, .coding-review { margin: 12px 0; padding: 14px; border-radius: var(--radius); background: rgba(255, 255, 255, .72); box-shadow: 0 0 0 1px rgba(15, 23, 42, .05); }
 .coding-workspace label, .coding-run label, .coding-review label { display: block; margin: 10px 0; }
 .coding-workspace input:not([type="checkbox"]), .coding-run textarea, .coding-review textarea { display: block; margin: 6px 0; }
 .coding-workspace code, .coding-run code, .coding-review code { overflow-wrap: anywhere; }

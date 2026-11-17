@@ -30,6 +30,7 @@
     "scripts/smoke-install-update.ts",
     "scripts/project-board-ui.ts",
     "scripts/plan-ui.ts",
-    "scripts/manual-project-ui.ts"
+    "scripts/manual-project-ui.ts",
+    "scripts/task-window-ui.ts"
   ]
 }

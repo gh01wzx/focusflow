@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
 import { createTaskClient } from '../../src/client/tasks.ts';
-import type { Frequency, TaskResolution, TaskView, Weekday } from '../../src/shared/tasks.ts';
+import type { TaskDraft, TaskResolution, TaskView } from '../../src/shared/tasks.ts';
 import { firstSelectedDate } from '../../src/shared/weekdays.ts';
 import type { Tab } from './view-options.ts';
 import { reportInterfaceReady } from '../../src/client/build.ts';
@@ -11,35 +10,20 @@ const client = createTaskClient();
 export function useTodayController() {
   const [view, setView] = useState<TaskView | null>(null);
   const [tab, setTab] = useState<Tab>('due');
-  const [title, setTitle] = useState('');
-  const [plannedDate, setPlannedDate] = useState('');
-  const [frequency, setFrequency] = useState<'none' | Frequency>('none');
-  const [habit, setHabit] = useState(false);
-  const [weekdays, setWeekdays] = useState<Weekday[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   // The last completion or cancellation, offered as Undo until the next change.
   const [undo, setUndo] = useState<{ id: string; title: string; status: TaskResolution } | null>(null);
-  const titleInput = useRef<HTMLInputElement>(null);
-  const previousDay = useRef('');
   const shown = useRef('');
   const busyRef = useRef(false);
   const generation = useRef(0);
   const mounted = useRef(true);
-  const focusAfterSave = useRef(false);
   const readyReported = useRef(false);
   useEffect(() => {
     if (!view || readyReported.current) return;
     readyReported.current = true; void reportInterfaceReady().catch(() => { readyReported.current = false; });
   }, [view]);
-
-  useEffect(() => {
-    if (!busy && focusAfterSave.current) {
-      titleInput.current?.focus();
-      focusAfterSave.current = false;
-    }
-  }, [busy]);
 
   function apply(next: TaskView) {
     // Background refreshes usually return the same tasks. Keeping the current object
@@ -47,10 +31,7 @@ export function useTodayController() {
     const serialized = JSON.stringify(next);
     if (serialized === shown.current) return;
     shown.current = serialized;
-    const oldDay = previousDay.current;
     setView(next);
-    setPlannedDate(current => !current || current === oldDay ? next.today : current);
-    previousDay.current = next.today;
   }
   async function refresh() {
     if (busyRef.current) return;
@@ -84,8 +65,11 @@ export function useTodayController() {
     };
   }, []);
 
-  async function change(operation: () => Promise<TaskView>, success: string, added = false) {
-    if (busyRef.current) return false;
+  // Returns an error message, or an empty string after saving. An inline change reports its
+  // error to the window that started it instead of the page.
+  async function change(operation: () => Promise<TaskView>, success: string,
+    options: { draft?: TaskDraft; inline?: boolean } = {}): Promise<string> {
+    if (busyRef.current) return 'Another change is still saving. Try again in a moment.';
     busyRef.current = true;
     ++generation.current;
     setBusy(true);
@@ -94,40 +78,35 @@ export function useTodayController() {
     setUndo(null);
     try {
       const next = await operation();
-      if (!mounted.current) return false;
+      if (!mounted.current) return '';
       apply(next);
       setMessage(success);
-      if (added) {
-        setTitle('');
-        const firstDate = frequency === 'weekly' ? firstSelectedDate(plannedDate, weekdays) : plannedDate;
-        setTab((firstDate ?? plannedDate) > next.today ? 'upcoming' : 'due');
+      if (options.draft) {
+        const draft = options.draft;
+        const firstDate = draft.frequency === 'weekly' ? firstSelectedDate(draft.plannedDate, draft.weekdays ?? []) : draft.plannedDate;
+        setTab((firstDate ?? draft.plannedDate) > next.today ? 'upcoming' : 'due');
       }
-      return true;
+      return '';
     } catch (failure) {
-      if (mounted.current) setError(failure instanceof Error ? failure.message : 'Could not save. Please try again.');
-      return false;
+      const text = failure instanceof Error ? failure.message : 'Could not save. Please try again.';
+      if (mounted.current && !options.inline) setError(text);
+      return text;
     } finally {
-      focusAfterSave.current = added;
       busyRef.current = false;
       if (mounted.current) setBusy(false);
     }
   }
-  function add(event: FormEvent) {
-    event.preventDefault();
-    void change(() => client.add({ title, plannedDate, frequency, habit: frequency !== 'none' && habit,
-      ...(frequency === 'weekly' ? { weekdays } : {}) }), 'Task added.', true);
-  }
 
   return {
-    view, tab, setTab, title, setTitle, plannedDate, setPlannedDate,
-    frequency, setFrequency, habit, setHabit, weekdays, setWeekdays, busy, error, message, undo, titleInput, add, refresh,
+    view, tab, setTab, busy, error, message, undo, refresh,
+    add: (draft: TaskDraft) => change(() => client.add(draft), 'Task added.', { draft, inline: true }),
     async resolve(id: string, status: TaskResolution) {
       const task = view && [...view.due, ...view.upcoming].find(item => item.id === id);
-      const saved = await change(
+      const failure = await change(
         () => client.resolve(id, status), status === 'completed' ? 'Task completed.' : 'Task cancelled.',
       );
-      if (saved && task && mounted.current) setUndo({ id, title: task.title, status });
-      return saved;
+      if (!failure && task && mounted.current) setUndo({ id, title: task.title, status });
+      return !failure;
     },
     reopen: (id: string) => change(() => client.reopen(id), 'Task reopened.'),
     async stopRecurrence(id: string) {

@@ -1,9 +1,27 @@
-export interface ScoringRule {
+// A plan follows the four habit laws: an obvious cue (habit stacking, time and place),
+// an attractive pairing, an easy two-minute start and the identity each completion supports.
+export interface HabitPlan {
+  cue: string;
+  identity: string;
+  time: string;
+  place: string;
+  starter: string;
+  bundle: string;
+}
+export const PLAN_LIMITS: Record<keyof HabitPlan, number> = { cue: 180, identity: 120, time: 5, place: 80, starter: 180, bundle: 180 };
+export const emptyPlan: HabitPlan = { cue: '', identity: '', time: '', place: '', starter: '', bundle: '' };
+
+export interface ScoringRule extends HabitPlan {
   subject: string;
   mode: 'minutes' | 'complete';
   rate: number;
   target: number;
-  cue: string;
+}
+
+// Scoring and plan details sent when a task or habit is created.
+export interface PlanDraft extends HabitPlan {
+  rate: number;
+  target: number;
 }
 
 export interface Reward {
@@ -44,7 +62,8 @@ export interface PersonalView {
   rewards: Reward[];
   entries: ActivityEntry[];
   progress: Record<string, number>;
-  week: { days: string[]; minutes: Record<string, Record<string, number>> };
+  // minutes: habit -> day -> logged minutes; points: day -> points earned that day.
+  week: { days: string[]; minutes: Record<string, Record<string, number>>; points: Record<string, number> };
   preferences: PersonalPreferences;
 }
 

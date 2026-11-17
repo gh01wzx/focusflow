@@ -70,25 +70,42 @@ export function usePersonal(revision: object | null, refreshTasks: () => Promise
       return false;
     } finally { pending.current = false; setBusy(false); }
   }
+  // Returns whether the task was saved, so a checked circle can clear again after a failure.
   async function resolve(task: Task, status: TaskResolution, run: (id: string, status: TaskResolution) => Promise<boolean>) {
-    if (pending.current) return;
-    if (status !== 'completed' || !data) { await run(task.id, status); return; }
+    if (pending.current) return false;
+    if (status !== 'completed' || !data) return run(task.id, status);
     pending.current = true;
     ++generation.current;
     setBusy(true); setError('');
     prepareSound();
     const oldEntries = new Set(data.entries.map(entry => entry.id));
     try {
-      if (!await run(task.id, status)) return;
+      if (!await run(task.id, status)) return false;
       const result = await readPersonal();
       setData(result.view);
       const entry = result.view.entries.find(item => item.subject === task.id && item.kind === 'earn' && !oldEntries.has(item.id));
       if (entry) celebrate(entry.id, entry.amount, false);
+      return true;
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Could not refresh points.');
+      return true;
     } finally { pending.current = false; setBusy(false); }
   }
-  return { data, error, busy, reward, mutate, resolve, refresh };
+  // Saves a habit plan from the task window. Errors return to the window instead of the page.
+  async function savePlan(subject: string, update: Record<string, unknown>) {
+    if (pending.current) return 'Another change is still saving. Try again in a moment.';
+    pending.current = true;
+    const current = ++generation.current;
+    setBusy(true);
+    try {
+      const result = await readPersonal('rule', { ...update, subject });
+      if (current === generation.current) setData(result.view);
+      return '';
+    } catch (failure) {
+      return failure instanceof Error ? failure.message : 'Could not save this plan.';
+    } finally { pending.current = false; setBusy(false); }
+  }
+  return { data, error, busy, reward, mutate, resolve, savePlan, refresh };
 }
 
 export type PersonalController = ReturnType<typeof usePersonal>;

@@ -13,7 +13,7 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-node -e "for(const p of ['typescript','electron','esbuild','react','react-dom'])require.resolve(p)" >nul 2>nul
+node -e "for(const p of ['typescript','electron','esbuild','react','react-dom','motion','@fontsource-variable/inter'])require.resolve(p)" >nul 2>nul
 if errorlevel 1 (
   call npm ci --no-audit --no-fund
   if errorlevel 1 goto failed

@@ -48,6 +48,8 @@ const assets = new Map([
   ['/app.js', ['today/app.js', 'text/javascript; charset=utf-8']],
   ['/style.css', ['today/style.css', 'text/css; charset=utf-8']],
   ['/projects.css', ['projects/style.css', 'text/css; charset=utf-8']],
+  ['/fonts/inter-latin.woff2', ['today/fonts/inter-latin-wght-normal.woff2', 'font/woff2']],
+  ['/fonts/inter-latin-ext.woff2', ['today/fonts/inter-latin-ext-wght-normal.woff2', 'font/woff2']],
 ]);
 export type ShutdownStage = 'transport:begin' | 'transport:stopped' | 'ai:begin' | 'ai:end' | 'github:begin' | 'github:end'
   | 'plans:begin' | 'plans:end' | 'handlers:draining' | 'database:begin' | 'database:end' | 'workspace:closed';
@@ -219,6 +221,13 @@ export async function startWorkspaceServer(options: {
       const asset = assets.get(resource);
       if (request.method === 'GET' && asset) {
         const [name, type] = asset;
+        if (type!.startsWith('font/')) {
+          // Fonts are binary and change only with a dependency update.
+          const font = await readFile(new URL(`../../public/${name}`, import.meta.url));
+          response.writeHead(200, { 'Content-Type': type!, 'Cache-Control': 'max-age=86400' });
+          response.end(font);
+          return;
+        }
         let content = await readFile(new URL(`../../public/${name}`, import.meta.url), 'utf8');
         if (resource === '/') {
           const label = (options.workspaceLabel ?? '').replace(/[&<>"']/g, character => ({

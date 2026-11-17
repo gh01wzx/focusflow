@@ -1,33 +1,69 @@
 import { useMemo, useState } from 'react';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { usePersonal } from './usePersonal.ts';
-import { ActivityHistory, HabitRow, PointsJar, RewardShop, ScoringEditor } from './components/PersonalRewards.tsx';
-import { points } from '../../src/shared/personal.ts';
+import { ActivityHistory, RewardShop } from './components/PersonalRewards.tsx';
 import type { ScoringRule } from '../../src/shared/personal.ts';
 import { HISTORY_LIMIT } from '../../src/shared/tasks.ts';
+import type { Task } from '../../src/shared/tasks.ts';
 import { localDay } from '../../src/shared/calendar.ts';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
 import { useTodayController } from './useTodayController.ts';
 import { canReopen, labels, tabText } from './view-options.ts';
-import { TaskComposer } from './components/TaskComposer.tsx';
+import { habitInsight, todayProgress } from './habit-insights.ts';
 import { TaskRow } from './components/TaskRow.tsx';
+import { HabitCard } from './components/HabitCard.tsx';
+import { TaskSheet } from './components/TaskSheet.tsx';
+import type { SheetRequest } from './components/TaskSheet.tsx';
+import { ProgressPanel } from './components/ProgressPanel.tsx';
 import { RepeatingTasks } from './components/RepeatingTasks.tsx';
-import { CheckIcon } from './components/CheckIcon.tsx';
+import { ListItem, spring } from './components/Animated.tsx';
+import { CheckIcon, PlusIcon } from './components/Icons.tsx';
 
 export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const state = useTodayController();
   const { view, tab, setTab, busy, error, message, undo, refresh } = state;
   const personal = usePersonal(view, refresh);
   const [rewards, setRewards] = useState(false);
-  const rows = view?.[tab] ?? [];
-  const overdue = view?.due.filter(task => !task.frequency && task.plannedDate < view.today).length ?? 0;
-  const text = tabText[tab];
+  const [sheet, setSheet] = useState<SheetRequest | null>(null);
   const saving = busy || personal.busy;
-  const rules = useMemo(() => new Map<string, ScoringRule>(personal.data?.rules.map(rule => [rule.subject, rule])), [personal.data]);
+  const data = personal.data;
+  const rules = useMemo(() => new Map<string, ScoringRule>(data?.rules.map(rule => [rule.subject, rule])), [data]);
+  const ruleFor = (task: Task) => rules.get(task.recurrenceId ?? task.id);
   const completedToday = useMemo(() => view?.history.filter(task => task.status === 'completed' && task.resolvedAt
     && localDay(new Date(task.resolvedAt)) === view.today) ?? [], [view]);
+  const progress = view ? todayProgress(view, rules, data?.progress ?? {}, completedToday) : null;
+  const pinned = data?.rewards.find(item => item.id === data.preferences.pinnedReward);
+  const rows = view?.[tab] ?? [];
+  const groups = tab === 'due'
+    ? [{ key: 'habits', title: 'Habits', items: rows.filter(task => task.recurrenceId) }, { key: 'tasks', title: 'Tasks', items: rows.filter(task => !task.recurrenceId) }]
+    : [{ key: tab, title: labels[tab], items: rows }];
+  const overdue = view?.due.filter(task => !task.frequency && task.plannedDate < view.today).length ?? 0;
+  const text = tabText[tab];
+  const edit = (task: Task) => setSheet({ mode: 'edit', id: crypto.randomUUID(), task, rule: ruleFor(task) });
+
+  function insight(task: Task) {
+    const rule = ruleFor(task), minutes = data?.progress[task.id] ?? 0;
+    const logged = data?.week.minutes[task.recurrenceId ?? ''] ?? {};
+    return habitInsight(task, view!, { done: rule?.mode === 'minutes' && minutes >= rule.target, started: minutes > 0 },
+      day => (logged[day] ?? 0) > 0);
+  }
+  function row(task: Task) {
+    const rule = ruleFor(task);
+    if (tab === 'due' && rule?.mode === 'minutes') {
+      return <ListItem key={task.id} className="habit-item"><HabitCard task={task} rule={rule} insight={insight(task)} state={personal} onEdit={edit} /></ListItem>;
+    }
+    return <ListItem key={task.id} className="row-item">
+      <TaskRow task={task} today={view!.today} busy={saving || !!task.recurrenceId && !data} completable={rule?.mode !== 'minutes'} rule={rule}
+        {...(tab === 'due' && task.recurrenceId ? { insight: insight(task) } : {})}
+        {...(tab !== 'history' && data ? { onEdit: edit } : {})}
+        {...(tab === 'history' && canReopen(task, view!) ? { onReopen: (id: string) => void state.reopen(id) } : {})}
+        onResolve={(_id, status) => personal.resolve(task, status, state.resolve)} />
+    </ListItem>;
+  }
 
   return (
+    <MotionConfig reducedMotion={data?.preferences.reducedMotion ? 'always' : 'user'}>
     <WorkspaceShell workspace="personal" busy={saving} onWorkspaceChange={onWorkspaceChange} navigation={
         <nav aria-label="Personal views">
           {(['due', 'upcoming', 'history'] as const).map(key => (
@@ -49,7 +85,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
           </button>
         </nav>
     }>
-      <main>
+      <main className="today-main">
         <header className="page-header">
           <div>
             <p className="eyebrow">
@@ -59,19 +95,14 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
             </p>
             <h1>{rewards ? 'Rewards' : labels[tab]}</h1>
           </div>
-          {view && !rewards && (
-            <div className="summary">
-              <strong>{rows.length}</strong>
-              <span>{tab === 'history' ? 'recorded' : 'pending'}</span>
-            </div>
-          )}
+          {!rewards && <button className="primary new-button" disabled={!view || saving}
+            onClick={() => setSheet({ mode: 'create', id: crypto.randomUUID() })}><PlusIcon />New task</button>}
         </header>
         {personal.error && <div className="error" role="alert">{personal.error}
           <button disabled={saving} onClick={() => void personal.refresh()}>Refresh points</button>
         </div>}
-        {rewards ? <RewardShop state={personal} /> : <div className={tab === 'due' ? 'personal-grid' : ''}>
-          <div>
-            {tab === 'due' && <TaskComposer state={{ ...state, busy: saving }} />}
+        {rewards ? <RewardShop state={personal} /> : <div className={tab === 'due' ? 'personal-grid' : 'personal-single'}>
+          <div className="today-lists">
             {error && (
               <div className="error" role="alert">
                 {error}
@@ -85,57 +116,53 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               {undo && <button className="text-button" disabled={saving} onClick={() => void state.reopen(undo.id)}
                 aria-label={`Undo ${undo.status === 'completed' ? 'completing' : 'cancelling'} ${undo.title}`}>Undo</button>}
             </div>
-            <section className="task-section" aria-busy={saving} aria-label={labels[tab] + ' tasks'}>
-              <div className="section-heading">
-                <h2>{tab === 'due' ? 'Your task list' : labels[tab]}<span>{rows.length}</span></h2>
-                {tab === 'due' && overdue > 0 && <span className="overdue-count">{overdue} overdue</span>}
+            {/* Groups move as one when the content above them changes, so their rows never slide on their own. */}
+            {view && groups.map(group => group.items.length > 0 && <motion.section key={group.key} layout="position" transition={spring}
+              className="list-group glass" aria-label={group.title + (tab === 'due' ? '' : ' tasks')} aria-busy={saving}>
+              <div className="group-heading">
+                <h2>{group.title}<span className="count">{group.items.length}</span></h2>
+                {group.key === 'tasks' && overdue > 0 && <span className="overdue-count">{overdue} overdue</span>}
               </div>
-              {view && rows.length > 0 && (
-                <ul className="task-list">
-                  {rows.map(task => {
-                    const rule = rules.get(task.recurrenceId ?? task.id);
-                    if (tab === 'due' && rule?.mode === 'minutes') return <HabitRow key={task.id} task={task} rule={rule} state={personal} />;
-                    const row = <TaskRow task={task} today={view.today} busy={saving || !!task.recurrenceId && !personal.data}
-                      completable={rule?.mode !== 'minutes'}
-                      onResolve={(_id, status) => personal.resolve(task, status, state.resolve)}
-                      {...(tab === 'history' && canReopen(task, view) ? { onReopen: (id: string) => void state.reopen(id) } : {})} />;
-                    return tab === 'due' ? <li className="task-with-scoring" key={task.id}>
-                      <ul>{row}</ul>
-                      {personal.data && <div className="task-points">
-                        {!!rule?.rate && <span>+{points(rule.rate)} points</span>}
-                        <ScoringEditor key={String(rule?.rate) + rule?.mode} task={task} {...(rule ? { rule } : {})} state={personal} />
-                      </div>}
-                    </li> : <li className="task-with-scoring" key={task.id}><ul>{row}</ul></li>;
-                  })}
-                </ul>
-              )}
-              {tab === 'history' && rows.length >= HISTORY_LIMIT && <p className="list-note">
-                Showing the latest {HISTORY_LIMIT} entries. Older history stays saved on this computer.</p>}
-              {view && rows.length === 0 && (
-                <div className="empty">
-                  <span className="empty-icon"><CheckIcon /></span>
-                  <h3>{text.emptyTitle}</h3>
-                  <p>{text.emptyDescription}</p>
-                  {tab === 'due' && view.upcoming.length > 0 && (
-                    <button className="text-button" onClick={() => setTab('upcoming')}>
-                      View upcoming tasks
-                    </button>
-                  )}
-                </div>
-              )}
-            </section>
+              <ul className="task-list">
+                <AnimatePresence initial={false} mode="popLayout">{group.items.map(row)}</AnimatePresence>
+              </ul>
+            </motion.section>)}
+            {tab === 'history' && rows.length >= HISTORY_LIMIT && <p className="list-note">
+              Showing the latest {HISTORY_LIMIT} entries. Older history stays saved on this computer.</p>}
+            {view && rows.length === 0 && (
+              <div className="empty glass">
+                <span className="empty-icon"><CheckIcon /></span>
+                <h3>{text.emptyTitle}</h3>
+                <p>{text.emptyDescription}</p>
+                {tab === 'due' && view.upcoming.length > 0 && (
+                  <button className="text-button" onClick={() => setTab('upcoming')}>
+                    View upcoming tasks
+                  </button>
+                )}
+              </div>
+            )}
             {tab === 'due' && <>
-              <RepeatingTasks rules={view?.recurrences ?? []} busy={saving} onStop={state.stopRecurrence} />
-              {completedToday.length > 0 && <details className="completions">
+              {completedToday.length > 0 && <details className="completions glass">
                 <summary>Completed today ({completedToday.length})</summary>
-                <ul>{completedToday.map(task => <li key={task.id}>{task.title}</li>)}</ul>
+                <ul className="task-list">{completedToday.map(task => <li key={task.id} className="row-item">
+                  <TaskRow task={task} today={view!.today} busy={saving} onResolve={async () => false}
+                    {...(canReopen(task, view!) ? { onReopen: (id: string) => void state.reopen(id) } : {})} />
+                </li>)}</ul>
               </details>}
+              <RepeatingTasks rules={view?.recurrences ?? []} busy={saving} onStop={state.stopRecurrence} />
             </>}
             {tab === 'history' && <ActivityHistory state={personal} />}
           </div>
-          {tab === 'due' && <PointsJar state={personal} openRewards={() => setRewards(true)} />}
+          {tab === 'due' && progress && <ProgressPanel state={personal} habits={progress.habits} tasks={progress.tasks}
+            onOpenRewards={() => setRewards(true)} />}
         </div>}
+        <TaskSheet request={sheet} today={view?.today ?? ''} busy={saving}
+          reward={pinned && data ? { title: pinned.title, remaining: pinned.cost - data.balance } : null}
+          onCreate={state.add}
+          onSavePlan={(task, update) => personal.savePlan(task.id, { ...update })}
+          onClose={() => setSheet(null)} />
       </main>
     </WorkspaceShell>
+    </MotionConfig>
   );
 }

@@ -4,15 +4,24 @@ Open `Start-FocusFlow.cmd` to build and open your everyday workspace. Personal a
 
 ## Personal
 
-**Today** shows open tasks. Add a title and a date. Use **Upcoming** for future tasks and **History** for resolved tasks. A missed one-off task keeps its original date and stays open until you complete or cancel it.
+**Today** groups repeating **Habits** above one-off **Tasks**. Use **Upcoming** for future tasks and **History** for resolved tasks. A missed one-off task keeps its original date and stays open until you complete or cancel it.
 
-After you complete or cancel a task, choose **Undo** next to the message to reopen it. **History** also offers **Reopen** for one-off tasks and for a repeating occurrence while its period is current. Reopening a completed task returns the points it earned. History shows the latest 200 resolved tasks; older records stay saved.
+Choose **New task** to open the task window. Pick **One-off**, **Repeating** (checked off once per day or chosen weekday) or **Timed habit** (minutes logged toward a daily target). The window follows the four habit laws from *Atomic Habits*:
 
-Add a daily or weekly **Repeat** to create a schedule. Weekly schedules let you choose one or more weekdays. Daily and selected-weekday occurrences follow the local calendar. Older weekly schedules keep their original seven-day periods. A missed period is recorded once. To end a schedule, expand **Repeating tasks**, choose **Stop repeating** and confirm. Completing or cancelling an occurrence affects only that occurrence.
+- **Make it obvious:** a cue such as "After I pour my morning coffee", plus a time and a place.
+- **Make it attractive:** the points it earns, something you enjoy to pair it with, and the reward you are working toward.
+- **Make it easy:** a two-minute version that counts as showing up, and a small daily target for timed habits.
+- **Make it satisfying:** the identity each completion votes for, such as "I am a reader".
 
-Select **Log minutes each day** when adding a repeating habit. The default target is five minutes at one point per minute. Use **Points settings** to change the target, rate or cue. Each saved session can earn points, including sessions after reaching the daily target. The last seven days show minutes against each day's progress. A future habit occurrence in **Upcoming** is logged on its day. New one-off tasks start with a five-point completion rule. Older tasks earn points after you set a rule.
+Only the title is required. The summary at the bottom shows the whole plan. Use the pencil on a task or habit to edit its plan later; the title and schedule stay as created.
 
-**Rewards** lets you add and price your own rewards. The jar shows points earned on the current date. The available balance carries forward and pays for redemptions. **Archive** asks for confirmation and removes a reward from the shop while keeping its history. In **History > Points history**, open **Correct log** to adjust minutes or move a duration entry to another scheduled date. The correction uses the original rate. You can also undo supported entries after confirming. Use **Feedback settings** for sound, volume and reduced motion.
+Tick the circle to complete a task. A timed habit card shows minutes against its target, a **Log 2 min** button for its two-minute version, recent occurrences and how many it has done in a row. After a missed occurrence it reminds you never to miss twice. A future habit occurrence in **Upcoming** is logged on its day.
+
+After you complete or cancel a task, choose **Undo** next to the message to reopen it. **History** and **Completed today** also offer **Reopen** for one-off tasks and for a repeating occurrence while its period is current. Reopening a completed task returns the points it earned. History shows the latest 200 resolved tasks; older records stay saved.
+
+Weekly schedules let you choose one or more weekdays. Daily and selected-weekday occurrences follow the local calendar. Older weekly schedules keep their original seven-day periods. A missed period is recorded once. To end a schedule, expand **Repeating tasks**, choose **Stop repeating** and confirm. Completing or cancelling an occurrence affects only that occurrence.
+
+The panel beside Today closes two rings as habits and tasks get done, counts today's points and shows points for the last seven days, your balance and progress toward a pinned reward. **Rewards** lets you add and price your own rewards. The available balance carries forward and pays for redemptions. **Archive** asks for confirmation and removes a reward from the shop while keeping its history. In **History > Points history**, open **Correct log** to adjust minutes or move a duration entry to another scheduled date. The correction uses the original rate. You can also undo supported entries after confirming. Use **Feedback settings** for sound, volume and reduced motion.
 
 ## Projects
 

@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { ActivityEntry, Reward, ScoringRule } from '../shared/personal.ts';
 
 const entryColumns = 'id,kind,subject,title,day,logged_at AS loggedAt,minutes,rate,amount,reference';
+const ruleColumns = 'subject,mode,rate,target,cue,identity,plan_time AS time,place,starter,bundle';
 const rewardColumns = 'r.id,r.title,r.cost,r.note,r.once_only AS onceOnly,r.archived';
 const activeRedemption = `p.kind='redeem' AND p.subject=r.id AND NOT EXISTS (
   SELECT 1 FROM personal_entries x WHERE x.reference=p.id AND x.kind='reverse')`;
@@ -13,8 +14,16 @@ const currentSubjects = `SELECT id FROM tasks WHERE status='pending' AND recurre
 
 export function createPersonalRepository(db: DatabaseSync) {
   const rewardsQuery = `SELECT ${rewardColumns}, EXISTS(SELECT 1 FROM personal_entries p WHERE ${activeRedemption}) AS used FROM personal_rewards r`;
-  const ruleBySubject = db.prepare('SELECT * FROM personal_scoring WHERE subject=?');
-  const currentRules = db.prepare(`SELECT * FROM personal_scoring WHERE subject IN (${currentSubjects})`);
+  const ruleBySubject = db.prepare(`SELECT ${ruleColumns} FROM personal_scoring WHERE subject=?`);
+  const currentRules = db.prepare(`SELECT ${ruleColumns} FROM personal_scoring WHERE subject IN (${currentSubjects})`);
+  const upsertRule = db.prepare(`INSERT INTO personal_scoring(subject,mode,rate,target,cue,identity,plan_time,place,starter,bundle)
+    VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(subject) DO UPDATE SET mode=excluded.mode,rate=excluded.rate,target=excluded.target,
+    cue=excluded.cue,identity=excluded.identity,plan_time=excluded.plan_time,place=excluded.place,starter=excluded.starter,bundle=excluded.bundle`);
+  // Same earning rule as today's total: earned and corrected entries, plus undone earnings.
+  const dailyPoints = db.prepare(`SELECT day, SUM(amount) AS points FROM personal_entries
+    WHERE day BETWEEN ? AND ? AND (kind IN ('earn','edit') OR
+      (kind='reverse' AND reference IN (SELECT id FROM personal_entries WHERE kind='earn')))
+    GROUP BY day`);
   const rewardById = db.prepare(rewardsQuery + ' WHERE r.id=?');
   const allRewards = db.prepare(rewardsQuery + ' ORDER BY r.title,r.id');
   const entryById = db.prepare('SELECT ' + entryColumns + ' FROM personal_entries WHERE id=?');
@@ -49,9 +58,8 @@ export function createPersonalRepository(db: DatabaseSync) {
     },
     rules() { return currentRules.all() as unknown as ScoringRule[]; },
     saveRule(rule: ScoringRule) {
-      db.prepare(`INSERT INTO personal_scoring VALUES (?,?,?,?,?) ON CONFLICT(subject) DO UPDATE SET
-        mode=excluded.mode,rate=excluded.rate,target=excluded.target,cue=excluded.cue`)
-        .run(rule.subject, rule.mode, rule.rate, rule.target, rule.cue);
+      upsertRule.run(rule.subject, rule.mode, rule.rate, rule.target, rule.cue, rule.identity, rule.time, rule.place,
+        rule.starter, rule.bundle);
     },
     reward(id: string) {
       const row = rewardById.get(id);
@@ -89,6 +97,9 @@ export function createPersonalRepository(db: DatabaseSync) {
       const result: Record<string, Record<string, number>> = {};
       for (const row of weekMinutes.all(start, end)) (result[String(row.habit)] ??= {})[String(row.day)] = Number(row.minutes);
       return result;
+    },
+    weekPoints(start: string, end: string) {
+      return Object.fromEntries(dailyPoints.all(start, end).map(row => [String(row.day), Number(row.points)]));
     },
     totals(day: string) {
       const row = dayTotals.get(day)!;

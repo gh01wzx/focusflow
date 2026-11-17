@@ -13,6 +13,7 @@ import { restoreSnapshot } from '../src/database/backup.ts';
 import { HISTORY_LIMIT } from '../src/shared/tasks.ts';
 import type { TaskView } from '../src/shared/tasks.ts';
 import { request as httpRequest } from 'node:http';
+import { randomUUID } from 'node:crypto';
 
 async function fixture(t: TestContext) {
   const directory = await mkdtemp(join(tmpdir(), 'focusflow-tasks-test-'));
@@ -72,6 +73,26 @@ test('reopening returns one completion credit and keeps repeating occurrences to
     assert.throws(() => store.tasks.reopen(occurrence.id), /current occurrence/);
     assert.equal(store.tasks.view().history.find(item => item.id === occurrence.id)?.status, 'completed');
     assert.equal(store.tasks.reopen('missing'), undefined);
+  } finally { store.close(); }
+});
+
+test('a habit keeps its plan, plan edits apply, an invalid plan saves nothing and daily points add up', async t => {
+  const { path } = await fixture(t);
+  const store = await openWorkspaceStore(path, () => new Date(2026, 10, 4, 9));
+  try {
+    const plan = { rate: 150, target: 10, cue: 'pour my morning coffee', identity: 'I am a calm person', time: '07:30',
+      place: 'Living room', starter: 'Take one slow breath', bundle: 'calm music' };
+    const rule = store.tasks.addRecurrence({ title: 'Meditate', plannedDate: '2026-11-04', frequency: 'daily', habit: true, plan });
+    assert.deepEqual({ ...store.personal.view().rules.find(item => item.subject === rule.id) }, { subject: rule.id, mode: 'minutes', ...plan });
+    const occurrence = store.tasks.view().due[0]!;
+    store.personal.mutate('rule', { subject: occurrence.id, mode: 'minutes', rate: 200, target: 5,
+      cue: 'finish breakfast', identity: '', time: '', place: '', starter: '', bundle: '' });
+    assert.equal(store.personal.view().rules.find(item => item.subject === rule.id)?.cue, 'finish breakfast');
+    store.personal.mutate('log', { id: randomUUID(), day: '2026-11-04', subject: occurrence.id, minutes: 3 });
+    assert.deepEqual({ ...store.personal.view().week.points }, { '2026-11-04': 600 });
+    assert.throws(() => store.tasks.add({ title: 'Bad time', plannedDate: '2026-11-04', frequency: 'none', plan: { ...plan, time: '25:00' } }),
+      /valid time/);
+    assert.equal(store.tasks.view().due.some(item => item.title === 'Bad time'), false);
   } finally { store.close(); }
 });
 

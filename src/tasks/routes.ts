@@ -4,8 +4,8 @@ import type { Snapshot } from '../database/backup.ts';
 type TaskApi = ReturnType<typeof createTaskService> & { snapshot(): Promise<Snapshot> };
 
 type TaskRoute =
-  | { kind: 'view' | 'add' | 'addRecurrence' | 'backup' }
-  | { kind: 'resolve' | 'reopen' | 'stop'; id: string };
+  | { kind: 'view' | 'add' | 'addRecurrence' | 'backup' | 'focus' }
+  | { kind: 'resolve' | 'reopen' | 'reschedule' | 'stop'; id: string };
 
 export function matchTaskRoute(method: string | undefined, path: string): TaskRoute | undefined {
   if (method === 'GET' && path === '/api/tasks') return { kind: 'view' };
@@ -13,6 +13,9 @@ export function matchTaskRoute(method: string | undefined, path: string): TaskRo
   if (path === '/api/tasks') return { kind: 'add' };
   if (path === '/api/recurrences') return { kind: 'addRecurrence' };
   if (path === '/api/tasks/backup') return { kind: 'backup' };
+  if (path === '/api/focus') return { kind: 'focus' };
+  const reschedule = /^\/api\/tasks\/([a-f0-9-]{36})\/reschedule$/.exec(path);
+  if (reschedule?.[1]) return { kind: 'reschedule', id: reschedule[1] };
   const resolve = /^\/api\/tasks\/([a-f0-9-]{36})\/resolve$/.exec(path);
   if (resolve?.[1]) return { kind: 'resolve', id: resolve[1] };
   const reopen = /^\/api\/tasks\/([a-f0-9-]{36})\/reopen$/.exec(path);
@@ -45,6 +48,15 @@ export async function dispatchTaskRoute(
       const task = store.reopen(route.id);
       return task ? { status: 200, body: { task, view: store.view() } }
         : { status: 404, body: { error: 'Task not found' } };
+    }
+    case 'reschedule': {
+      const task = store.reschedule(route.id, input);
+      return task ? { status: 200, body: { task, view: store.view() } }
+        : { status: 404, body: { error: 'Task not found' } };
+    }
+    case 'focus': {
+      store.setFocus(input);
+      return { status: 200, body: { view: store.view() } };
     }
   }
 }

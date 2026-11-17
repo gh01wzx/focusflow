@@ -25,6 +25,8 @@ export function createTaskClient(transport: typeof fetch = fetch) {
     add: (draft: TaskDraft) => request(draft.frequency === 'none' ? '/api/tasks' : '/api/recurrences', draft),
     resolve: (id: string, status: TaskResolution) => request(`/api/tasks/${encodeURIComponent(id)}/resolve`, { status }),
     reopen: (id: string) => request(`/api/tasks/${encodeURIComponent(id)}/reopen`, {}),
+    reschedule: (id: string, plannedDate: string) => request(`/api/tasks/${encodeURIComponent(id)}/reschedule`, { plannedDate }),
+    setFocus: (day: string, taskIds: string[]) => request('/api/focus', { day, taskIds }),
     stopRecurrence: (id: string) => request(`/api/recurrences/${encodeURIComponent(id)}/stop`, {}),
   };
 }

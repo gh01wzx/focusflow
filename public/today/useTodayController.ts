@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createTaskClient } from '../../src/client/tasks.ts';
 import type { TaskDraft, TaskResolution, TaskView } from '../../src/shared/tasks.ts';
 import { firstSelectedDate } from '../../src/shared/weekdays.ts';
+import { dateText } from './view-options.ts';
 import type { Tab } from './view-options.ts';
 import { reportInterfaceReady } from '../../src/client/build.ts';
 
@@ -97,19 +98,28 @@ export function useTodayController() {
     }
   }
 
+  // Completes or cancels a task and offers Undo. Returns an error message, or an empty string after saving.
+  async function settle(id: string, status: TaskResolution, inline = false) {
+    const task = view && [...view.due, ...view.upcoming].find(item => item.id === id);
+    const failure = await change(() => client.resolve(id, status), status === 'completed' ? 'Task completed.'
+      : task?.recurrenceId ? 'Rest day recorded. Your chain stays intact.' : 'Task cancelled.', { inline });
+    if (!failure && task && mounted.current) setUndo({ id, title: task.title, status });
+    return failure;
+  }
+
   return {
-    view, tab, setTab, busy, error, message, undo, refresh,
+    view, tab, setTab, busy, error, message, undo, refresh, settle,
     add: (draft: TaskDraft) => change(() => client.add(draft), 'Task added.', { draft, inline: true }),
-    async resolve(id: string, status: TaskResolution) {
-      const task = view && [...view.due, ...view.upcoming].find(item => item.id === id);
-      const failure = await change(() => client.resolve(id, status), status === 'completed' ? 'Task completed.'
-        : task?.recurrenceId ? 'Rest day recorded. Your chain stays intact.' : 'Task cancelled.');
-      if (!failure && task && mounted.current) setUndo({ id, title: task.title, status });
-      return !failure;
-    },
+    // Returns whether the change was saved, so a checked circle can clear again after a failure.
+    resolve: async (id: string, status: TaskResolution) => !await settle(id, status),
     // Replaces the status line, for feedback from Personal points actions such as a habit log.
     announce: (text: string) => { if (mounted.current) setMessage(text); },
     reopen: (id: string) => change(() => client.reopen(id), 'Task reopened.'),
+    // Inline calls come from the Close the day window, which shows its own errors.
+    reschedule: (id: string, plannedDate: string, inline = false) =>
+      change(() => client.reschedule(id, plannedDate), 'Moved to ' + dateText(plannedDate) + '.', { inline }),
+    setFocus: (day: string, taskIds: string[], inline = false) =>
+      change(() => client.setFocus(day, taskIds), day === view?.today ? 'Focus updated.' : "Tomorrow's focus saved.", { inline }),
     async stopRecurrence(id: string) {
       await change(() => client.stopRecurrence(id), 'Repeating stopped. Current-period tasks stay available.');
     },

@@ -6,7 +6,7 @@ import { dateText } from '../view-options.ts';
 import { cueLine } from '../../../src/shared/habits.ts';
 import type { HabitInsight } from '../../../src/shared/habits.ts';
 import { HabitTrack } from './HabitCard.tsx';
-import { CheckIcon, CloseIcon, MoonIcon, PencilIcon } from './Icons.tsx';
+import { CheckIcon, CloseIcon, MoonIcon, PencilIcon, StarIcon } from './Icons.tsx';
 
 interface TaskRowProps {
   task: Task;
@@ -19,9 +19,11 @@ interface TaskRowProps {
   onResolve(id: string, status: TaskResolution): Promise<boolean>;
   onReopen?(id: string): void;
   onEdit?(task: Task): void;
+  // Today's focus: a star on open one-off tasks. A full focus disables new stars.
+  focus?: { on: boolean; full: boolean; toggle(task: Task): void } | undefined;
 }
 
-export function TaskRow({ task, today, busy, completable = true, rule, insight, onResolve, onReopen, onEdit }: TaskRowProps) {
+export function TaskRow({ task, today, busy, completable = true, rule, insight, onResolve, onReopen, onEdit, focus }: TaskRowProps) {
   // The circle fills at once; it empties again only if saving fails.
   const [checking, setChecking] = useState(false);
   const pending = task.status === 'pending';
@@ -63,6 +65,10 @@ export function TaskRow({ task, today, busy, completable = true, rule, insight, 
         {insight && <HabitTrack insight={insight} />}
       </div>
       {pending && rule?.mode === 'complete' && rule.rate > 0 && <span className="points-badge" title="Points when done">+{points(rule.rate)}</span>}
+      {pending && focus && <button className={`icon-button star ${focus.on ? 'on' : ''}`} disabled={busy || checking || (!focus.on && focus.full)}
+        aria-pressed={focus.on} aria-label={`Focus on ${task.title} today`}
+        title={focus.on ? "Remove from today's focus" : focus.full ? 'Focus already has three tasks' : "Add to today's focus"}
+        onClick={() => focus.toggle(task)}><StarIcon /></button>}
       {onEdit && <button className="icon-button" disabled={busy} aria-label={`Edit plan for ${task.title}`} title="Edit plan"
         onClick={() => onEdit(task)}><PencilIcon /></button>}
       {/* Skipping a repeating occurrence is a planned rest day; it never breaks the habit chain. */}

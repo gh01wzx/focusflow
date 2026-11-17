@@ -6,7 +6,11 @@ Open `Start-FocusFlow.cmd` to build and open your everyday workspace. Personal a
 
 **Today** groups repeating **Habits** above one-off **Tasks**. Use **Upcoming** for future tasks and **History** for resolved tasks. A missed one-off task keeps its original date and stays open until you complete or cancel it.
 
+Choose the star on up to three one-off tasks to make them today's **Focus**. Focus tasks move to their own group at the top, show how many are done, and come first on the Next card after any planned time that has arrived. While focus tasks are open, **Other tasks** fold away; choose **Show** to see them. A task you move to another date leaves the focus.
+
 The **Next** card at the top shows one thing to do now: planned times that have arrived come first, then habits and tasks without a time, then later planned times. Choose **Start 2 minutes** to begin with the smallest step; the timer keeps running while you switch views. **Done** logs the minutes for a timed habit or completes the task. **Later** sets it aside for the rest of the day.
+
+From 6 PM, Today offers **Close the day**, about a minute of evening review. You can also open it from the panel beside Today at any time. It lists habits with nothing logged today, where **2 min now** starts the timer on the Next card and **Rest today** records a planned rest day. It lists one-off tasks still open, which you can move to **Tomorrow**, move to another date, or **Drop**. Then pick up to three tasks as tomorrow's focus and read a tip for preparing tomorrow's first planned habit. **Done for today** or **Not tonight** hides the evening prompt until the next day.
 
 Type in **Add a task for today** and press Enter for a quick task. Choose **New habit** to build a habit in four short steps: what and when, the moment it follows, the two-minute version, and the reward and identity. **New task** and **More options** open the same window with every field on one page. Pick **One-off**, **Repeating** (checked off once per day or chosen weekday) or **Timed habit** (minutes logged toward a daily target). The window follows the four habit laws from *Atomic Habits*:
 

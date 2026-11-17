@@ -1,5 +1,6 @@
 import { validDate } from './calendar.ts';
 import { validWeekdays } from './weekdays.ts';
+import { FOCUS_LIMIT } from './tasks.ts';
 import type { Frequency, RecurrenceRule, Task, TaskStatus, TaskView } from './tasks.ts';
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -47,14 +48,19 @@ export function parseRecurrenceRule(value: unknown): RecurrenceRule {
   return value;
 }
 
+function ids(value: unknown): value is string[] {
+  return Array.isArray(value) && value.length <= FOCUS_LIMIT && value.every(item => typeof item === 'string');
+}
+
 export function parseTaskView(value: unknown): TaskView {
   if (!record(value) || !validDate(value.today)
     || !Array.isArray(value.due) || !value.due.every(task)
     || !Array.isArray(value.upcoming) || !value.upcoming.every(task)
     || !Array.isArray(value.history) || !value.history.every(task)
-    || !Array.isArray(value.recurrences) || !value.recurrences.every(rule)) {
+    || !Array.isArray(value.recurrences) || !value.recurrences.every(rule)
+    || !record(value.focus) || !ids(value.focus.today) || !ids(value.focus.tomorrow)) {
     throw new Error('Could not read local tasks. Restart FocusFlow and try again.');
   }
   return { today: value.today, due: value.due, upcoming: value.upcoming,
-    history: value.history, recurrences: value.recurrences };
+    history: value.history, recurrences: value.recurrences, focus: { today: value.focus.today, tomorrow: value.focus.tomorrow } };
 }

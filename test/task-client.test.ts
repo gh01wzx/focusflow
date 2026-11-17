@@ -7,7 +7,7 @@ import { createTaskClient } from '../src/client/tasks.ts';
 import { startWorkspaceServer } from '../src/workspace/server.ts';
 import type { TaskView } from '../src/shared/tasks.ts';
 
-const emptyView: TaskView = { today: '2026-11-04', due: [], upcoming: [], history: [], recurrences: [] };
+const emptyView: TaskView = { today: '2026-11-04', due: [], upcoming: [], history: [], recurrences: [], focus: { today: [], tomorrow: [] } };
 
 test('browser client uses the real task API for one-time and repeating task lifecycles', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'focusflow-task-client-'));

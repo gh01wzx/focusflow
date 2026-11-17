@@ -37,6 +37,11 @@ export function createTaskRepository(db: DatabaseSync) {
   const cancelFuture = db.prepare("UPDATE tasks SET status='cancelled',resolved_at=? WHERE recurrence_id=? AND status='pending' AND planned_date>?");
   const resolve = db.prepare("UPDATE tasks SET status=?, resolved_at=? WHERE id=? AND status='pending'");
   const reopenResolved = db.prepare("UPDATE tasks SET status='pending',resolved_at=NULL WHERE id=? AND status IN ('completed','cancelled')");
+  const focusForDay = db.prepare('SELECT task_id AS taskId FROM day_focus WHERE day=? ORDER BY position');
+  const clearFocus = db.prepare('DELETE FROM day_focus WHERE day=?');
+  const addFocus = db.prepare('INSERT INTO day_focus(day,task_id,position) VALUES(?,?,?)');
+  const dropEarlierFocus = db.prepare('DELETE FROM day_focus WHERE task_id=? AND day<?');
+  const moveTask = db.prepare("UPDATE tasks SET planned_date=? WHERE id=? AND status='pending' AND recurrence_id IS NULL");
 
   return {
     listPendingTasks: () => pendingTasks.all().map(parseTask),
@@ -76,6 +81,16 @@ export function createTaskRepository(db: DatabaseSync) {
       db.prepare("UPDATE tasks SET status='pending',resolved_at=NULL WHERE id=? AND status='completed'").run(id);
     },
     reopenResolvedTask: (id: string) => { reopenResolved.run(id); },
+    focus: (day: string) => focusForDay.all(day).map(row => String(row.taskId)),
+    replaceFocus(day: string, ids: string[]) {
+      clearFocus.run(day);
+      ids.forEach((id, position) => addFocus.run(day, id, position));
+    },
+    // A task moved to a later date leaves the focus of the days it no longer belongs to.
+    rescheduleTask(id: string, plannedDate: string) {
+      moveTask.run(plannedDate, id);
+      dropEarlierFocus.run(id, plannedDate);
+    },
     resolveTask: (id: string, status: TaskResolution, at: string) => { resolve.run(status, at, id); },
   };
 }

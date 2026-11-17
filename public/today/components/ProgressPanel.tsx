@@ -31,8 +31,8 @@ function Rings({ habits, tasks }: { habits: Progress; tasks: Progress }) {
   </svg>;
 }
 
-export function ProgressPanel({ state, habits, tasks, onOpenRewards }: {
-  state: PersonalController; habits: Progress; tasks: Progress; onOpenRewards(): void;
+export function ProgressPanel({ state, habits, tasks, onOpenRewards, onCloseDay }: {
+  state: PersonalController; habits: Progress; tasks: Progress; onOpenRewards(): void; onCloseDay(): void;
 }) {
   const data = state.data;
   if (!data) return <aside className="progress-panel glass" aria-label="Today's progress"><p className="feedback">Loading points.</p></aside>;
@@ -77,6 +77,7 @@ export function ProgressPanel({ state, habits, tasks, onOpenRewards }: {
       </div>}
     </div>
     <div className="panel-actions">
+      <button className="quiet-button" disabled={state.busy} onClick={onCloseDay}>Close the day</button>
       <button className="quiet-button" disabled={state.busy} onClick={onOpenRewards}>Open rewards</button>
       <button className="quiet-button" disabled={state.busy}
         onClick={() => void state.mutate('preferences', { ...data.preferences, sound: !data.preferences.sound })}>

@@ -77,22 +77,26 @@ export function useTodayController() {
   }, []);
 
   async function change(operation: () => Promise<TaskView>, success: string, added = false) {
-    if (busyRef.current) return;
+    if (busyRef.current) return false;
     busyRef.current = true;
     ++generation.current;
     setBusy(true);
     setError('');
     setMessage('');
     try {
-      apply(await operation());
+      const next = await operation();
+      if (!mounted.current) return false;
+      apply(next);
       setMessage(success);
       if (added) {
         setTitle('');
         const firstDate = frequency === 'weekly' ? firstSelectedDate(plannedDate, weekdays) : plannedDate;
-        setTab((firstDate ?? plannedDate) > (view?.today ?? '') ? 'upcoming' : 'due');
+        setTab((firstDate ?? plannedDate) > next.today ? 'upcoming' : 'due');
       }
+      return true;
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Could not save. Please try again.');
+      return false;
     } finally {
       focusAfterSave.current = added;
       busyRef.current = false;
@@ -111,9 +115,9 @@ export function useTodayController() {
     resolve: (id: string, status: TaskResolution) => change(
       () => client.resolve(id, status), status === 'completed' ? 'Task completed.' : 'Task cancelled.',
     ),
-    stopRecurrence: (id: string) => change(
-      () => client.stopRecurrence(id), 'Repeating stopped. Current-period tasks stay available.',
-    ),
+    async stopRecurrence(id: string) {
+      await change(() => client.stopRecurrence(id), 'Repeating stopped. Current-period tasks stay available.');
+    },
   };
 }
 

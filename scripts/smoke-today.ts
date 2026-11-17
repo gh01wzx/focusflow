@@ -86,7 +86,7 @@ async function launch() {
   });
   const page = await application.firstWindow({ timeout: 15_000 });
   page.setDefaultTimeout(10_000);
-  await page.getByRole('heading', { name: 'Today.', exact: true }).waitFor();
+  await page.getByRole('heading', { name: 'Today', exact: true }).waitFor();
   await page.getByLabel('Task title').waitFor();
   await page.waitForFunction(() => !(document.getElementById('task-title') as HTMLInputElement).disabled);
   assert.deepEqual(await page.evaluate(() => ({ requireType: typeof (globalThis as Record<string, unknown>).require,
@@ -219,7 +219,7 @@ try {
     await add('Follow up on yesterday', shift(-1));
     await page.getByText('Overdue', { exact: true }).waitFor();
     await add('Plan tomorrow', shift(1));
-    await page.getByRole('heading', { name: 'Upcoming.', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'Upcoming', exact: true }).waitFor();
     await page.getByRole('button', { name: /Today/ }).click();
     assert.equal(await page.getByText('Plan tomorrow', { exact: true }).count(), 0);
     await page.screenshot({ path: join(artifacts, 'today.png'), fullPage: true });

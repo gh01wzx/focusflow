@@ -53,14 +53,14 @@ export type ShutdownStage = 'transport:begin' | 'transport:stopped' | 'ai:begin'
   | 'plans:begin' | 'plans:end' | 'handlers:draining' | 'database:begin' | 'database:end' | 'workspace:closed';
 
 export async function startWorkspaceServer(options: {
-  dataDirectory: string; clock?: () => Date; sampleLabel?: string | null; github?: GitHubService; ai?: AiService; planGenerator?: PlanGenerator;
+  dataDirectory: string; clock?: () => Date; workspaceLabel?: string | null; github?: GitHubService; ai?: AiService; planGenerator?: PlanGenerator;
   dsh?: DshService;
   compatible?: CompatibleService;
   onShutdown?: (stage: ShutdownStage) => void;
   onInterfaceReady?: () => void;
   appVersion?: string;
 }): Promise<LocalServer> {
-  const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock, !!options.sampleLabel);
+  const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock);
   const trace = (stage: ShutdownStage) => { options.onShutdown?.(stage); };
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
   const workspaces = createWorkspaceService(store.execution, store.projectRepository, join(options.dataDirectory, '..', 'coding-workspaces'));
@@ -134,7 +134,7 @@ export async function startWorkspaceServer(options: {
             throw new ProjectInputError('The saved worktree and current repository differ. Reopen project settings.');
           }
           const checked = existing?.state === 'ready' ? null : await workspaces.inspect(id, { sourcePath: settings.sourcePath }, destination);
-          const headSha = existing?.baseSha ?? checked!.headSha;
+          const headSha = existing?.state === 'ready' ? existing.baseSha : checked!.headSha;
           const scope = createHash('sha256').update(JSON.stringify([ticket, destination, headSha, settings, projectContext(ticket.projectId)])).digest('hex');
           const savedBatch = publications.state(ticket.projectId).batch;
           const unfinishedIssue = savedBatch?.items.some(item => item.content.ticketId === id && item.stage !== 'published');
@@ -146,7 +146,7 @@ export async function startWorkspaceServer(options: {
               batch = publication.batch;
               if (batch?.items.length !== 1 || batch.items[0]?.content.ticketId !== id) throw new PublicationError('Finish the existing publication batch from the project first.');
             }
-            sendJson(response, 200, { scope, batch, destination, headSha, estimate: Math.ceil([projectContext(ticket.projectId), ticket.title, ticket.description, ticket.acceptanceCriteria].join('\n').length / 4), budget: settings.tokenBudget ?? 0 });
+            sendJson(response, 200, { scope, batch, destination, headSha, estimate: Math.ceil([projectContext(ticket.projectId), ticket.title, ticket.description, ticket.acceptanceCriteria].join('\n').length / 4), budget: settings.tokenBudget ?? 0, selection: settings.execution });
             return;
           }
           if (!input || input.scope !== scope || input.confirm !== true) throw new ProjectInputError('The ticket scope changed. Open the current run preview.');
@@ -209,7 +209,7 @@ export async function startWorkspaceServer(options: {
         const input = request.method === 'GET' ? undefined : await readJson(request, origin, 8192);
         sendJson(response, 200, await dispatchWorkspaceRoute(codingRoute, input, workspaces)); return;
       }
-      if (request.method === 'GET' && resource === '/api/build') { sendJson(response, 200, await readBuildInfo(!!options.sampleLabel, options.appVersion)); return; }
+      if (request.method === 'GET' && resource === '/api/build') { sendJson(response, 200, await readBuildInfo(!!options.workspaceLabel, options.appVersion)); return; }
       if (request.method === 'POST' && resource === '/api/runtime/ready') {
         const value = await readJson(request, origin, 256);
         if (!value || typeof value !== 'object' || !('ready' in value) || value.ready !== true) throw new HttpError(400, 'Confirm interface readiness.');
@@ -221,12 +221,12 @@ export async function startWorkspaceServer(options: {
         const [name, type] = asset;
         let content = await readFile(new URL(`../../public/${name}`, import.meta.url), 'utf8');
         if (resource === '/') {
-          const label = (options.sampleLabel ?? '').replace(/[&<>"']/g, character => ({
+          const label = (options.workspaceLabel ?? '').replace(/[&<>"']/g, character => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
           })[character]!);
-          const notice = label ? `<div class="sample-notice" role="note"><strong>Sample data</strong> &middot; ${label}. Everyday tasks are separate.</div>` : '';
-          content = content.replace('<!-- sample-data-notice -->', notice);
-          if (label) content = content.replace('<title>FocusFlow</title>', `<title>FocusFlow - ${label} - Sample data</title>`);
+          const notice = label ? `<div class="workspace-notice" role="note"><strong>Separate workspace</strong> &middot; ${label}. Your everyday data stays separate.</div>` : '';
+          content = content.replace('<!-- workspace-notice-placeholder -->', notice);
+          if (label) content = content.replace('<title>FocusFlow</title>', `<title>FocusFlow - ${label} - Separate workspace</title>`);
         }
         response.writeHead(200, { 'Content-Type': type! });
         response.end(content);

@@ -31,7 +31,7 @@ Ctrl+C requests cancellation. A timeout, missing terminal evidence or natural-co
 
 Structured protocol fields classify auth, usage/rate limit, connection and sandbox failures. Provider prose/identity is not printed. Actual expired-account/quota failures and coding-sandbox enforcement remain unverified.
 
-Use compact result JSON for review, never auth files or full diagnostic logs. [Evidence](VALIDATION.md) records the owner-reported real checks.
+Use compact result JSON for review, never auth files or full diagnostic logs. See [the Windows coding trial](https://github.com/gh01wzx/focusflow/issues/49) for earlier observations and [owner acceptance](https://github.com/gh01wzx/focusflow/issues/68) for the remaining workflow.
 
 ## Controlled Windows write trial
 

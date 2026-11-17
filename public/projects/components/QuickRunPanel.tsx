@@ -1,25 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { issueBody, issueTitle } from '../../../src/shared/publication.ts';
 import type { PublicationBatch } from '../../../src/shared/publication.ts';
 import type { GitHubRepository } from '../../../src/shared/github.ts';
 import { defaultAiModelSelection } from '../../../src/shared/ai.ts';
-import { projectSettings } from '../../../src/client/project-settings.ts';
+import type { AiModelSelection } from '../../../src/shared/ai.ts';
 import { ModelPicker } from './ModelPicker.tsx';
 
-interface RunDetails { scope: string; batch: PublicationBatch | null; destination: GitHubRepository; headSha: string; estimate: number; budget: number }
-export function QuickRunPanel({ ticketId, projectId, onChanged, onBusy }: { ticketId: string; projectId: string; onChanged(): void; onBusy(value: boolean): void }) {
+interface RunDetails { scope: string; batch: PublicationBatch | null; destination: GitHubRepository; headSha: string; estimate: number; budget: number; selection?: AiModelSelection }
+export function QuickRunPanel({ ticketId, onChanged, onBusy }: { ticketId: string; onChanged(): void; onBusy(value: boolean): void }) {
   const [details, setDetails] = useState<RunDetails>();
   const [selection, setSelection] = useState(defaultAiModelSelection);
   const [files, setFiles] = useState('');
+  const [modelReady, setModelReady] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  useEffect(() => {
-    let current = true;
-    void projectSettings(projectId).then(value => {
-      if (current && value.execution) setSelection(value.execution);
-    }).catch(() => {});
-    return () => { current = false; };
-  }, [projectId]);
   async function act(action: 'details' | 'start') {
     setBusy(true); onBusy(true); setError('');
     try {
@@ -29,8 +23,11 @@ export function QuickRunPanel({ ticketId, projectId, onChanged, onBusy }: { tick
       });
       const result = await response.json() as RunDetails & { error?: string };
       if (!response.ok) throw new Error(result.error ?? 'Could not start this ticket.');
-      if (action === 'details') setDetails(result);
-      else { setDetails(undefined); onChanged(); }
+      if (action === 'details') {
+        if (!details) setSelection(result.selection ?? defaultAiModelSelection);
+        setDetails(result);
+      }
+      else { setDetails(undefined); setModelReady(false); onChanged(); }
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Could not start.'); }
     finally { setBusy(false); onBusy(false); }
   }
@@ -38,15 +35,20 @@ export function QuickRunPanel({ ticketId, projectId, onChanged, onBusy }: { tick
   return <div className="quick-run">
     {error && <p role="alert">{error}</p>}
     {!details ? <button className="primary" disabled={busy} onClick={() => void act('details')}>Run coding ticket</button> : <>
-      <p>{details.destination.fullName} ? {details.destination.private ? 'Private' : 'Public'} ? Base <code>{details.headSha.slice(0, 12)}</code></p>
+      <dl className="run-scope">
+        <div><dt>Repository</dt><dd>{details.destination.fullName}</dd></div>
+        <div><dt>Visibility</dt><dd>{details.destination.private ? 'Private' : 'Public'}</dd></div>
+        <div><dt>Base commit</dt><dd><code>{details.headSha.slice(0, 12)}</code></dd></div>
+      </dl>
       {content && <details open><summary>Issue to publish</summary><strong>{issueTitle(content)}</strong><pre className="ticket-result">{issueBody(content)}</pre></details>}
-      <ModelPicker value={selection} onChange={setSelection} disabled={busy} />
+      <ModelPicker value={selection} onChange={setSelection} onReadyChange={setModelReady} disabled={busy} />
       {selection.provider !== 'codex' && <label>Tracked files to edit<textarea value={files} maxLength={6000}
         onChange={event => setFiles(event.target.value)} placeholder="One relative path per line" /></label>}
       <p>Uses {selection.provider === 'codex' ? 'ChatGPT Codex allowance' : 'the selected API balance'}. Ticket and project notes are roughly {details.estimate.toLocaleString()} input tokens before runtime context.</p>
       {selection.provider === 'codex' && details.budget > 0 && <p>Stop after {details.budget.toLocaleString()} reported tokens.</p>}
-      <button className="primary" disabled={busy || !selection.model || selection.provider !== 'codex' && !files.trim()} onClick={() => void act('start')}>{content ? 'Publish Issue and run' : 'Start'}</button>
-      <button className="quiet-button" disabled={busy} onClick={() => setDetails(undefined)}>Cancel</button>
+      <button className="primary" disabled={busy || !modelReady || selection.provider !== 'codex' && !files.trim()} onClick={() => void act('start')}>{content ? 'Publish Issue and run' : 'Start'}</button>
+      {error && <button className="quiet-button" disabled={busy} onClick={() => void act('details')}>Refresh run details</button>}
+      <button className="quiet-button" disabled={busy} onClick={() => { setDetails(undefined); setModelReady(false); setError(''); }}>Cancel</button>
     </>}
   </div>;
 }

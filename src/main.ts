@@ -17,7 +17,7 @@ const dataDirectory = customData
   : join(profile.directory, 'data');
 const ai = createAiService(createAiRuntime(process.env.LOCALAPPDATA ?? join(homedir(), '.local', 'share'),
   false, customData ? dataDirectory : profile.directory));
-const app = await startWorkspaceServer({ dataDirectory, sampleLabel: customData ? null : profile.sampleLabel, ai });
+const app = await startWorkspaceServer({ dataDirectory, workspaceLabel: customData ? null : profile.workspaceLabel, ai });
 console.log(`FocusFlow: ${app.origin}`);
 console.log(`Local data: ${dataDirectory}`);
 console.log('Keep this window open. Ctrl+C stops the server.');

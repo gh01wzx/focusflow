@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { usePersonal } from './usePersonal.ts';
 import { ActivityHistory, HabitRow, PointsJar, RewardShop, ScoringEditor } from './components/PersonalRewards.tsx';
 import { points } from '../../src/shared/personal.ts';
+import { localDay } from '../../src/shared/calendar.ts';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
 import { useTodayController } from './useTodayController.ts';
@@ -19,15 +20,19 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const rows = view?.[tab] ?? [];
   const overdue = view?.due.filter(task => !task.frequency && task.plannedDate < view.today).length ?? 0;
   const text = tabText[tab];
+  const saving = busy || personal.busy;
+  const completedToday = view?.history.filter(task => task.status === 'completed' && task.resolvedAt
+    && localDay(new Date(task.resolvedAt)) === view.today) ?? [];
 
   return (
-    <WorkspaceShell workspace="personal" busy={busy} onWorkspaceChange={onWorkspaceChange} navigation={
+    <WorkspaceShell workspace="personal" busy={saving} onWorkspaceChange={onWorkspaceChange} navigation={
         <nav aria-label="Personal views">
           {(['due', 'upcoming', 'history'] as const).map(key => (
             <button
               key={key}
-              className={`nav-item ${tab === key ? 'active' : ''}`}
-              aria-current={tab === key ? 'page' : undefined}
+              className={`nav-item ${!rewards && tab === key ? 'active' : ''}`}
+              aria-current={!rewards && tab === key ? 'page' : undefined}
+              disabled={saving}
               onClick={() => { setRewards(false); setTab(key); }}
             >
               <span className="nav-symbol" aria-hidden="true">{key === 'due' ? '\u25cf' : key === 'history' ? '\u21ba' : '\u25cb'}</span>
@@ -35,11 +40,11 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               <span className="count">{view?.[key].length ?? '-'}</span>
             </button>
           ))}
-          <button className={`nav-item ${rewards ? 'active' : ''}`} onClick={() => setRewards(true)}>Rewards</button>
+          <button className={`nav-item ${rewards ? 'active' : ''}`} aria-current={rewards ? 'page' : undefined}
+            disabled={saving} onClick={() => setRewards(true)}>Rewards</button>
         </nav>
     }>
       <main>
-
         <header className="page-header">
           <div>
             <p className="eyebrow">
@@ -56,68 +61,66 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
             </div>
           )}
         </header>
-        {personal.error && <p className="error" role="alert">{personal.error}</p>}
-        {rewards ? <RewardShop state={personal} /> : <div className={tab === 'due' ? 'personal-grid' : ''}>
-        <div>
-        {tab === 'due' && <TaskComposer state={state} />}
-        {error && (
-          <div className="error" role="alert">
-            {error}
-            <button onClick={() => void refresh()} disabled={busy}>Retry</button>
-          </div>
-        )}
-        <p className="feedback" role="status" aria-live="polite">
-          {message || (!view && !error ? 'Loading your tasks.' : '')}
-        </p>
-        <section className="task-section" aria-busy={busy} aria-label={labels[tab] + ' tasks'}>
-          <div className="section-heading">
-            <h2>{tab === 'due' ? 'Your task list' : labels[tab]}<span>{rows.length}</span></h2>
-            {tab === 'due' && overdue > 0 && <span className="overdue-count">{overdue} overdue</span>}
-
-          </div>
-          {view && rows.length > 0 && (
-            <ul className="task-list">
-              {rows.map(task => {
-                const rule = personal.data?.rules.find(item => item.subject === (task.recurrenceId ?? task.id));
-                return tab === 'due' && rule?.mode === 'minutes' ? <HabitRow key={task.id} task={task} rule={rule} state={personal} />
-                  : <li className="task-with-scoring" key={task.id}>
-                    <ul><TaskRow task={task} today={view.today} busy={busy || personal.busy}
-                      onResolve={(_id, status) => personal.resolve(task, status, state.resolve)} /></ul>
-                    {tab === 'due' && personal.data && <div className="task-points">
-                      {!!rule?.rate && <span>+{points(rule.rate)} points</span>}
-                      <ScoringEditor key={String(rule?.rate) + rule?.mode} task={task} {...(rule ? { rule } : {})} state={personal} />
-                    </div>}
-                  </li>;
-              })}
-            </ul>
-          )}
-          {view && rows.length === 0 && (
-            <div className="empty">
-              <span className="empty-icon"><CheckIcon /></span>
-              <h3>{text.emptyTitle}</h3>
-              <p>{text.emptyDescription}</p>
-              {tab === 'due' && view.upcoming.length > 0 && (
-                <button className="text-button" onClick={() => setTab('upcoming')}>
-                  View upcoming tasks {'\u001a'}
-                </button>
-              )}
-            </div>
-          )}
-        </section>
-        {tab === 'due' && <>
-          <RepeatingTasks rules={view?.recurrences ?? []} busy={busy} onStop={state.stopRecurrence} />
-          {!!view?.history.some(task => task.status === 'completed' && task.resolvedAt && new Date(task.resolvedAt).toDateString() === new Date().toDateString()) &&
-            <details><summary>Completed today</summary><ul>{view.history.filter(task => task.status === 'completed' && task.resolvedAt
-              && new Date(task.resolvedAt).toDateString() === new Date().toDateString()).map(task => <li key={task.id}>{task.title}</li>)}</ul></details>}
-        </>}
-        {tab === 'history' && <ActivityHistory state={personal} />}
-        </div>
-        {tab === 'due' && <PointsJar state={personal} openRewards={() => setRewards(true)} />}
+        {personal.error && <div className="error" role="alert">{personal.error}
+          <button disabled={saving} onClick={() => void personal.refresh()}>Refresh points</button>
         </div>}
-        <footer>
-          <span className="local-dot" />Changes save automatically
-          <span className="footer-detail">Personal ? Local tasks</span>
-        </footer>
+        {rewards ? <RewardShop state={personal} /> : <div className={tab === 'due' ? 'personal-grid' : ''}>
+          <div>
+            {tab === 'due' && <TaskComposer state={{ ...state, busy: saving }} />}
+            {error && (
+              <div className="error" role="alert">
+                {error}
+                <button onClick={() => void refresh()} disabled={busy}>Retry</button>
+              </div>
+            )}
+            <p className="feedback" role="status" aria-live="polite">
+              {message || (!view && !error ? 'Loading your tasks.' : '')}
+            </p>
+            <section className="task-section" aria-busy={saving} aria-label={labels[tab] + ' tasks'}>
+              <div className="section-heading">
+                <h2>{tab === 'due' ? 'Your task list' : labels[tab]}<span>{rows.length}</span></h2>
+                {tab === 'due' && overdue > 0 && <span className="overdue-count">{overdue} overdue</span>}
+              </div>
+              {view && rows.length > 0 && (
+                <ul className="task-list">
+                  {rows.map(task => {
+                    const rule = personal.data?.rules.find(item => item.subject === (task.recurrenceId ?? task.id));
+                    return tab === 'due' && rule?.mode === 'minutes' ? <HabitRow key={task.id} task={task} rule={rule} state={personal} />
+                      : <li className="task-with-scoring" key={task.id}>
+                        <ul><TaskRow task={task} today={view.today} busy={saving || !!task.recurrenceId && !personal.data}
+                          onResolve={(_id, status) => personal.resolve(task, status, state.resolve)} /></ul>
+                        {tab === 'due' && personal.data && <div className="task-points">
+                          {!!rule?.rate && <span>+{points(rule.rate)} points</span>}
+                          <ScoringEditor key={String(rule?.rate) + rule?.mode} task={task} {...(rule ? { rule } : {})} state={personal} />
+                        </div>}
+                      </li>;
+                  })}
+                </ul>
+              )}
+              {view && rows.length === 0 && (
+                <div className="empty">
+                  <span className="empty-icon"><CheckIcon /></span>
+                  <h3>{text.emptyTitle}</h3>
+                  <p>{text.emptyDescription}</p>
+                  {tab === 'due' && view.upcoming.length > 0 && (
+                    <button className="text-button" onClick={() => setTab('upcoming')}>
+                      View upcoming tasks
+                    </button>
+                  )}
+                </div>
+              )}
+            </section>
+            {tab === 'due' && <>
+              <RepeatingTasks rules={view?.recurrences ?? []} busy={saving} onStop={state.stopRecurrence} />
+              {completedToday.length > 0 && <details className="completions">
+                <summary>Completed today ({completedToday.length})</summary>
+                <ul>{completedToday.map(task => <li key={task.id}>{task.title}</li>)}</ul>
+              </details>}
+            </>}
+            {tab === 'history' && <ActivityHistory state={personal} />}
+          </div>
+          {tab === 'due' && <PointsJar state={personal} openRewards={() => setRewards(true)} />}
+        </div>}
       </main>
     </WorkspaceShell>
   );

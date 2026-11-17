@@ -29,7 +29,7 @@ export async function exerciseWeekdayUI(page: Page, today: string): Promise<Task
   await add.click();
   await page.getByRole('status').filter({ hasText: 'Task added.' }).waitFor();
   const expected = firstSelectedDate(today, [1, 2, 6]);
-  await page.getByRole('heading', { name: expected === today ? 'Today.' : 'Upcoming.', exact: true }).waitFor();
+  await page.getByRole('heading', { name: expected === today ? 'Today' : 'Upcoming', exact: true }).waitFor();
   await page.getByText('Chores on chosen weekdays', { exact: true }).waitFor();
   const view = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
   const rule = view.recurrences.find(rule => rule.title === 'Chores on chosen weekdays')!;

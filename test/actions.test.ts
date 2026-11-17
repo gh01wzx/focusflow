@@ -41,7 +41,13 @@ test('actions span projects, order ties consistently, and start only the selecte
 
 test('action client uses the real API, preserves failed starts, and rejects malformed lists', async () => {
   const root = await mkdtemp(join(tmpdir(), 'focusflow-actions-http-'));
-  const app = await startWorkspaceServer({ dataDirectory: root, sampleLabel: 'Test' });
+  const store = await openWorkspaceStore(join(root, 'tracker.db'));
+  try {
+    const project = store.projects.addProject({ title: 'Action fixture' });
+    const milestone = store.projects.addMilestone({ projectId: project.id, title: 'First step' });
+    store.projects.addTicket({ milestoneId: milestone.id, title: 'Start from the action center' });
+  } finally { store.close(); }
+  const app = await startWorkspaceServer({ dataDirectory: root });
   try {
     const client = createActionClient((path, options) => fetch(app.origin + String(path), {
       ...options, headers: { ...options?.headers, Origin: app.origin },

@@ -47,7 +47,7 @@ async function launch(args: string[]) {
   });
   const page = await application.firstWindow({ timeout: 15_000 });
   page.setDefaultTimeout(10_000);
-  await page.getByRole('heading', { name: 'Today.', exact: true }).waitFor();
+  await page.getByRole('heading', { name: 'Today', exact: true }).waitFor();
   await page.waitForFunction(() => !(document.getElementById('task-title') as HTMLInputElement).disabled);
   assert.equal(await application.evaluate(({ app }) => app.getPath('userData')), profile(args).directory);
   return { application, page };
@@ -86,32 +86,45 @@ try {
   assert.equal(await personal.page.getByRole('note').count(), 0);
   mark('named-review-alongside-ordinary-app');
   let review = await launch(['--review', 'pr-72']);
-  await review.page.getByRole('note').filter({ hasText: 'Sample data' }).waitFor();
-  assert.match(await review.page.title(), /Review pr-72 - Sample data/);
+  await review.page.getByRole('note').filter({ hasText: 'Separate workspace' }).waitFor();
+  assert.match(await review.page.title(), /Review pr-72 - Separate workspace/);
   mark('ai-missing-runtime-and-simulated-consent-ui');
   await exerciseAiUI(review.page, join(artifacts, 'ai-connection-simulated.png'));
   assert.equal(await review.page.getByText('Everyday task stays here', { exact: true }).count(), 0);
-  await review.page.getByRole('checkbox', { name: 'Complete Try completing this sample task', exact: true }).click();
+  assert.equal(await review.page.getByRole('checkbox', { name: /^Complete / }).count(), 0);
+  await review.page.getByLabel('Task title', { exact: true }).fill('Review task');
+  await review.page.getByRole('button', { name: 'Add task', exact: true }).click();
+  await review.page.getByRole('checkbox', { name: 'Complete Review task', exact: true }).click();
   await review.page.getByRole('status').filter({ hasText: 'Task completed.' }).waitFor();
   await review.page.getByLabel('Task title', { exact: true }).fill('Review change persists');
   await review.page.getByRole('button', { name: 'Add task', exact: true }).click();
   await review.page.getByRole('status').filter({ hasText: 'Task added.' }).waitFor();
   const saved = await review.page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
+  const reviewStore = await openWorkspaceStore(join(profile(['--review', 'pr-72']).directory, 'data', 'tracker.db'));
+  try {
+    assert.equal(reviewStore.projects.view().projects.length, 0);
+    const project = reviewStore.projects.addProject({ title: 'Review project' });
+    const milestone = reviewStore.projects.addMilestone({ projectId: project.id, title: 'Review steps' });
+    for (const status of TICKET_STATUSES) {
+      const ticket = reviewStore.projects.addTicket({ milestoneId: milestone.id, title: 'Check ' + status });
+      if (status !== 'backlog') reviewStore.projects.setStatus(ticket.id, status);
+    }
+  } finally { reviewStore.close(); }
   await review.page.getByRole('navigation', { name: 'Workspaces', exact: true })
     .getByRole('button', { name: 'Projects', exact: true }).click();
   await review.page.getByRole('navigation', { name: 'Project list', exact: true })
-    .getByRole('button', { name: 'Sample project', exact: true }).click();
-  await review.page.getByRole('heading', { name: 'Sample project', exact: true }).waitFor();
+    .getByRole('button', { name: 'Review project', exact: true }).click();
+  await review.page.getByRole('heading', { name: 'Review project', exact: true }).waitFor();
   await review.page.getByRole('button', { name: 'Status board', exact: true }).click();
   const board = review.page.getByRole('region', { name: 'Project status board', exact: true });
   await board.waitFor();
   for (const status of TICKET_STATUSES) {
     assert.equal(await board.getByRole('region', { name: TICKET_STATUS_LABELS[status], exact: true })
-      .getByRole('button', { name: /^Open ticket / }).count(), status === 'backlog' ? 6 : 2);
+      .getByRole('button', { name: /^Open ticket / }).count(), 1);
   }
-  assert.equal(await board.getByRole('button', { name: /^Open ticket / }).count(), 12);
+  assert.equal(await board.getByRole('button', { name: /^Open ticket / }).count(), 4);
   await review.page.getByRole('note').filter({ hasText: 'Review pr-72' }).waitFor();
-  await review.page.screenshot({ path: join(artifacts, 'sample-projects.png'), fullPage: true });
+  await review.page.screenshot({ path: join(artifacts, 'review-projects.png'), fullPage: true });
   mark('github-os-storage-and-simulated-confirmation');
   assert.equal(await review.application.evaluate(async ({ safeStorage }) => {
     if (!await safeStorage.isAsyncEncryptionAvailable()) return false;
@@ -120,7 +133,7 @@ try {
     const decrypted = await safeStorage.decryptStringAsync(encrypted);
     return decrypted.result === plain && !encrypted.includes(Buffer.from(plain));
   }), true, 'Real Windows OS-protected credential storage must round-trip.');
-  await exerciseGitHubUI(review.page, 'Sample project', join(artifacts, 'github-connection-simulated.png'));
+  await exerciseGitHubUI(review.page, 'Review project', join(artifacts, 'github-connection-simulated.png'));
   mark('close-with-incomplete-local-request');
   const origin = new URL(review.page.url()).origin;
   const partial = connect(Number(new URL(origin).port), '127.0.0.1');
@@ -145,7 +158,7 @@ try {
   await review.page.getByText('Review change persists', { exact: true }).waitFor();
   const reopened = await review.page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
   assert.deepEqual(reopened, saved);
-  await review.page.screenshot({ path: join(artifacts, 'sample-personal.png'), fullPage: true });
+  await review.page.screenshot({ path: join(artifacts, 'review-personal.png'), fullPage: true });
   await close(review.application);
   await close(personal.application);
   assert.deepEqual(await readFile(personalDatabase), personalBytes);
@@ -156,7 +169,7 @@ try {
   await close(reopenedPersonal.application);
   assert.deepEqual(await readFile(personalDatabase), personalBytes);
   await writeFile(join(artifacts, 'report.json'), JSON.stringify({ status: 'verified', commit: process.env.GITHUB_SHA ?? 'unknown',
-    scope: 'Installed ordinary/review apps run separately; sample edits and visible labels survive restart; ordinary sample sentinel data stays unchanged.' }, null, 2));
+    scope: 'Installed ordinary/review apps run separately; review edits and visible labels survive restart; everyday data stays unchanged.' }, null, 2));
   console.log('REVIEW_SMOKE_VERIFIED');
 } catch (error) {
   await writeFile(join(artifacts, 'failure.json'), JSON.stringify({ stage,

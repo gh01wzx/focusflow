@@ -71,7 +71,7 @@ async function launch(version: string) {
   assert.equal(await application.evaluate(({ app }) => app.getPath('userData')), profile);
   const page = await application.firstWindow({ timeout: 15000 });
   page.setDefaultTimeout(10000);
-  await page.getByRole('heading', { name: 'Today.', exact: true }).waitFor();
+  await page.getByRole('heading', { name: 'Today', exact: true }).waitFor();
   await page.waitForFunction(() => !(document.getElementById('task-title') as HTMLInputElement).disabled);
   await checkInstalledEntry(application, installation, environment);
   return page;

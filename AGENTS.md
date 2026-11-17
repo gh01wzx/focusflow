@@ -37,4 +37,4 @@
 - Tests use disposable directories. Ordinary tests never use a live model or authenticated GitHub writes. Review instructions must identify the build and data profile.
 - Never commit databases, credentials, personal configuration, execution logs or installer output. Installed user data stays outside source/install directories.
 - Preserve existing weekly schedules and applied database migrations. New schema changes append migrations and retain verified backup/recovery protection.
-- Keep personal task storage stable across source checkouts and schema versions. Preserve separate optional sample/review profiles; never move or reset existing data automatically. SQLite driver and interface choices remain reviewable engineering decisions.
+- Keep personal task storage stable across source checkouts and schema versions. Keep preview and development workspaces separate and start fresh databases empty. Preserve existing data without automatic moves or resets. SQLite driver and interface choices remain reviewable engineering decisions.

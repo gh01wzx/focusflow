@@ -76,12 +76,10 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
         onNewProject={() => openComposer('project')} />
     }>
       <main className="project-main">
-        <div className="breadcrumb">Projects {project && <><span>/</span>{project.title}</>}</div>
         <header className="page-header">
           <div>
-            <p className="eyebrow">PROJECT WORKSPACE</p>
-            <h1>Projects<span className="heading-dot">.</span></h1>
-            <p className="subtitle">Open a ticket to work on it.</p>
+            {project && <div className="breadcrumb">Projects</div>}
+            <h1>{project?.title ?? 'Projects'}</h1>
           </div>
         </header>
         {error && !state.editing && !openTicketId && !deletion && (!composing || !view) && <div className="error" role="alert">{error}
@@ -110,7 +108,6 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
           {project ? (
             <section className="project-detail" aria-label="Selected project" aria-busy={busy}>
               <div className="detail-heading">
-                <h2 className="project-heading">{project.title}</h2>
                 <div className="project-tools">
                   <PlanDraftPanel key={project.id} projectId={project.id} disabled={locked} onOpenChange={setPlanning} onApproved={() => { void state.refresh(); }} />
                   <PublicationPanel projectId={project.id} disabled={locked} onOpenChange={setPlanning} onChanged={() => { void state.refresh(); }} />
@@ -127,25 +124,27 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
               <GitHubConnection key={project.id} projectId={project.id}
                 onRepository={value => setRepository(current => current?.projectId === project.id && JSON.stringify(current.value) === JSON.stringify(value)
                   ? current : { projectId: project.id, value })} />
-              <div className="project-layout-buttons" role="group" aria-label="Project layout">
-                <button type="button" aria-pressed={layout === 'milestones'} disabled={locked} onClick={() => setLayout('milestones')}>Milestones</button>
-                <button type="button" aria-pressed={layout === 'board'} disabled={locked} onClick={() => setLayout('board')}>Status board</button>
+              <div className="project-ticket-toolbar">
+                <div className="project-layout-buttons" role="group" aria-label="Project layout">
+                  <button type="button" aria-pressed={layout === 'milestones'} disabled={locked} onClick={() => setLayout('milestones')}>Milestones</button>
+                  <button type="button" aria-pressed={layout === 'board'} disabled={locked} onClick={() => setLayout('board')}>Status board</button>
+                </div>
+                {milestone && <div className="milestone-picker">
+                  <label htmlFor="selected-milestone">Milestone</label>
+                  <select id="selected-milestone" value={milestoneId} disabled={locked}
+                    onChange={event => state.selectMilestone(event.target.value)}>
+                    {view.milestones.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
+                  </select>
+                  <button className="primary" disabled={locked} onClick={() => openComposer('ticket')}>New ticket</button>
+                </div>}
               </div>
               {layout === 'board' ? <ProjectBoard view={view} renderTicket={renderTicket} /> : milestone ? (
                 <>
-                  <div className="milestone-picker">
-                    <label htmlFor="selected-milestone">Milestone</label>
-                    <select id="selected-milestone" value={milestoneId} disabled={locked}
-                      onChange={event => state.selectMilestone(event.target.value)}>
-                      {view.milestones.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
-                    </select>
-                    <button className="text-button" disabled={locked} onClick={() => state.beginEdit('milestone', milestone.id)}>Edit milestone</button>
-                  </div>
+                  <button className="text-button" disabled={locked} onClick={() => state.beginEdit('milestone', milestone.id)}>Edit milestone</button>
                   {editor('milestone', milestone.id, milestone)}
                   {milestone.description && <p className="project-description">{milestone.description}</p>}
                   <div className="section-heading ticket-list-heading">
                     <h2>Tickets<span>{tickets.length}</span></h2>
-                    <button className="primary" disabled={locked} onClick={() => openComposer('ticket')}>New ticket</button>
                   </div>
                   {tickets.length > 0 ? (
                     <ul className="task-list project-ticket-list">

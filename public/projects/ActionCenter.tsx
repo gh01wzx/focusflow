@@ -2,56 +2,66 @@ import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
 import { projectActions } from '../../src/shared/actions.ts';
 import type { ActionTicket } from '../../src/shared/actions.ts';
+import { isTicketBlocked } from '../../src/shared/dependencies.ts';
 import { useActionsController } from './useActionsController.ts';
 import { ProjectNavigation } from './components/ProjectNavigation.tsx';
 import { TicketBlockerNotice } from './components/TicketBlockers.tsx';
-import { isTicketBlocked } from '../../src/shared/dependencies.ts';
+
 export function ActionCenter({ onWorkspaceChange, onProject, onTicket, onNewProject }: WorkspaceProps & {
-  onProject(id: string): void; onTicket(projectId: string, ticketId: string): void; onNewProject(): void;
+  onProject(projectId: string): void;
+  onTicket(projectId: string, ticketId: string): void;
+  onNewProject(): void;
 }) {
   const state = useActionsController();
   const actions = projectActions(state.views ?? []);
-  function card(item: ActionTicket, recommended = false) {
-    const view = state.views!.find(view => view.selectedProjectId === item.ticket.projectId)!;
-    return <li className="action-card" key={item.ticket.id}>
-      <h3><button className="text-button" onClick={() => onTicket(item.ticket.projectId, item.ticket.id)}>{item.ticket.title}</button></h3>
-      <p>{item.project} / {item.milestone}</p>
-      <details><summary>View details</summary>
-        <h4>Description</h4><p className="action-text">{item.ticket.description || 'No description yet.'}</p>
-        <h4>Acceptance criteria</h4><p className="action-text">{item.ticket.acceptanceCriteria || 'No acceptance criteria yet.'}</p>
-      </details>
-      <TicketBlockerNotice ticket={item.ticket} view={view} busy={state.busy}
-        onVisit={ticket => onTicket(ticket.projectId, ticket.id)} />
-      {isTicketBlocked(item.ticket, view.tickets, view.dependencies) && <button className="secondary-button" disabled={state.busy}
-        onClick={() => onTicket(item.ticket.projectId, item.ticket.id)}>Inspect blocker</button>}
-      {(recommended||item.ticket.executionMode==='codex') && <button className="primary" disabled={state.busy}
-        onClick={() => item.ticket.executionMode==='codex'?onTicket(item.ticket.projectId,item.ticket.id):void state.start(item.ticket.id)}>
-        {item.ticket.executionMode==='codex'?'Open coding task':'Start ticket'}</button>}
+  const projects = state.views?.flatMap(view => view.projects) ?? [];
+
+  function row(item: ActionTicket, next = false) {
+    const { ticket } = item;
+    const view = state.views!.find(view => view.selectedProjectId === ticket.projectId)!;
+    const open = () => onTicket(ticket.projectId, ticket.id);
+    const blocked = isTicketBlocked(ticket, view.tickets, view.dependencies);
+    const manualStart = next && ticket.executionMode === 'manual' && !blocked;
+    return <li className="action-card" key={ticket.id}>
+      <div className="action-card-content">
+        <h3><button className="text-button" disabled={state.busy} onClick={open}>{ticket.title}</button></h3>
+        <p>{item.project} / {item.milestone}</p>
+      </div>
+      {manualStart ? <button className="primary" disabled={state.busy} onClick={() => void state.start(ticket.id)}>Start ticket</button>
+        : <button className={next ? 'primary' : 'secondary-button'} disabled={state.busy} onClick={open}>
+            {blocked ? 'Inspect blocker' : ticket.status === 'review' ? 'Review ticket'
+              : next ? 'Open coding task' : 'Open ticket'}
+          </button>}
+      {blocked && <div className="action-blockers">
+        <TicketBlockerNotice ticket={ticket} view={view} busy={state.busy}
+          onVisit={other => onTicket(other.projectId, other.id)} />
+      </div>}
     </li>;
   }
+
   return <WorkspaceShell workspace="projects" busy={state.busy} onWorkspaceChange={onWorkspaceChange}
-    navigation={<ProjectNavigation projects={state.views?.flatMap(view => view.projects) ?? []} overview busy={state.busy}
+    navigation={<ProjectNavigation projects={projects} overview busy={state.busy}
       onOverview={() => {}} onProject={onProject} onNewProject={onNewProject} />}>
     <main className="actions-main">
       <header className="page-header"><h1>Action center</h1></header>
       {state.error && <div role="alert" className="error">{state.error}
         <button disabled={state.busy} onClick={() => void state.refresh()}>Retry</button></div>}
       <p role="status" className="feedback">{state.message || (!state.views && !state.error ? 'Loading project actions.' : '')}</p>
-      {state.views && <div className="action-board" role="region" aria-label="Project actions" tabIndex={0}>
-        <section className="action-column review-column" aria-label="Review">
+      {state.views && <div className="action-board" role="region" aria-label="Project actions" aria-busy={state.busy}>
+        {actions.review.length > 0 && <section className="action-column" aria-label="Review">
           <header className="action-column-heading"><h2>Review</h2><span className="count">{actions.review.length}</span></header>
-          <p className="action-hint">Check finished work.</p>{actions.review.length
-          ? <ul className="action-list">{actions.review.map(item => card(item))}</ul> : <p className="action-empty">No tickets waiting for review.</p>}</section>
-        <section className="action-column progress-column" aria-label="In progress">
+          <ul className="action-list">{actions.review.map(item => row(item))}</ul>
+        </section>}
+        {actions.active.length > 0 && <section className="action-column" aria-label="In progress">
           <header className="action-column-heading"><h2>In progress</h2><span className="count">{actions.active.length}</span></header>
-          <p className="action-hint">Work you have already started.</p>{actions.active.length
-          ? <ul className="action-list">{actions.active.map(item => card(item))}</ul> : <p className="action-empty">No tickets in progress.</p>}</section>
-        <section className="action-column next-column" aria-label="Next task">
-          <header className="action-column-heading"><h2>Next task</h2><span className="count">{actions.next ? 1 : 0}</span></header>
-          <p className="action-hint">One unblocked Backlog task, oldest created first.</p>
-          {actions.next ? <ul className="action-list">{card(actions.next, true)}</ul>
-            : <p className="action-empty">No eligible Backlog task. Select a project to add work or inspect blockers.</p>}
-
+          <ul className="action-list">{actions.active.map(item => row(item))}</ul>
+        </section>}
+        <section className="action-column" aria-label="Next task">
+          <header className="action-column-heading"><h2>Next task</h2></header>
+          {actions.next ? <ul className="action-list">{row(actions.next, true)}</ul>
+            : <p className="action-empty">{projects.length
+              ? 'No eligible Backlog task. Open a project to add work or check blockers.'
+              : 'Create a project to plan your first ticket.'}</p>}
         </section>
       </div>}
     </main>

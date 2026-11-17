@@ -17,7 +17,7 @@ export function BuildInformation({ disabled }: { disabled: boolean }) {
       {error && <p className="error" role="alert">{error}</p>}
       {info ? <dl><dt>Version</dt><dd>{info.version}</dd><dt>Commit</dt><dd>{info.commit}</dd><dt>Source tree</dt><dd>{info.tree}</dd>
         <dt>Local source changes</dt><dd>{info.dirty ? 'Uncommitted or unknown changes - commit alone does not identify this build' : 'Clean source at the recorded commit'}</dd>
-        <dt>Database format</dt><dd>{info.schemaVersion}</dd><dt>Data profile</dt><dd>{info.profile === 'sample' ? 'Separate sample data' : 'Everyday data'}</dd>
+        <dt>Database format</dt><dd>{info.schemaVersion}</dd><dt>Data profile</dt><dd>{info.profile === 'isolated' ? 'Separate workspace' : 'Everyday data'}</dd>
         <dt>Node</dt><dd>{info.node}</dd><dt>Electron</dt><dd>{info.electron ?? 'Browser server'}</dd></dl> : !error && <p>Reading build information.</p>}
       <p>Copy these version details when reporting a problem. Task content, credentials and local paths are excluded.</p>
     </ProjectDialog>}

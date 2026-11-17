@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import type { ProviderPatch } from '../shared/coding.ts';
 import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
@@ -16,7 +18,7 @@ export function patchFiles(value: unknown) {
   return paths;
 }
 
-export async function applyProviderPatch(ai: AiProviders, selection: AiModelSelection, cwd: string,
+export async function prepareProviderPatch(ai: AiProviders, selection: AiModelSelection, cwd: string,
   prompt: string, paths: string[], signal: AbortSignal) {
   const root = await realpath(cwd);
   const sources: Array<{ path: string; content: string }> = [];
@@ -37,23 +39,40 @@ export async function applyProviderPatch(ai: AiProviders, selection: AiModelSele
   if (!patch.startsWith('diff --git ') || patch.length > 60000 || /^(?:rename from|rename to|new file mode|deleted file mode|old mode|new mode|GIT binary patch|Binary files) /m.test(patch)) {
     throw new ExecutionFailure('PATCH_FORMAT', 'The model did not produce a usable source diff.');
   }
-  for (const source of sources) {
+  const candidate: ProviderPatch = { diff: patch.trimEnd() + '\n',
+    files: sources.map(source => ({ path: source.path, sha256: sourceHash(source.content) })) };
+  await checkPatch(cwd, candidate, signal, false);
+  return candidate;
+}
+const sourceHash = (source: string) => createHash('sha256').update(source).digest('hex');
+
+async function checkPatch(cwd: string, candidate: ProviderPatch, signal: AbortSignal, apply: boolean) {
+  const root = await realpath(cwd);
+  const paths = patchFiles(candidate.files.map(item => item.path).join('\n'));
+  for (const source of candidate.files) {
     const current = await realpath(join(cwd, source.path));
-    if (relative(root, current).replaceAll('\\', '/') !== source.path || await readFile(current, { encoding: 'utf8', signal }) !== source.content) {
+    if (relative(root, current).replaceAll('\\', '/') !== source.path || sourceHash(await readFile(current, { encoding: 'utf8', signal })) !== source.sha256) {
       throw new ExecutionFailure('WORKSPACE_CHANGED', 'The selected source changed while the model was working. Review it before retrying.');
     }
   }
   const directory = await mkdtemp(join(tmpdir(), 'focusflow-patch-'));
   try {
     const file = join(directory, 'change.patch');
-    await writeFile(file, patch.trimEnd() + '\n', { flag: 'wx', signal });
+    await writeFile(file, candidate.diff, { flag: 'wx', signal });
     const stats = await git(cwd, ['apply', '--numstat', '--', file], signal);
     const touched = stats.split(/\r?\n/).map(line => /^\d+\t\d+\t(.+)$/.exec(line)?.[1]);
     if (!touched.length || touched.some(path => !path || !paths.includes(path))) throw new ExecutionFailure('FILE_SCOPE', 'The proposed diff changes files outside the approved list.');
     await git(cwd, ['apply', '--check', '--', file], signal);
     signal.throwIfAborted();
     // Once the local write begins, let Git finish and retain any successful edits for review.
-    await git(cwd, ['apply', '--', file]);
-    return 'Applied a source diff to ' + [...new Set(touched)].join(', ') + '. Project checks were not run.';
+    if (apply) {
+      try { await git(cwd, ['apply', '--', file]); }
+      catch { throw new ExecutionFailure('PATCH_WRITE_UNCERTAIN', 'Inspect the worktree before continuing. The patch write could not be confirmed.'); }
+    }
+    return [...new Set(touched)].join(', ');
   } finally { await rm(directory, { recursive: true, force: true }); }
+}
+
+export async function applySavedProviderPatch(cwd: string, candidate: ProviderPatch, signal: AbortSignal) {
+  return 'Applied the approved patch to ' + await checkPatch(cwd, candidate, signal, true) + '. Project checks were not run.';
 }

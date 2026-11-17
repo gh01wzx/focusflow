@@ -12,6 +12,11 @@ export interface ProjectSettings {
   execution?: AiModelSelection;
   review?: AiModelSelection;
 }
+export interface RepositoryContext {
+  revision: string;
+  files: { path: string; excerpt: string; truncated: boolean }[];
+}
+
 export const emptyProjectSettings: ProjectSettings = {
   revision: 0, requirements: '', decisions: '', references: '', sourcePath: '', preview: '',
 };

@@ -40,6 +40,15 @@ export function createTaskRepository(db: DatabaseSync) {
     listActiveRules: () => activeRules.all().map(storedRule),
     listDueRules: (today: string) => dueRules.all(today).map(storedRule),
     listPendingOccurrences: () => pendingOccurrences.all().map(parseTask),
+    occurrenceAt(recurrenceId: string, day: string): Task | undefined {
+      const row = db.prepare(taskColumns + ' WHERE t.recurrence_id=? AND t.planned_date<=? ORDER BY t.planned_date DESC LIMIT 1')
+        .get(recurrenceId, day);
+      return row === undefined ? undefined : parseTask(row);
+    },
+    adjustDurationHistory(id: string, reached: boolean) {
+      db.prepare("UPDATE tasks SET status=? WHERE id=? AND status IN ('completed','missed')")
+        .run(reached ? 'completed' : 'missed', id);
+    },
     findTask(id: string): Task | undefined {
       const row = taskById.get(id);
       return row === undefined ? undefined : parseTask(row);

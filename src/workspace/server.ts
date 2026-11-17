@@ -3,6 +3,7 @@ import { parseAiModelSelection, supportsSelection } from '../shared/ai.ts';
 import { unfinishedPrerequisites } from '../shared/dependencies.ts';
 import { git } from '../execution/git.ts';
 import { repositoryName } from '../shared/github.ts';
+import type { RepositoryContext } from '../shared/project-settings.ts';
 import { patchFiles } from '../execution/patch-turn.ts';
 import { createPreviewService } from '../execution/preview.ts';
 import { createTicketAi } from '../projects/ticket-ai.ts';
@@ -64,17 +65,18 @@ export async function startWorkspaceServer(options: {
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
   const workspaces = createWorkspaceService(store.execution, store.projectRepository, join(options.dataDirectory, '..', 'coding-workspaces'));
   const approvals = createApprovalBroker();
-  const previews = createPreviewService();
+  const previews = createPreviewService(store.execution);
   const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });
   const projectContext = (id: string) => {
     const goal = store.projectRepository.findProject(id)?.description;
     const changes = store.execution.recentChanges(id).map(({ title, run }) =>
       title + (run.headSha ? ' [' + run.headSha + ']' : '') + (run.summary ? ': ' + run.summary.slice(0, 300) : ''));
-    return [goal && 'Project goal: ' + goal, projectInstructions(store.projectSettings.read(id)),
+    const settings = store.projectSettings.read(id);
+    return ['Project context revision ' + settings.revision, goal && 'Project goal: ' + goal, projectInstructions(settings),
       changes.length && 'Recent merged work (model summaries when available):\n' + changes.join('\n')].filter(Boolean).join('\n\n');
   };
   const providers = createAiProviders(ai, options.dsh, undefined, options.compatible);
-  const coding = createCodingService(store.execution,store.projectRepository,store.projectTransaction,ai,approvals,options.github?.issues,store.linkedWork,projectContext,providers,id => store.projectSettings.read(id).tokenBudget ?? 0);
+  const coding = createCodingService(store.execution,store.projectRepository,store.projectTransaction,ai,approvals,options.github?.issues,store.linkedWork,projectContext,providers,id => store.projectSettings.read(id).tokenBudget ?? 0, id => store.projectSettings.read(id).revision);
   const ticketAi = createTicketAi(store.projectRepository, store.projectTransaction, store.projectSettings, providers, projectContext);
   const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(providers), store.planApproval, projectContext);
   const publications = createPublicationService(store.publications, store.projects, store.projectTransaction, options.github?.issues);
@@ -101,6 +103,10 @@ export async function startWorkspaceServer(options: {
       if(deliveryRoute&&(deliveryRoute[2]?request.method==='POST':request.method==='GET')){
         const id=deliveryRoute[1]!,action=deliveryRoute[2];const input=action?await readJson(request,origin,8192):undefined;
         sendJson(response,200,!action?delivery.state(id):action==='preview'?await delivery.preview(id):action==='publish'?await delivery.publish(id,input):await delivery.reconcile(id));return;
+      }
+      const patchApproval = /^\/api\/project-tickets\/([a-f0-9-]{36})\/coding\/patch\/apply$/.exec(resource);
+      if (request.method === 'POST' && patchApproval?.[1]) {
+        sendJson(response, 200, coding.applyPatch(patchApproval[1], await readJson(request, origin, 8192))); return;
       }
       const runRoute=/^\/api\/project-tickets\/([a-f0-9-]{36})\/coding\/run(?:\/(start|resume|cancel|recover))?$/.exec(resource);
       if(runRoute&&(runRoute[2]?request.method==='POST':request.method==='GET')){
@@ -176,7 +182,7 @@ export async function startWorkspaceServer(options: {
       if (preview?.[1] && request.method === (preview[2] ? 'POST' : 'GET')) {
         const id = preview[1], ticket = store.projectRepository.findTicket(id);
         if (!ticket) throw new ProjectNotFoundError('Ticket not found.');
-        if (!preview[2]) { sendJson(response, 200, previews.state(id)); return; }
+        if (!preview[2]) { sendJson(response, 200, await previews.state(id)); return; }
         await readJson(request, origin, 4096);
         const workspace = store.execution.workspace(id);
         if (!workspace) throw new ExecutionFailure('NO_WORKSPACE', 'Prepare this ticket worktree first.');
@@ -250,6 +256,29 @@ export async function startWorkspaceServer(options: {
         sendJson(response, 200, { name });
         return;
       }
+      const contextReferences = /^\/api\/projects\/([a-f0-9-]{36})\/context\/references$/.exec(resource);
+      if (request.method === 'GET' && contextReferences?.[1]) {
+        const id = contextReferences[1];
+        store.projects.view(id);
+        const folder = store.projectSettings.read(id).sourcePath;
+        if (!folder) throw new ProjectInputError('Save a local repository folder first.');
+        const revision = await git(folder, ['rev-parse', '--verify', 'HEAD']);
+        const paths = ['README.md', 'AGENTS.md', 'docs/ARCHITECTURE.md'];
+        const tree = await git(folder, ['ls-tree', '-r', '--full-tree', revision, '--', ...paths]);
+        const files: RepositoryContext['files'] = [];
+        for (const path of paths) {
+          const entry = tree.split('\n').find(line => /^100(?:644|755) blob /.test(line) && line.endsWith('\t' + path));
+          if (!entry) continue;
+          const size = Number(await git(folder, ['cat-file', '-s', revision + ':' + path]));
+          if (!Number.isSafeInteger(size) || size < 1 || size > 65536) continue;
+          const content = await git(folder, ['cat-file', 'blob', revision + ':' + path]);
+          if (content.includes('\0')) continue;
+          const excerpt = content.slice(0, 1500).replace(/[\uD800-\uDBFF]$/, '').trimEnd();
+          if (excerpt) files.push({ path, excerpt, truncated: excerpt.length < content.length });
+        }
+        sendJson(response, 200, { revision, files } satisfies RepositoryContext);
+        return;
+      }
       const settings = /^\/api\/projects\/([a-f0-9-]{36})\/settings$/.exec(resource);
       if (settings?.[1] && (request.method === 'GET' || request.method === 'POST')) {
         const id = settings[1];
@@ -299,7 +328,7 @@ export async function startWorkspaceServer(options: {
       if (projectRoute?.kind === 'deleteProject') {
         const id = projectRoute.id;
         if (projectRequests > 1 || plans.status(id).busy || publications.state(id).busy
-          || store.projectRepository.listTickets(id).some(ticket => (reviews.busy(ticket.id) || ticketAi.busy(ticket.id)))) {
+          || store.projectRepository.listTickets(id).some(ticket => (reviews.busy(ticket.id) || ticketAi.busy(ticket.id) || previews.owned(ticket.id)))) {
           throw new ProjectInputError('Wait for the current project work to finish, then retry deletion.');
         }
       }

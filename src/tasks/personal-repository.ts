@@ -48,6 +48,19 @@ export function createPersonalRepository(db: DatabaseSync) {
         .run(entry.id, entry.kind, entry.subject, entry.title, entry.day, entry.loggedAt,
           Intl.DateTimeFormat().resolvedOptions().timeZone, now.getTimezoneOffset(), entry.minutes, entry.rate, entry.amount, entry.reference);
     },
+    moveActivity(entry: ActivityEntry, day: string, subject: string, operation: string) {
+      db.prepare('UPDATE personal_entries SET day=?,subject=? WHERE id=? OR reference=?').run(day, subject, entry.id, entry.id);
+      db.prepare('INSERT INTO personal_date_corrections VALUES (?,?,?)').run(operation, entry.day, entry.subject);
+    },
+    week(start: string, end: string) {
+      const rows = db.prepare(`SELECT COALESCE(t.recurrence_id,p.subject) AS habit, p.day, SUM(p.minutes) AS minutes
+        FROM personal_entries p JOIN tasks t ON t.id=p.subject
+        WHERE p.day BETWEEN ? AND ? AND p.minutes<>0
+        GROUP BY habit,p.day HAVING SUM(p.minutes)>0`).all(start, end);
+      const result: Record<string, Record<string, number>> = {};
+      for (const row of rows) (result[String(row.habit)] ??= {})[String(row.day)] = Number(row.minutes);
+      return result;
+    },
     totals(day: string) {
       const row = db.prepare(`SELECT COALESCE(SUM(amount),0) AS balance,
         COALESCE(SUM(CASE WHEN day=? AND (kind IN ('earn','edit') OR

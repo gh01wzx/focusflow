@@ -44,6 +44,7 @@ export interface PersonalView {
   rewards: Reward[];
   entries: ActivityEntry[];
   progress: Record<string, number>;
+  week: { days: string[]; minutes: Record<string, Record<string, number>> };
   preferences: PersonalPreferences;
 }
 

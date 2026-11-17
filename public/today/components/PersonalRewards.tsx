@@ -37,18 +37,31 @@ export function ScoringEditor({ task, rule, state }: { task: Task; rule?: Scorin
 export function HabitRow({ task, rule, state }: { task: Task; rule: ScoringRule; state: PersonalController }) {
   const [draft, setDraft] = useState<{ id: string; day: string; minutes: string }>();
   const total = state.data?.progress[task.id] ?? 0;
+  const week = state.data?.week;
+  const recent = week?.minutes[task.recurrenceId ?? task.id] ?? {};
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (draft && await state.mutate('log', { ...draft, subject: task.id, minutes: Number(draft.minutes) }, rule.target)) setDraft(undefined);
   }
   return <li className="habit-row">
     <div className="habit-header"><div><strong>{task.title}</strong><p>{total} / {rule.target} min
-      {total >= rule.target ? ' � Target met' : total ? ' � Started' : ''} � {points(rule.rate)} pt/min</p>
+      {total >= rule.target ? ' - Target met' : total ? ' - Started' : ''} - {points(rule.rate)} pt/min</p>
       {rule.cue && <p>{rule.cue}</p>}</div>
       <button className="primary" disabled={state.busy || !state.data} onClick={() => setDraft({
         id: crypto.randomUUID(), day: state.data!.day, minutes: String(rule.target),
       })}>{total ? 'Log again' : 'Log minutes'}</button>
     </div>
+    {week && <ul className="habit-week" aria-label="Last seven days against the current target">
+      {week.days.map(day => {
+        const minutes = recent[day] ?? 0;
+        const status = minutes >= rule.target ? 'Target met' : minutes > 0 ? 'Started' : 'No log';
+        return <li key={day} data-progress={status}>
+          <time dateTime={day}>{new Intl.DateTimeFormat('en', { weekday: 'short', timeZone: 'UTC' })
+            .format(new Date(day + 'T12:00:00Z'))}</time>
+          <span>{status}</span><span>{minutes} min</span>
+        </li>;
+      })}
+    </ul>}
     {draft && <form className="inline-settings" onSubmit={event => void save(event)}>
       <label>Minutes <input type="number" min="1" max="1440" value={draft.minutes} required autoFocus
         onChange={event => setDraft({ ...draft, minutes: event.target.value })} /></label>
@@ -78,7 +91,7 @@ export function PointsJar({ state, openRewards }: { state: PersonalController; o
       </div>}
     </div>
     <strong>{points(data.balance)} available</strong>
-    {pinned && <p>{pinned.title} � {data.balance >= pinned.cost ? 'Ready to redeem' : points(pinned.cost - data.balance) + ' points to go'}</p>}
+    {pinned && <p>{pinned.title} - {data.balance >= pinned.cost ? 'Ready to redeem' : points(pinned.cost - data.balance) + ' points to go'}</p>}
     <button className="quiet-button" onClick={openRewards}>Open rewards</button>
     <button className="quiet-button" onClick={() => void state.mutate('preferences', { ...data.preferences, sound: !data.preferences.sound })}>
       {data.preferences.sound ? 'Mute sound' : 'Enable sound'}
@@ -114,7 +127,7 @@ export function RewardShop({ state }: { state: PersonalController }) {
         id: crypto.randomUUID(), title: '', cost: 3000, note: '', onceOnly: false, archived: false, used: false,
       })}>Add reward</button>}
     {data.rewards.map(item => <article className="reward-row" key={item.id}>
-      <div><strong>{item.title}</strong><p>{points(item.cost)} points{item.note ? ' � ' + item.note : ''}</p></div>
+      <div><strong>{item.title}</strong><p>{points(item.cost)} points{item.note ? ' - ' + item.note : ''}</p></div>
       {redeeming?.item.id === item.id ? <div>
         <button className="primary" disabled={state.busy} onClick={async () => {
           if (await state.mutate('redeem', { id: redeeming.id, subject: item.id, cost: redeeming.item.cost })) setRedeeming(undefined);
@@ -148,7 +161,7 @@ export function RewardShop({ state }: { state: PersonalController }) {
 }
 
 export function ActivityHistory({ state }: { state: PersonalController }) {
-  const [edit, setEdit] = useState<{ entry: ActivityEntry; id: string; minutes: number }>();
+  const [edit, setEdit] = useState<{ entry: ActivityEntry; id: string; minutes: number; day: string }>();
   const entries = state.data?.entries ?? [];
   return <section className="activity-history"><h2>Points history</h2>
     {entries.length === 0 && <p>No points activity yet.</p>}
@@ -156,19 +169,21 @@ export function ActivityHistory({ state }: { state: PersonalController }) {
       const undone = entries.some(item => item.reference === entry.id && item.kind === 'reverse');
       const original = entry.kind === 'earn' || entry.kind === 'redeem';
       return <article key={entry.id} className="reward-row">
-        <div><strong>{entry.title}</strong><p>{entry.day} � {entry.kind === 'reverse' ? 'Undone' : entry.kind === 'edit' ? 'Corrected' : entry.kind === 'redeem' ? 'Redeemed' : 'Earned'}
-          {' � '}{entry.amount > 0 ? '+' : ''}{points(entry.amount)} points{entry.minutes ? ' � ' + entry.minutes + ' min' : ''}</p></div>
+        <div><strong>{entry.title}</strong><p>{entry.day} - {entry.kind === 'reverse' ? 'Undone' : entry.kind === 'edit' ? 'Corrected' : entry.kind === 'redeem' ? 'Redeemed' : 'Earned'}
+          {' - '}{entry.amount > 0 ? '+' : ''}{points(entry.amount)} points{entry.minutes ? ' - ' + entry.minutes + ' min' : ''}</p></div>
         {original && !undone && <div>
           {entry.minutes > 0 && <button className="quiet-button" onClick={() => setEdit({
-            entry, id: crypto.randomUUID(), minutes: entry.minutes + entries.filter(item => item.reference === entry.id).reduce((sum, item) => sum + item.minutes, 0),
-          })}>Correct minutes</button>}
+            entry, id: crypto.randomUUID(), day: entry.day, minutes: entry.minutes + entries.filter(item => item.reference === entry.id).reduce((sum, item) => sum + item.minutes, 0),
+          })}>Correct log</button>}
           <button className="quiet-button" disabled={state.busy} onClick={() => void state.mutate('reverse', { subject: entry.id, id: crypto.randomUUID() })}>Undo</button>
         </div>}
         {edit?.entry.id === entry.id && <form className="inline-settings" onSubmit={async event => {
           event.preventDefault();
-          if (await state.mutate('edit', { subject: entry.id, id: edit.id, minutes: edit.minutes })) setEdit(undefined);
+          if (await state.mutate('edit', { subject: entry.id, id: edit.id, day: edit.day, minutes: edit.minutes })) setEdit(undefined);
         }}><label>Minutes <input type="number" min="1" max="1440" required value={edit.minutes}
           onChange={event => setEdit({ ...edit, minutes: Number(event.target.value) })} /></label>
+          <label>Activity date <input type="date" required value={edit.day} max={state.data?.day}
+            onChange={event => setEdit({ ...edit, day: event.target.value })} /></label>
           <button className="primary" disabled={state.busy}>Save correction</button>
           <button type="button" className="quiet-button" onClick={() => setEdit(undefined)}>Cancel</button>
         </form>}

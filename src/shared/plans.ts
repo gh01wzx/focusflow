@@ -1,6 +1,6 @@
 export interface SuggestedTicket {
   key: string; title: string; description: string; acceptanceCriteria: string;
-  executionMode: 'manual' | 'codex'; prerequisiteKeys: string[];
+  executionMode: 'manual' | 'codex'; prerequisiteKeys: string[]; requirementIds?: string[];
 }
 export interface SuggestedMilestone { key: string; title: string; description: string; tickets: SuggestedTicket[] }
 export interface SuggestedPlan { milestones: SuggestedMilestone[] }
@@ -38,13 +38,17 @@ export function parseSuggestedPlan(value: unknown): SuggestedPlan {
     const id = unique(item.key);
     if (!Array.isArray(item.tickets) || item.tickets.length < 1 || item.tickets.length > 12) invalid();
     const tickets = item.tickets.map((value): SuggestedTicket => {
-      const ticket = object(value, ['key', 'title', 'description', 'acceptanceCriteria', 'executionMode', 'prerequisiteKeys']);
+      const ticket = object(value, ['key', 'title', 'description', 'acceptanceCriteria', 'executionMode', 'prerequisiteKeys', 'requirementIds']);
       if (ticket.executionMode !== 'manual' && ticket.executionMode !== 'codex') invalid();
       if (!Array.isArray(ticket.prerequisiteKeys) || ticket.prerequisiteKeys.length > 16) invalid();
       const prerequisiteKeys = ticket.prerequisiteKeys.map(key);
       if (new Set(prerequisiteKeys).size !== prerequisiteKeys.length) invalid();
+      const ids = ticket.requirementIds;
+      if (ids !== undefined && (!Array.isArray(ids) || ids.length > 200 || new Set(ids).size !== ids.length
+        || ids.some(id => typeof id !== 'string' || !/^A[1-9][0-9]*$/.test(id)))) invalid();
       return { key: unique(ticket.key), title: text(ticket.title, 200, true), description: text(ticket.description, 2000),
-        acceptanceCriteria: text(ticket.acceptanceCriteria, 2000, true), executionMode: ticket.executionMode, prerequisiteKeys };
+        acceptanceCriteria: text(ticket.acceptanceCriteria, 2000, true), executionMode: ticket.executionMode, prerequisiteKeys,
+        ...(ids === undefined ? {} : { requirementIds: ids as string[] }) };
     });
     return { key: id, title: text(item.title, 200, true), description: text(item.description, 2000), tickets };
   });

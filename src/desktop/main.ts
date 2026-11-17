@@ -56,6 +56,7 @@ async function startDesktop(): Promise<void> {
         if (!interfaceReady) return;
         if (window?.isMinimized()) window.restore();
         window?.show();
+      if (profile.sampleLabel && process.env.FOCUSFLOW_PREVIEW_READY === '1') console.log('FocusFlow review window ready');
         window?.focus();
       });
 

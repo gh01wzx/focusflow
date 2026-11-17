@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 19;
+export const SCHEMA_VERSION = 20;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -188,5 +188,13 @@ export const MIGRATIONS = [
   { version: 19, sql: `CREATE TABLE ticket_ai (
     ticket_id TEXT PRIMARY KEY REFERENCES project_tickets(id) ON DELETE CASCADE,
     draft_json TEXT NOT NULL CHECK(json_valid(draft_json))
+  );` },
+  { version: 20, sql: `CREATE TABLE personal_date_corrections (
+    operation_id TEXT PRIMARY KEY REFERENCES personal_entries(id),
+    previous_day TEXT NOT NULL, previous_subject TEXT NOT NULL
+  );
+  CREATE TABLE ticket_previews (
+    ticket_id TEXT PRIMARY KEY REFERENCES project_tickets(id) ON DELETE CASCADE,
+    receipt_json TEXT NOT NULL CHECK(json_valid(receipt_json))
   );` },
 ] as const;

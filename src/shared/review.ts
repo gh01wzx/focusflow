@@ -6,8 +6,8 @@ import {executionRecord} from './execution.ts';
 
 export interface ReviewFile {path:string;status:string;additions:number;deletions:number;patch:string|null;sha:string;source:string|null;complete:boolean}
 export interface ReviewCheck {name:string;status:string;conclusion:string|null;url:string|null;source:'check-run'|'commit-status'}
-export interface ReviewEvidence {pull:RemoteCodingPull;files:ReviewFile[];checks:ReviewCheck[];filesComplete:boolean;checksAvailable:boolean;checksComplete:boolean;fetchedAt:string}
-export interface ReviewAnswer {id:string;kind:'summary'|'independent'|'question';question:string;text:string;headSha:string;scope:string;createdAt:string;evidenceAt?:string}
+export interface ReviewEvidence {scope?:string;pull:RemoteCodingPull;files:ReviewFile[];checks:ReviewCheck[];filesComplete:boolean;checksAvailable:boolean;checksComplete:boolean;fetchedAt:string}
+export interface ReviewAnswer {id:string;kind:'summary'|'independent'|'question';question:string;text:string;headSha:string;scope:string;createdAt:string;evidenceAt?:string;selection?:import('./ai.ts').AiModelSelection;contextSnapshot?:string}
 export interface ReviewRecord {evidence:ReviewEvidence|null;answers:ReviewAnswer[];approval:{headSha:string;scope:string;at:string;unverifiedAccepted:boolean}|null;
   issue:LinkedIssue|null;error:string;pending:string|null;mergeNotice:string}
 export interface ReviewState extends ReviewRecord {ticketId:string;busy:boolean;stale:boolean;approved:boolean;scope:string;pullUrl:string}

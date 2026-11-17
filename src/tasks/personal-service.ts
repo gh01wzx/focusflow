@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { localDay } from '../shared/calendar.ts';
+import { localDay, nextOccurrence, validDate } from '../shared/calendar.ts';
 import { personalDefaults } from '../shared/personal.ts';
 import type { ActivityEntry, PersonalPreferences, PersonalView } from '../shared/personal.ts';
 import type { PersonalRepository } from './personal-repository.ts';
@@ -32,7 +32,12 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
   };
   const view = (now: Date): PersonalView => {
     const day = localDay(now);
-    return { day, ...repository.totals(day), rules: repository.rules(), entries: repository.entries(),
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(day + 'T12:00:00Z');
+      date.setUTCDate(date.getUTCDate() + i - 6);
+      return date.toISOString().slice(0, 10);
+    });
+    return { day, week: { days, minutes: repository.week(days[0]!, day) }, ...repository.totals(day), rules: repository.rules(), entries: repository.entries(),
       rewards: repository.rewards().filter(item => !item.archived), preferences: preferences(), progress: repository.progress() };
   };
   function record(now: Date, entry: Omit<ActivityEntry, 'day' | 'loggedAt'>, day = localDay(now)) {
@@ -43,6 +48,21 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
     if (rule?.mode === 'minutes') throw new TaskInputError('Use Log minutes to record this activity.');
     if (rule && rule.rate > 0) record(now, { id: randomUUID(), kind: 'earn', subject: task.id, title: task.title,
       minutes: 0, rate: rule.rate, amount: rule.rate, reference: null });
+  }
+  function correctionSubject(entry: ActivityEntry, newDay: string) {
+    const original = tasks.findTask(entry.subject);
+    const recurrence = original?.recurrenceId && tasks.findRule(original.recurrenceId);
+    const target = recurrence && tasks.occurrenceAt(recurrence.id, newDay);
+    if (!target || target.status === 'cancelled' || !recurrence) {
+      throw new TaskInputError('Choose a date when this habit was scheduled.');
+    }
+    const end = nextOccurrence(target.plannedDate, recurrence.weekdays === null ? recurrence.frequency : 'daily');
+    if (end !== null && newDay >= end) throw new TaskInputError('Choose a date when this habit was scheduled.');
+    return target.id;
+  }
+  function adjustHistory(id: string) {
+    const task = tasks.findTask(id), rule = task && taskRule(task);
+    if (rule?.mode === 'minutes') tasks.adjustDurationHistory(id, repository.minutes(id) >= rule.target);
   }
   function mutate(action: string, input: unknown) {
     return transaction(now => {
@@ -107,8 +127,19 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
           const currentAmount = entry.amount + adjustments.reduce((sum, item) => sum + item.amount, 0);
           if (action === 'edit' && entry.minutes <= 0) throw new TaskInputError('Choose a duration entry to edit.');
           const minutes = action === 'edit' ? integer(value.minutes, 1, 1440, 'Enter whole minutes from 1 to 1440.') : 0;
+          const requestedDay = value.day ?? entry.day;
+          if (action === 'edit' && (!validDate(requestedDay) || requestedDay > day)) {
+            throw new TaskInputError('Choose today or an earlier activity date.');
+          }
+          const newDay = action === 'edit' && validDate(requestedDay) ? requestedDay : entry.day;
+          const subject = newDay === entry.day ? entry.subject : correctionSubject(entry, newDay);
           record(now, { id, kind: action, subject: entry.subject, title: entry.title, rate: entry.rate, reference: entry.id,
             minutes: minutes - currentMinutes, amount: (action === 'edit' ? minutes * entry.rate : 0) - currentAmount }, entry.day);
+          if (newDay !== entry.day) repository.moveActivity(entry, newDay, subject, id);
+          if (entry.kind === 'earn' && entry.minutes > 0) {
+            adjustHistory(entry.subject);
+            if (subject !== entry.subject) adjustHistory(subject);
+          }
           if (action === 'reverse' && entry.kind === 'earn' && entry.minutes === 0) {
             const task = tasks.findTask(entry.subject);
             if (task && (!task.recurrenceId || task.plannedDate === day)) tasks.reopenTask(task.id);

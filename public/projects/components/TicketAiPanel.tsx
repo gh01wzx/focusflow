@@ -7,7 +7,7 @@ import { projectSettings } from '../../../src/client/project-settings.ts';
 import { aiProviderNames } from '../../../src/shared/ai.ts';
 import { ModelPicker } from './ModelPicker.tsx';
 
-interface State { busy: boolean; draft: null | { id: string; selection: AiModelSelection; suggestions: SuggestedTicket[]; children: string[]; result: string } }
+interface State { busy: boolean; draft: null | { id: string; selection: AiModelSelection; suggestions: SuggestedTicket[]; children: string[]; result: string; requirements?: { id: string; text: string }[] } }
 async function request(id: string, action = '', data?: unknown): Promise<State> {
   const response = await fetch('/api/project-tickets/' + id + '/ai' + (action ? '/' + action : ''), action ? {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data ?? {}),
@@ -55,6 +55,8 @@ export function TicketAiPanel({ ticket, onChanged, onBusy, onVisit }: {
   }
   if (ticket.coding?.issueNumber) return null;
   const draft = state?.draft;
+  const requirements = draft?.requirements ?? ticket.acceptanceCriteria.split(/\r?\n/).map(text => text.trim()).filter(Boolean)
+    .map((text, index) => ({ id: 'A' + (index + 1), text }));
   return <details className="ticket-ai" onToggle={event => setOpen(event.currentTarget.open)}>
     <summary>{draft?.children.length ? 'Breakdown' : 'Run AI'}</summary>
     {error && <p role="alert">{error}</p>}
@@ -76,6 +78,7 @@ export function TicketAiPanel({ ticket, onChanged, onBusy, onVisit }: {
     {draft?.result && <pre className="ticket-result">{draft.result}</pre>}
     {!!draft?.children.length && <ul>{draft.children.map((child, index) => <li key={child}>
       <button className="text-button" onClick={() => onVisit(child)}>{draft.suggestions[index]?.title ?? 'Open child ticket'}</button>
+      {!!draft.suggestions[index]?.requirementIds?.length && <span> Covers {draft.suggestions[index]!.requirementIds!.join(', ')}</span>}
     </li>)}</ul>}
     {!!suggestions.length && !draft?.children.length && <div>
       {suggestions.map((item, index) => <details key={item.key}><summary>{item.title}</summary>
@@ -86,6 +89,17 @@ export function TicketAiPanel({ ticket, onChanged, onBusy, onVisit }: {
           <textarea value={item[key]} onChange={event => setSuggestions(current => current.map((value, position) =>
             position === index ? { ...value, [key]: event.target.value } : value))} />
         </label>)}
+        {!!requirements.length && <fieldset><legend>Parent acceptance items covered</legend>
+          {requirements.map(requirement => <label key={requirement.id}><input type="checkbox"
+            checked={item.requirementIds?.includes(requirement.id) ?? false}
+            onChange={event => {
+              const checked = event.target.checked;
+              setSuggestions(current => current.map(value => value.key !== item.key ? value : {
+                ...value, requirementIds: checked ? [...(value.requirementIds ?? []), requirement.id]
+                  : (value.requirementIds ?? []).filter(id => id !== requirement.id),
+              }));
+            }} /> {requirement.id} {requirement.text}</label>)}
+        </fieldset>}
         <p>{item.prerequisiteKeys.length ? 'Requires ' + item.prerequisiteKeys.join(', ') : 'No proposed prerequisites'}</p>
       </details>)}
       <button className="primary" disabled={busy || suggestions.length - excluded.length < 2} onClick={() => void act('apply', {

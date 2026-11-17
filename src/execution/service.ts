@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {codingScope} from './scope.ts';
+import { relative } from 'node:path';
 import { realpath } from 'node:fs/promises';
 import type { ProjectRepository } from '../projects/repository.ts';
 import type { ProjectTransaction } from '../projects/service.ts';
@@ -35,7 +36,7 @@ function message(code:string):string {
   if(code==='USAGE_LIMIT')return'The provider reported exhausted Codex allowance. Resume only after it resets.';
   if(code==='RATE_LIMITED')return'The provider reported a rate limit. Wait before explicitly resuming.';
   if(code==='CANCELLED')return'The owned coding process stopped. Earlier file changes remain in its worktree.';
-  if(code==='CLI_MISSING'||code==='MISSING')return'The pinned AI runtime is missing. Close the app and use Start-FocusFlow.cmd to prepare it.';
+  if(code==='CLI_MISSING'||code==='MISSING')return'The pinned AI runtime is missing. Run npm run ai:install in the FocusFlow checkout.';
   if(code==='BUSY')return'Another AI operation owns the runtime. Finish or cancel it before explicitly resuming.';
   if(code==='CONNECTION_FAILED'||code==='CONNECTION_CLOSED')return'The runtime connection ended. Check the network and inspect saved work before resuming.';
   if(code==='UNSUPPORTED_REQUEST'||code==='UNSUPPORTED_TOOL')return'Codex requested an unsupported interaction. No permission was granted; clarify the task before resuming.';
@@ -97,8 +98,8 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
     const actual=await realpath(await git(workspace.workspacePath,['rev-parse','--show-toplevel'],signal));
     const sourceCommon=await realpath(await git(workspace.sourcePath,['rev-parse','--path-format=absolute','--git-common-dir'],signal));
     const worktreeCommon=await realpath(await git(workspace.workspacePath,['rev-parse','--path-format=absolute','--git-common-dir'],signal));
-    if(sourceCommon.toLowerCase()!==worktreeCommon.toLowerCase())throw new ExecutionFailure('WORKSPACE_CHANGED','The saved coding folder is no longer a worktree of its selected source repository.');
-    if(actual.toLowerCase()!==(await realpath(workspace.workspacePath)).toLowerCase()||await git(workspace.workspacePath,['branch','--show-current'],signal)!==workspace.branch)throw new ExecutionFailure('WORKSPACE_CHANGED','The ticket worktree or branch changed. Inspect it before resuming.');
+    if (relative(sourceCommon, worktreeCommon) !== '')throw new ExecutionFailure('WORKSPACE_CHANGED','The saved coding folder is no longer a worktree of its selected source repository.');
+    if (relative(actual, await realpath(workspace.workspacePath)) !== '' || await git(workspace.workspacePath, ['branch', '--show-current'], signal) !== workspace.branch)throw new ExecutionFailure('WORKSPACE_CHANGED','The ticket worktree or branch changed. Inspect it before resuming.');
   }
   async function perform(id:string,runId:string,abort:AbortController,prompt:string,expected:string,selection:AiModelSelection,files:string[],tokenBudget:number){
     try{

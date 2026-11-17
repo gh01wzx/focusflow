@@ -44,7 +44,7 @@ export function createLinkedWorkService(repository: LinkedWorkRepository, projec
     async refresh(id: string) {
       const generation = invalidate(id);
       const link = linked(id), saved = repository.read(id);
-      if (!provider) throw new LinkedWorkError('Linked work needs the Windows GitHub connection.');
+      if (!provider) throw new LinkedWorkError('Linked work needs a desktop GitHub connection.');
       try {
         const remote = await provider.read(link.ticket.projectId, link.repository, link.number);
         const pull = saved.pullNumber ? await provider.pull(link.ticket.projectId, link.repository, saved.pullNumber) : null;

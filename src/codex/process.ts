@@ -33,7 +33,9 @@ export async function withCodexProcess<T>(
   } = {},
 ): Promise<{ result: T; processClosed: true; temporaryDirectoryRemoved: true }> {
   const cwd = await mkdtemp(join(tmpdir(), 'focusflow-codex-turn-'));
-  const child = spawn(executable, args, { cwd, env: environment, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+  const macGroup = process.platform === 'darwin';
+  const child = spawn(executable, args, { cwd, env: environment, stdio: ['pipe', 'pipe', 'pipe'],
+    detached: macGroup, windowsHide: true });
   if (options.onStderr) child.stderr.setEncoding('utf8').on('data', options.onStderr);
   else child.stderr.resume();
   const client = new CodexClient(child.stdout, child.stdin, options.jsonRpc ? 30_000 : 15_000, 1_048_576, child.pid ?? null, options.jsonRpc);
@@ -66,6 +68,8 @@ export async function withCodexProcess<T>(
             ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
           killer.on('error', () => child.kill('SIGKILL'));
           killer.once('exit', code => { if (code !== 0 && !exited) child.kill('SIGKILL'); });
+        } else if (macGroup) {
+          try { process.kill(-child.pid, 'SIGKILL'); } catch { if (!exited) child.kill('SIGKILL'); }
         } else child.kill('SIGKILL');
       }
     }, options.graceMs ?? 2000);

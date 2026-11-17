@@ -5,7 +5,7 @@ import { startWorkspaceServer } from '../workspace/server.ts';
 import type { LocalServer } from '../http/local-server.ts';
 import { MigrationError, NewerDatabaseError } from '../database/migrate.ts';
 import { SCHEMA_VERSION } from '../database/schema.ts';
-import { selectProfile } from '../runtime/profile.ts';
+import { localDataDirectory, selectProfile } from '../runtime/profile.ts';
 import { createAiService } from '../ai/service.ts';
 import { createAiRuntime } from '../ai/runtime.ts';
 import { createProviderCredential } from '../ai/credential.ts';
@@ -24,7 +24,7 @@ let window: BrowserWindow | null = null;
 let service: LocalServer | undefined;
 
 app.setName('FocusFlow');
-app.setAppUserModelId('dev.focusflow.desktop');
+if (process.platform === 'win32') app.setAppUserModelId('dev.focusflow.desktop');
 if (process.argv.includes('--runtime-diagnostic')) {
   void app.whenReady().then(() => { console.log(RUNTIME_MARKER); app.exit(0); }, () => app.exit(1));
 } else {
@@ -34,8 +34,9 @@ if (process.argv.includes('--runtime-diagnostic')) {
 async function startDesktop(): Promise<void> {
   let preparingProfile = true;
   try {
+    const dataRoot = localDataDirectory(app.getPath('appData'));
     const profile = selectProfile({ packaged: app.isPackaged, args: process.argv,
-      localDataDirectory: process.env.LOCALAPPDATA ?? app.getPath('appData'),
+      localDataDirectory: dataRoot,
       checkoutDirectory: app.getAppPath(), schemaVersion: SCHEMA_VERSION,
       testProfile: process.env.FOCUSFLOW_TEST_PROFILE });
     const profileDirectory = profile.directory;
@@ -74,9 +75,9 @@ async function startDesktop(): Promise<void> {
       await app.whenReady();
       let confirmReady!: () => void;
       const ready = new Promise<void>(resolve => { confirmReady = resolve; });
-      const ai = createAiService(createAiRuntime(process.env.LOCALAPPDATA ?? app.getPath('appData'), true, profileDirectory));
+      const ai = createAiService(createAiRuntime(dataRoot, true, profileDirectory));
       const crypto: CredentialCrypto = {
-        available: async () => process.platform === 'win32' && await safeStorage.isAsyncEncryptionAvailable(),
+        available: async () => (process.platform === 'win32' || process.platform === 'darwin') && await safeStorage.isAsyncEncryptionAvailable(),
         encrypt: value => safeStorage.encryptStringAsync(value),
         decrypt: async value => (await safeStorage.decryptStringAsync(value)).result,
       };
@@ -102,7 +103,7 @@ async function startDesktop(): Promise<void> {
           webSecurity: true,
         },
       });
-      window.removeMenu();
+      if (process.platform !== 'darwin') window.removeMenu();
       window.webContents.setWindowOpenHandler(({ url }) => {
         if (/^http:\/\/127\.0\.0\.1:\d{1,5}\/$/.test(url) || url === AI_SETUP_URL || isAiSignInUrl(url) || isGitHubIssueUrl(url) || isGitHubPullUrl(url) || isGitHubEvidenceUrl(url) ||
             ['https://github.com/login/device', 'https://github.com/settings/apps', 'https://github.com/settings/personal-access-tokens/new'].includes(url)) {

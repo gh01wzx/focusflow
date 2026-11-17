@@ -10,7 +10,7 @@ npm run codex:login
 npm run codex:status
 ~~~
 
-The official CLI is pinned to 0.166.0. Its runtime and dedicated login profile are under %LOCALAPPDATA%\FocusFlow\codex-phase0. The CLI owns its credential files; the app does not copy/read raw credentials.
+The official CLI is pinned to 0.166.0. The standalone runtime and login profile live in `codex-phase0` under the [platform data root](DEVELOPMENT.md#data-paths). The desktop command `npm run ai:install` installs the separate `codex-product/runtime` used by the app. The CLI owns its credential files; the app does not copy/read raw credentials.
 
 Login uses the official browser flow. Live checks accept ChatGPT authentication and refuse API-key mode.
 

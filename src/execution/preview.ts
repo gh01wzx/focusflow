@@ -1,6 +1,6 @@
-import { execFile, spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
-import { git, gitEnvironment, ExecutionFailure } from './git.ts';
+import { git, ExecutionFailure } from './git.ts';
+import { launchPreview, processStamp, stopPreviewProcess } from './preview-process.ts';
 import type { CodingWorkspace } from '../shared/execution.ts';
 import type { ExecutionRepository } from './repository.ts';
 
@@ -16,23 +16,10 @@ export interface PreviewReceipt {
 
 const activeStage = (preview: PreviewReceipt) => ['starting','ready','stopping','uncertain'].includes(preview.stage);
 
-function processStamp(pid: number): Promise<string | null | undefined> {
-  return new Promise(resolve => {
-    if (!Number.isSafeInteger(pid) || pid < 1 || process.platform !== 'win32') { resolve(undefined); return; }
-    const script = '$p = Get-Process -Id ' + pid + ' -ErrorAction SilentlyContinue; ' +
-      "if (!$p) { 'missing' } else { $p.StartTime.ToUniversalTime().Ticks.ToString() }";
-    execFile('powershell.exe', ['-NoLogo','-NoProfile','-NonInteractive','-Command',script], {
-      windowsHide: true, timeout: 4000, maxBuffer: 4096, env: gitEnvironment(),
-    }, (error, stdout) => {
-      const value = stdout.trim();
-      resolve(error ? undefined : value === 'missing' ? null : /^\d{15,20}$/.test(value) ? value : undefined);
-    });
-  });
-}
-
 export function createPreviewService(repository: Pick<ExecutionRepository, 'preview' | 'savePreview'>) {
   const live = new Map<string, { process: ChildProcess; receipt: PreviewReceipt }>();
   const actions = new Set<string>();
+  const pendingActions = new Set<Promise<unknown>>();
   const queries = new Map<string, Promise<PreviewReceipt | null>>();
   let closed = false;
   function save(id: string, receipt: PreviewReceipt) {
@@ -69,7 +56,7 @@ export function createPreviewService(repository: Pick<ExecutionRepository, 'prev
     try {
       const prior = await lookup(id);
       if (prior && activeStage(prior)) return show(prior);
-      if (workspace.state !== 'ready' || process.platform !== 'win32') throw new ExecutionFailure('PREVIEW_UNAVAILABLE', 'Prepare a Windows ticket worktree first.');
+      if (workspace.state !== 'ready') throw new ExecutionFailure('PREVIEW_UNAVAILABLE', 'Prepare a ticket worktree first.');
       if (command !== 'focusflow' && !/^npm run [A-Za-z0-9:_-]+$/.test(command)) throw new ExecutionFailure('PREVIEW_SETUP', 'Save a preview command in Project settings.');
       const cwd = workspace.workspacePath;
       const branch = await git(cwd, ['branch', '--show-current']);
@@ -78,10 +65,8 @@ export function createPreviewService(repository: Pick<ExecutionRepository, 'prev
       const dirty = !!await git(cwd, ['status', '--porcelain']);
       if (closed) throw new ExecutionFailure('PREVIEW_CLOSING', 'FocusFlow is closing.');
       const profile = command === 'focusflow' ? 'ticket-' + id : '';
-      const commandLine = profile ? 'Start-FocusFlow.cmd --review ' + profile : command;
-      const child = spawn('cmd.exe', ['/d', '/c', commandLine], { cwd, windowsHide: true,
-        stdio: ['ignore','pipe','pipe'], env: { ...gitEnvironment(), ...(profile ? { FOCUSFLOW_PREVIEW_READY: '1' } : {}) } });
-      const receipt: PreviewReceipt = { pid: child.pid ?? 0, stamp: '', stage: 'starting', url: '', command: commandLine, profile,
+      const { child, stamp, label } = launchPreview(cwd, command, profile);
+      const receipt: PreviewReceipt = { pid: child.pid ?? 0, stamp, stage: 'starting', url: '', command: label, profile,
         revision: revision.slice(0, 12) + (dirty ? ' with local changes' : '') };
       const owned = { process: child, receipt };
       live.set(id, owned);
@@ -106,13 +91,14 @@ export function createPreviewService(repository: Pick<ExecutionRepository, 'prev
       child.stderr?.on('data', output);
       child.once('error', () => { update({ stage: 'failed' }); live.delete(id); });
       child.once('close', code => {
-        update({ stage: owned.receipt.stage === 'stopping' || code === 0 ? 'stopped' : 'failed', url: '' });
+        const stopped = owned.receipt.stage === 'stopping' || owned.receipt.stage === 'stopped' || code === 0;
+        update({ stage: stopped ? 'stopped' : 'failed', url: '' });
         if (live.get(id) === owned) live.delete(id);
       });
       save(id, receipt);
-      if (child.pid) {
-        const stamp = await processStamp(child.pid);
-        if (stamp) update({ stamp });
+      if (child.pid && !stamp) {
+        const observed = await processStamp(child.pid);
+        if (observed) update({ stamp: observed });
       }
       return show(live.get(id)?.receipt ?? repository.preview(id));
     } finally { actions.delete(id); }
@@ -123,28 +109,35 @@ export function createPreviewService(repository: Pick<ExecutionRepository, 'prev
     try {
       const receipt = await lookup(id);
       if (!receipt || !activeStage(receipt)) return show(receipt);
-      if (receipt.stage === 'uncertain' || receipt.stage === 'stopping') return show(receipt);
       const owned = live.get(id);
-      const stamp = await processStamp(receipt.pid);
-      if (stamp === null) return show(save(id, { ...receipt, stage: 'stopped', url: '' }));
-      if (!stamp || (receipt.stamp ? stamp !== receipt.stamp : !owned || owned.process.exitCode !== null)) {
-        return show({ ...receipt, stage: 'uncertain' });
+      // Windows can exit before its initial start time was read. Only an owned,
+      // still-running child may acquire a missing stamp. Recovered receipts never do.
+      let stamp = receipt.stamp;
+      if (!stamp && process.platform === 'win32' && owned && owned.process.exitCode === null && owned.process.signalCode === null) {
+        stamp = await processStamp(receipt.pid) ?? '';
       }
+      if (!stamp) return show({ ...receipt, stage: 'uncertain' });
       const stopping = save(id, { ...receipt, stage: 'stopping', stamp });
       if (owned) owned.receipt = stopping;
-      await new Promise<void>(resolve => {
-        const kill = spawn('taskkill.exe', ['/PID', String(receipt.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
-        const finish = () => resolve();
-        kill.once('error', finish); kill.once('close', finish);
-      });
-      const after = await processStamp(receipt.pid);
-      const result = save(id, { ...stopping, stage: after === null || after && after !== stamp ? 'stopped' : 'uncertain', url: '' });
+      const stopped = await stopPreviewProcess(receipt.pid, stamp);
+      const result = save(id, { ...stopping, stage: stopped ? 'stopped' : 'uncertain', url: '' });
       if (owned && live.get(id) === owned) owned.receipt = result;
       return show(result);
     } finally { actions.delete(id); }
   }
-  return { state, start, stop,
+  function track<T>(action: Promise<T>) {
+    const pending = action.finally(() => { pendingActions.delete(pending); });
+    pendingActions.add(pending);
+    return pending;
+  }
+  return { state,
+    start: (workspace: CodingWorkspace, command: string) => track(start(workspace, command)),
+    stop: (id: string) => track(stop(id)),
     owned(id: string) { const receipt = repository.preview(id); return actions.has(id) || !!receipt && activeStage(receipt); },
-    async close() { closed = true; await Promise.allSettled([...live.keys()].map(stop)); },
+    async close() {
+      closed = true;
+      await Promise.allSettled([...pendingActions]);
+      await Promise.allSettled([...live.keys()].map(stop));
+    },
   };
 }

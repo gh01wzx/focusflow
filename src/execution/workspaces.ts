@@ -25,7 +25,7 @@ export function createWorkspaceService(repository: ExecutionRepository, projects
     if (!isAbsolute(entered)) throw new ExecutionFailure('ABSOLUTE_PATH_REQUIRED', 'Choose an absolute local folder path.');
     const sourcePath = await realpath(entered).catch(() => { throw new ExecutionFailure('MISSING_FOLDER', 'The local repository folder is unavailable.'); });
     const top = await realpath(await runGit(sourcePath, ['rev-parse', '--show-toplevel']));
-    if (top.toLowerCase() !== sourcePath.toLowerCase()) throw new ExecutionFailure('NOT_REPOSITORY_ROOT', 'Choose the repository root, not a subfolder.');
+    if (relative(top, sourcePath) !== '') throw new ExecutionFailure('NOT_REPOSITORY_ROOT', 'Choose the repository root, not a subfolder.');
     const remoteUrl = await runGit(sourcePath, ['remote', 'get-url', 'origin']);
     const match = /^(?:https:\/\/github\.com\/|git@github\.com:)([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+?)(?:\.git)?\/?$/.exec(remoteUrl);
     if (!match || match[1]!.toLowerCase() !== target.fullName.toLowerCase()) {
@@ -65,7 +65,7 @@ export function createWorkspaceService(repository: ExecutionRepository, projects
         const actual = await realpath(await runGit(workspacePath, ['rev-parse', '--show-toplevel']));
         const sourceCommon=await realpath(await runGit(checked.sourcePath,['rev-parse','--path-format=absolute','--git-common-dir']));
         const worktreeCommon=await realpath(await runGit(workspacePath,['rev-parse','--path-format=absolute','--git-common-dir']));
-        if (actual.toLowerCase() !== workspacePath.toLowerCase() || sourceCommon.toLowerCase()!==worktreeCommon.toLowerCase() || await runGit(workspacePath, ['branch', '--show-current']) !== branch) {
+        if (relative(actual, workspacePath) !== '' || relative(sourceCommon, worktreeCommon) !== '' || await runGit(workspacePath, ['branch', '--show-current']) !== branch) {
           throw new ExecutionFailure('WORKSPACE_CHANGED', 'The existing folder is not this ticket\'s worktree. It was left untouched.');
         }
         const result: CodingWorkspace = { ...workspace, state: 'ready', message: 'Workspace ready. No model or coding run has started.' };

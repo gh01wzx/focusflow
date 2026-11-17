@@ -34,7 +34,7 @@ export async function dispatchAiRoute(action: NonNullable<ReturnType<typeof matc
   }
   if (action === 'compatible-status') return compatible?.status() ?? { connected: false, endpoint: '' };
   if (action === 'compatible') {
-    if (!compatible) throw new HttpError(400, 'Open the Windows app to save a provider.');
+    if (!compatible) throw new HttpError(400, 'Open the desktop app to save a provider.');
     try { return await compatible.connect(input); }
     catch { throw new HttpError(400, 'Could not connect. Check the endpoint, API key and model listing.'); }
   }

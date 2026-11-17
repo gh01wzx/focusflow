@@ -92,7 +92,7 @@ export function createPublicationService(repository: PublicationRepository, proj
     async wait(projectId: string) { if (active?.projectId === projectId) await active.promise; return state(projectId); },
     async preview(projectId: string, ticketId?: string) {
       if (closing || active) throw new PublicationError('Wait for the current publication to finish.');
-      if (!provider) throw new PublicationError('Publication needs the Windows GitHub connection and an App with Issues read/write permission.');
+      if (!provider) throw new PublicationError('Publication needs a desktop GitHub connection and an App with Issues read/write permission.');
       const existing = repository.read(projectId);
       if (existing?.approvedAt && existing.items.some(item => item.stage !== 'published')) return state(projectId);
       let linked: GitHubRepository;

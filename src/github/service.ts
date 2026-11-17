@@ -107,7 +107,7 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
         if (shutdown.signal.aborted) throw new GitHubFailure('GitHub connection is closing.');
         await operation();
       } catch (error) {
-        message = error instanceof GitHubFailure ? error.message : 'GitHub credential storage or response could not be used. Check the Windows credential store, then reconnect.';
+        message = error instanceof GitHubFailure ? error.message : 'GitHub credential storage or response could not be used. Check your operating system credential store, then reconnect.';
       }
       return state(projectId).catch(() => ({ ...unavailableGitHub, available: true, message: 'Stored GitHub credentials could not be opened. Disconnect locally and authorize again; task data is unchanged.' }));
     });
@@ -138,7 +138,7 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
       const login=await account(token);
       const value:StoredGitHub={clientId:'',token,account:login,expiresAt:null,repositories:saved?.repositories??{}};
       await vault.write(value);saved=value;device=null;preview=null;repositories=[];
-      message='GitHub token checked and stored using Windows encryption. Inspect and confirm this project repository; no Issue or code was published.';
+      message='GitHub token checked and stored using operating system encryption. Inspect and confirm this project repository; no Issue or code was published.';
     }),
     status: (projectId: string) => run(projectId, renew),
     start: (projectId: string, clientId: unknown) => run(projectId, async () => {

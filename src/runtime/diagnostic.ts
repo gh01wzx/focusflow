@@ -11,7 +11,7 @@ export function diagnoseRuntime(executable: string, args: string[], timeoutMs = 
   return new Promise(resolve => {
     try {
     const environment: NodeJS.ProcessEnv = {};
-    for (const key of ['PATH','Path','SystemRoot','WINDIR','USERPROFILE','APPDATA','LOCALAPPDATA','TEMP','TMP']) if (process.env[key]) environment[key] = process.env[key];
+    for (const key of ['PATH','Path','SystemRoot','WINDIR','USERPROFILE','APPDATA','LOCALAPPDATA','HOME','TEMP','TMP','TMPDIR']) if (process.env[key]) environment[key] = process.env[key];
     if (testProfile) environment.FOCUSFLOW_TEST_PROFILE = testProfile;
     const child = spawn(executable, args, { env: environment, stdio: ['ignore','pipe','ignore'], windowsHide: true });
     let output = '', timedOut = false, done = false;

@@ -50,4 +50,4 @@ export function parseGitHubStatus(value: unknown): GitHubStatus {
 }
 export const unavailableGitHub: GitHubStatus = { available: false, connected: false, account: null, clientId: '',
   repository: null, preview: null, repositories: [], userCode: null, nextPollAt: 0,
-  message: 'GitHub connection requires the Windows desktop app and OS-protected credential storage. Manual projects remain available.' };
+  message: 'GitHub connection requires the desktop app and OS-protected credential storage. Manual projects remain available.' };

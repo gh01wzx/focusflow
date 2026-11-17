@@ -11,6 +11,15 @@ export function CloseIcon() {
 export function PlusIcon() {
   return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>;
 }
+export function MoonIcon() {
+  return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" /></svg>;
+}
+export function PlayIcon() {
+  return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5L8 5.5Z" /></svg>;
+}
+export function SkipIcon() {
+  return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 7 6-7 6M15 6v12" /></svg>;
+}
 export function SparkIcon() {
   return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18" /></svg>;
 }

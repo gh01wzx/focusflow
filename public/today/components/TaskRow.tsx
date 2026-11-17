@@ -3,10 +3,10 @@ import { points } from '../../../src/shared/personal.ts';
 import type { ScoringRule } from '../../../src/shared/personal.ts';
 import type { Task, TaskResolution } from '../../../src/shared/tasks.ts';
 import { dateText } from '../view-options.ts';
-import { cueLine } from '../habit-insights.ts';
-import type { HabitInsight } from '../habit-insights.ts';
+import { cueLine } from '../../../src/shared/habits.ts';
+import type { HabitInsight } from '../../../src/shared/habits.ts';
 import { HabitTrack } from './HabitCard.tsx';
-import { CheckIcon, CloseIcon, PencilIcon } from './Icons.tsx';
+import { CheckIcon, CloseIcon, MoonIcon, PencilIcon } from './Icons.tsx';
 
 interface TaskRowProps {
   task: Task;
@@ -26,7 +26,8 @@ export function TaskRow({ task, today, busy, completable = true, rule, insight, 
   const [checking, setChecking] = useState(false);
   const pending = task.status === 'pending';
   const late = pending && !task.frequency && task.plannedDate < today;
-  const statusLabel = task.status === 'completed' ? 'Completed' : task.status === 'missed' ? 'Missed' : 'Cancelled';
+  const statusLabel = task.status === 'completed' ? 'Completed' : task.status === 'missed' ? 'Missed'
+    : task.recurrenceId ? 'Rest day' : 'Cancelled';
   const cue = cueLine(rule);
 
   return (
@@ -64,8 +65,11 @@ export function TaskRow({ task, today, busy, completable = true, rule, insight, 
       {pending && rule?.mode === 'complete' && rule.rate > 0 && <span className="points-badge" title="Points when done">+{points(rule.rate)}</span>}
       {onEdit && <button className="icon-button" disabled={busy} aria-label={`Edit plan for ${task.title}`} title="Edit plan"
         onClick={() => onEdit(task)}><PencilIcon /></button>}
-      {pending && <button className="icon-button" disabled={busy || checking} aria-label={`Cancel ${task.title}`} title="Cancel"
-        onClick={() => void onResolve(task.id, 'cancelled')}><CloseIcon /></button>}
+      {/* Skipping a repeating occurrence is a planned rest day; it never breaks the habit chain. */}
+      {pending && task.recurrenceId && <button className="icon-button" disabled={busy || checking} aria-label={`Rest today ${task.title}`}
+        title="Rest today" onClick={() => void onResolve(task.id, 'cancelled')}><MoonIcon /></button>}
+      {pending && !task.recurrenceId && <button className="icon-button" disabled={busy || checking} aria-label={`Cancel ${task.title}`}
+        title="Cancel" onClick={() => void onResolve(task.id, 'cancelled')}><CloseIcon /></button>}
       {!pending && onReopen && <button className="text-button" disabled={busy} aria-label={`Reopen ${task.title}`}
         onClick={() => onReopen(task.id)}>Reopen</button>}
     </div>

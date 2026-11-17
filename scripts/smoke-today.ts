@@ -209,12 +209,12 @@ try {
     await page.getByText('Overdue', { exact: true }).waitFor();
     await add('Plan tomorrow', shift(1));
     await page.getByRole('heading', { name: 'Upcoming', exact: true }).waitFor();
-    await page.getByRole('button', { name: /Today/ }).click();
+    await page.getByRole('navigation', { name: 'Personal views', exact: true }).getByRole('button', { name: /^.?Today/ }).click();
     assert.equal(await page.getByText('Plan tomorrow', { exact: true }).count(), 0);
     await page.screenshot({ path: join(artifacts, 'today.png'), fullPage: true });
     await add('\u4fdd\u7559\u539f\u6587 <img src=x onerror=alert(1)>');
     assert.equal(await page.locator('img').count(), 0);
-    await page.getByRole('button', { name: /History/ }).click();
+    await page.getByRole('navigation', { name: 'Personal views', exact: true }).getByRole('button', { name: /History/ }).click();
     await page.getByText('Finish a small task', { exact: true }).waitFor();
     await page.getByText('An optional task', { exact: true }).waitFor();
     mark('repeating-task-controls');
@@ -222,8 +222,9 @@ try {
     await page.getByRole('checkbox', { name: 'Complete Daily check-in', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Task completed.' }).waitFor();
     await add('Weekly review', today, 'weekly');
-    await page.getByRole('button', { name: 'Cancel Weekly review', exact: true }).click();
-    await page.getByRole('status').filter({ hasText: 'Task cancelled.' }).waitFor();
+    // Skipping a repeating occurrence is recorded as a rest day.
+    await page.getByRole('button', { name: 'Rest today Weekly review', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Rest day recorded.' }).waitFor();
     await add('Daily unfinished', today, 'daily');
     await add('Future repeat', shift(1), 'weekly');
     await page.locator('.recurrences summary').click();
@@ -262,7 +263,7 @@ try {
     assert.equal(rolled.history.find(task => task.title === 'Daily unfinished')?.status, 'missed');
     assert.equal(rolled.history.find(task => task.title === 'Daily check-in')?.status, 'completed');
     assert.equal(rolled.history.find(task => task.title === 'Weekly review')?.status, 'cancelled');
-    await page.getByRole('button', { name: /History/ }).click();
+    await page.getByRole('navigation', { name: 'Personal views', exact: true }).getByRole('button', { name: /History/ }).click();
     await page.getByText('Missed', { exact: true }).waitFor();
     await page.screenshot({ path: join(artifacts, 'recurrence-history.png'), fullPage: true });
     mark('repeat-rollover-restart'); await closeApp(); page = await launch();

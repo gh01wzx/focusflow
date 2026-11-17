@@ -43,13 +43,21 @@ npm run codex:write-trial -- --live
 
 The default command prints scope only. It does not create a profile, start a process or call a model. The explicit live command uses the pinned official runtime and the existing dedicated Phase 0 ChatGPT profile; it refuses API-key mode and does not install or sign in automatically.
 
-The live scope is one disposable TypeScript addition fix, three immutable checks, one owned outside sentinel and a loopback HTTP listener. It requests workspace-write with general temporary-directory write roots excluded and network disabled, uses the user approval reviewer, and cancels every escalation request. There are at most two model turns: one write/check turn, then an immediate cancellation turn only if the first observations pass. Ctrl+C, timeout, unknown tools, unrelated file patches, failure or incomplete evidence block the trial. There is no automatic retry or broader-permission fallback.
+The live scope is one disposable TypeScript addition fix, three immutable checks, one owned outside sentinel and a loopback HTTP listener. It requests workspace-write with general temporary-directory write roots excluded and network disabled, uses the user approval reviewer, and declines every escalation request. A declined request lets the same turn continue under its existing permissions. There are at most two model turns: one write/check turn, then an immediate cancellation turn only if the first observations pass. Ctrl+C, timeout, unknown tools, unrelated file patches, failure or incomplete evidence block the trial. There is no automatic retry or broader-permission fallback.
 
 The three exact PowerShell commands must each complete with a matching exit code and marker. The host checks exact final file bytes, rejects extra files/symlinks, checks its outside sentinel and counts listener requests. Command strings, paths, prompts, provider prose, thread identifiers and credentials are not written to the result. Output appears only after the owned Codex process exits and its workspace is removed. The separate guard and listener are cleaned in a finalizer.
 
 These are observations, not a security boundary. Tool notifications arrive after execution. They cannot establish all possible file/command restrictions; workspace-write is not private-file read isolation. A loopback probe does not establish internet, Git permission or approval behavior, nor production recovery. A denied request alone is not successful sandbox enforcement. Unrecognized permission errors or a provider wrapping/changing an exact check command leave evidence incomplete. Even an observations-complete result requires owner review and a separate decision in #49; this command never enables execution features.
 
 Ordinary tests use fake protocol messages and disposable fixture files, with no live model or authenticated GitHub writes. CI does not run --live. The real Windows write/permission/cancellation gate remains open.
+
+### Check Windows sandbox writes without a model
+
+~~~powershell
+npm run codex:write-trial -- --sandbox-only
+~~~
+
+This check uses the trial's existing pinned runtime and profile. It queries Windows sandbox readiness and runs one fixed local command in a disposable workspace using the same workspace-write policy as the live trial. The host verifies the file bytes. No account lookup, model turn, setup escalation or public write is requested. Passing verifies a local command under that policy. The model's file patch, approval and cancellation paths still need live acceptance.
 
 ### Diagnose a trial that stops before coding
 
@@ -59,6 +67,6 @@ npm run codex:write-trial -- --diagnose
 
 This command performs one owned runtime initialization and cleanup using the existing dedicated Phase 0 profile. It does not read account status, start a thread, call a model, install, sign in or create a new profile. A successful initialization does not verify authentication or coding permissions.
 
-Blocked trial output now names the phase and whether the model phase was reached. After successful owned-process cleanup it also includes the numeric exit code, signal and an allowlisted spawn-error code. No raw stderr, user paths or account details are printed. A CLOSED transport result alone does not diagnose its cause. A runtime exiting before initialization with access problems needs inspection of the existing profile/configuration and host permissions in the normal Windows environment.
+Blocked trial output names the phase and whether the model phase was reached. When available, it includes the terminal status, permission requests denied by the trial, observed check completions, and the test file outcome. The runtime stderr tail is checked in memory for a few known failure categories. Only category names are reported. After successful owned-process cleanup it also includes the numeric exit code, signal and an allowlisted spawn-error code. No raw stderr, user paths or account details are printed. A CLOSED transport result alone does not diagnose its cause. A runtime exiting before initialization with access problems needs inspection of the existing profile/configuration and host permissions in the normal Windows environment.
 
 Do not copy credentials into another profile, disable the sandbox, widen writable roots or repeatedly retry an unchanged failing live run. Record the exact commit, result and one next experiment in #49. A successful empty-profile initialization is only diagnostic comparison; it is not an authorized replacement login or live-write validation.

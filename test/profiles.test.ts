@@ -9,8 +9,6 @@ import { selectProfile } from '../src/runtime/profile.ts';
 import { openWorkspaceStore } from '../src/workspace/store.ts';
 import { startWorkspaceServer } from '../src/workspace/server.ts';
 import { MIGRATIONS, SCHEMA_VERSION } from '../src/database/schema.ts';
-import { TICKET_STATUSES } from '../src/shared/projects.ts';
-import { projectActions } from '../src/shared/actions.ts';
 
 async function fixture(t: TestContext) {
   const root = await mkdtemp(join(tmpdir(), 'focusflow-profiles-'));
@@ -32,11 +30,12 @@ test('default source, named review and installed data stay separate and reopen d
   const root = await fixture(t);
   const everyday = profile(root, true);
   assert.equal(everyday.directory, join(root, 'FocusFlow', 'desktop'));
-  assert.equal(everyday.sampleLabel, null);
+  assert.equal(everyday.workspaceLabel, null);
   const development = profile(root);
   const review = profile(root, true, ['--review', 'PR-72']);
-  assert.equal(development.sampleLabel, 'Development');
-  assert.equal(review.sampleLabel, 'Review pr-72');
+  assert.equal(development.workspaceLabel, 'Development');
+  assert.equal(review.workspaceLabel, 'Review pr-72');
+  assert.equal(review.directory, join(root, 'FocusFlow', 'workspaces', 'reviews', 'pr-72', `schema-${SCHEMA_VERSION}`));
   assert.equal(new Set([everyday.directory, development.directory, review.directory]).size, 3);
   assert.deepEqual(profile(root), development);
   assert.deepEqual(profile(root, false, ['--review', 'pr-72']), review);
@@ -45,7 +44,7 @@ test('default source, named review and installed data stay separate and reopen d
     checkoutDirectory: join(root, 'another-checkout'), schemaVersion: SCHEMA_VERSION }).directory, development.directory);
   assert.notEqual(profile(root, false, [], SCHEMA_VERSION + 1).directory, development.directory);
   assert.notEqual(profile(root, true, ['--review', 'pr-72'], SCHEMA_VERSION + 1).directory, review.directory);
-  assert.equal(profile(root, true, ['--review']).sampleLabel, 'Review local');
+  assert.equal(profile(root, true, ['--review']).workspaceLabel, 'Review local');
 });
 
 test('review names cannot select arbitrary paths or silently use an inherited test override', async t => {
@@ -57,47 +56,34 @@ test('review names cannot select arbitrary paths or silently use an inherited te
     checkoutDirectory: root, schemaVersion: SCHEMA_VERSION, testProfile: join(root, 'test') }), /Clear FOCUSFLOW_TEST_PROFILE/);
   const custom = selectProfile({ packaged: true, args: [], localDataDirectory: root,
     checkoutDirectory: root, schemaVersion: SCHEMA_VERSION, testProfile: join(root, 'test') });
-  assert.deepEqual(custom, { directory: join(root, 'test'), sampleLabel: null });
+  assert.deepEqual(custom, { directory: join(root, 'test'), workspaceLabel: null });
 });
 
-test('sample edits survive reopening without re-seeding or changing everyday data', async t => {
+test('new review data starts empty, reopens with its edits, and leaves everyday data alone', async t => {
   const root = await fixture(t);
   const everyday = database(profile(root, true).directory);
   let personal = await openWorkspaceStore(everyday, now);
   personal.tasks.add({ title: 'Everyday sentinel', plannedDate: '2026-11-05' });
   personal.close();
   const original = await readFile(everyday);
-  const sample = database(profile(root, true, ['--review', 'pr-72']).directory);
-  let store = await openWorkspaceStore(sample, now, true);
+
+  const review = database(profile(root, true, ['--review', 'pr-72']).directory);
+  let store = await openWorkspaceStore(review, now);
   const first = store.tasks.view();
-  assert.equal(first.due.length, 2);
-  assert.equal(first.upcoming.length, 1);
-  assert.equal(first.recurrences.length, 1);
-  const examples = store.projects.view();
-  assert.equal(examples.milestones.length, 3);
-  assert.equal(examples.tickets.length, 12);
-  for (const status of TICKET_STATUSES) assert.equal(examples.tickets.filter(ticket => ticket.status === status).length, status === 'backlog' ? 6 : 2);
-  assert.ok(examples.tickets.every(ticket => ticket.executionMode === 'manual' && ticket.description && ticket.acceptanceCriteria));
-  assert.equal(examples.dependencies.length, 4);
-  assert.ok(examples.dependencies.every(link => examples.tickets.find(ticket => ticket.id === link.ticketId)!.milestoneId
-    !== examples.tickets.find(ticket => ticket.id === link.prerequisiteId)!.milestoneId));
-  const dependent = examples.tickets.find(ticket => ticket.title === 'Start after the demo goal is done')!;
-  assert.throws(() => store.projects.start(dependent.id), /prerequisites/);
-  assert.ok(['Move this sample ticket', 'Write the demo goal', 'Add a short column guide'].includes(projectActions(store.projects.actions()).next!.ticket.title));
-  assert.ok(examples.tickets.some(ticket => ticket.blockReason));
-  const task = first.due.find(value => value.recurrenceId === null)!;
-  store.tasks.resolve(task.id, 'completed');
-  store.tasks.add({ title: 'My review task', plannedDate: '2026-11-05' });
-  const ticket = examples.tickets.find(ticket => ticket.title === 'Move this sample ticket')!;
-  store.projects.setStatus(ticket.id, 'done');
+  assert.deepEqual([first.due, first.upcoming, first.history, first.recurrences], [[], [], [], []]);
+  assert.deepEqual(store.projects.view().projects, []);
+  const task = store.tasks.add({ title: 'My review task', plannedDate: '2026-11-05' });
+  const project = store.projects.addProject({ title: 'My review project' });
+  const milestone = store.projects.addMilestone({ projectId: project.id, title: 'Review milestone' });
+  store.projects.addTicket({ milestoneId: milestone.id, title: 'Review ticket' });
   const saved = store.tasks.view();
   const projects = store.projects.view();
   store.close();
-  store = await openWorkspaceStore(sample, now, true);
+  store = await openWorkspaceStore(review, now);
   try {
     assert.deepEqual(store.tasks.view(), saved);
     assert.deepEqual(store.projects.view(), projects);
-    assert.equal(store.tasks.view().history.find(value => value.id === task.id)?.status, 'completed');
+    assert.ok(store.tasks.view().due.some(item => item.id === task.id));
   } finally { store.close(); }
   assert.deepEqual(await readFile(everyday), original);
   personal = await openWorkspaceStore(everyday, now);
@@ -125,7 +111,7 @@ test('older and newer review formats remain untouched; migration needs an explic
   future.exec(`PRAGMA user_version=${SCHEMA_VERSION + 1}`); future.close();
   const futureBytes = await readFile(newer);
   const current = database(profile(root, true, args).directory);
-  const sample = await openWorkspaceStore(current, now, true); sample.close();
+  const sample = await openWorkspaceStore(current, now); sample.close();
   assert.deepEqual(await readFile(old), before);
   assert.deepEqual(await readFile(newer), futureBytes);
   const oldReader = new DatabaseSync(old, { readOnly: true });
@@ -135,7 +121,7 @@ test('older and newer review formats remain untouched; migration needs an explic
   const trial = database(profile(root, true, ['--review', 'migration-copy']).directory);
   await mkdir(dirname(trial), { recursive: true });
   await copyFile(old, trial);
-  const migrated = await openWorkspaceStore(trial, now, true);
+  const migrated = await openWorkspaceStore(trial, now);
   try {
     assert.deepEqual(migrated.tasks.view().due.map(value => value.title), ['Keep the old review']);
     assert.equal(migrated.projects.view().projects.length, 0, 'Existing copies must never receive examples.');
@@ -144,19 +130,19 @@ test('older and newer review formats remain untouched; migration needs an explic
   assert.equal((await readdir(join(dirname(trial), 'backups'))).filter(name => name.endsWith('.db')).length, 1);
 });
 
-test('sample notice and title are escaped and absent from the everyday page', async t => {
+test('workspace notice and title are escaped and absent from the everyday page', async t => {
   const root = await fixture(t);
-  const sample = await startWorkspaceServer({ dataDirectory: join(root, 'sample'), clock: now, sampleLabel: '<script>Review</script>' });
+  const sample = await startWorkspaceServer({ dataDirectory: join(root, 'sample'), clock: now, workspaceLabel: '<script>Review</script>' });
   const personal = await startWorkspaceServer({ dataDirectory: join(root, 'everyday'), clock: now });
   try {
     const html = await (await fetch(sample.origin)).text();
     assert.match(html, /role="note"/);
-    assert.match(html, /<strong>Sample data<\/strong>/);
+    assert.match(html, /<strong>Separate workspace<\/strong>/);
     assert.match(html, /&lt;script&gt;Review&lt;\/script&gt;/);
     assert.doesNotMatch(html, /<script>Review/);
     assert.match(html, /<title>FocusFlow - &lt;script&gt;Review/);
     const ordinary = await (await fetch(personal.origin)).text();
-    assert.doesNotMatch(ordinary, /sample-notice|sample-data-notice|Everyday tasks are separate/);
+    assert.doesNotMatch(ordinary, /workspace-notice|workspace-notice-placeholder|Your everyday data stays separate/);
     assert.match(ordinary, /<title>FocusFlow<\/title>/);
   } finally { await sample.close(); await personal.close(); }
 });

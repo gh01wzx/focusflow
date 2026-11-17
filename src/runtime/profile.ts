@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 
 export interface LaunchProfile {
   directory: string;
-  sampleLabel: string | null;
+  workspaceLabel: string | null;
 }
 
 export function selectProfile(options: {
@@ -27,17 +27,17 @@ export function selectProfile(options: {
       throw new Error('Use a review name of up to 48 letters, numbers or hyphens, such as pr-72.');
     }
     return {
-      directory: join(root, 'reviews', name.toLowerCase(), `schema-${options.schemaVersion}`),
-      sampleLabel: `Review ${name.toLowerCase()}`,
+      directory: join(root, 'workspaces', 'reviews', name.toLowerCase(), `schema-${options.schemaVersion}`),
+      workspaceLabel: `Review ${name.toLowerCase()}`,
     };
   }
-  if (options.testProfile) return { directory: resolve(options.testProfile), sampleLabel: null };
-  if (options.packaged || personal) return { directory: join(root, 'desktop'), sampleLabel: null };
+  if (options.testProfile) return { directory: resolve(options.testProfile), workspaceLabel: null };
+  if (options.packaged || personal) return { directory: join(root, 'desktop'), workspaceLabel: null };
   const checkout = resolve(options.checkoutDirectory);
   const identity = createHash('sha256').update(process.platform === 'win32' ? checkout.toLowerCase() : checkout)
     .digest('hex').slice(0, 16);
   return {
-    directory: join(root, 'development', identity, `schema-${options.schemaVersion}`),
-    sampleLabel: 'Development',
+    directory: join(root, 'workspaces', 'development', identity, `schema-${options.schemaVersion}`),
+    workspaceLabel: 'Development',
   };
 }

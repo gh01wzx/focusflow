@@ -22,6 +22,7 @@ export function TicketAiPanel({ ticket, onChanged, onBusy, onVisit }: {
   const [state, setState] = useState<State>();
   const [open, setOpen] = useState(false);
   const [action, setAction] = useState<'text' | 'breakdown'>('breakdown');
+  const [modelReady, setModelReady] = useState(false);
   const [selection, setSelection] = useState(defaultAiModelSelection);
   const [defaults, setDefaults] = useState<{ planning?: AiModelSelection; execution?: AiModelSelection }>({});
   const [suggestions, setSuggestions] = useState<SuggestedTicket[]>([]);
@@ -68,9 +69,9 @@ export function TicketAiPanel({ ticket, onChanged, onBusy, onVisit }: {
         <option value="breakdown">Break down</option>
         {ticket.executionMode === 'manual' && <option value="text">Execute as a written result</option>}
       </select></label>
-      <ModelPicker value={selection} onChange={setSelection} disabled={busy} />
+      <ModelPicker value={selection} onChange={setSelection} onReadyChange={setModelReady} disabled={busy} />
       <p>Uses {selection.provider === 'codex' ? 'ChatGPT Codex allowance' : aiProviderNames[selection.provider] + ' API balance'} and sends the ticket and project context.</p>
-      <button className="primary" disabled={busy || !selection.model} onClick={() => void act('run', { action, selection, confirm: true })}>
+      <button className="primary" disabled={busy || !modelReady} onClick={() => void act('run', { action, selection, confirm: true })}>
         {action === 'breakdown' ? 'Generate breakdown' : 'Generate result'}
       </button>
     </>}

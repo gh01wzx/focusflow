@@ -14,7 +14,7 @@
 body {
   margin: 0;
 }
-.sample-notice {
+.workspace-notice {
   position: sticky;
   top: 0;
   z-index: 10;
@@ -25,8 +25,8 @@ body {
   line-height: 20px;
   font-size: 13px;
 }
-.sample-notice + #root .shell,
-.sample-notice + #root .sidebar {
+.workspace-notice + #root .shell,
+.workspace-notice + #root .sidebar {
   min-height: calc(100vh - 45px);
 }
 button,
@@ -77,6 +77,9 @@ svg {
 }
 .brand {
   display: flex;
+  border: 0;
+  background: transparent;
+  text-align: left;
   align-items: center;
   gap: 12px;
   font-size: 21px;
@@ -188,14 +191,6 @@ nav {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-.local-dot {
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #8da47d;
-  flex-shrink: 0;
 }
 main {
   width: 100%;
@@ -604,20 +599,6 @@ h3 {
   white-space: nowrap;
   border: 0;
 }
-footer {
-  border-top: 1px solid #e6ebdf;
-  padding-top: 20px;
-  margin-top: 20px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 10px;
-  color: #9aa58e;
-}
-.footer-detail {
-  margin-left: auto;
-  color: #b0b9a6;
-}
 @media (max-width: 1050px) {
   main {
     padding: 30px 34px;
@@ -695,9 +676,6 @@ footer {
     margin-left: auto;
   }
   .section-hint,
-  .footer-detail {
-    display: none;
-  }
   .task-section {
     min-height: 290px;
   }

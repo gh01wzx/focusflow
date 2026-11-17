@@ -1,142 +1,63 @@
 # Development
 
-The product is a personal-use local tool run from source. Start-FocusFlow.cmd is the only Windows command file; it also accepts --review NAME. The owner requested implementation without automated tests or live model trials. Verification workflows are manual-only, and neither their absence nor a merged PR is evidence that the new code works. Formal installation, signing, distribution, release and updating are outside scope.
-
-Prerequisite: Node 24.12.x or later 24.x. Install exact dependencies with npm ci.
+Use Node.js 24.12 or a later 24.x version. Install exact dependencies with `npm ci`. Open the app from source with `Start-FocusFlow.cmd`. Packaging, distribution and app updates are outside the personal-use scope.
 
 ## Where information belongs
 
-| Content | Main location |
+| Information | Location |
 | --- | --- |
-| Planned work and task status | GitHub Issues, starting at the [MVP task index](https://github.com/gh01wzx/focusflow/issues/28) |
-| Current use and launch instructions | [README](../README.md) |
-| Detailed task, project and optional integration instructions | [Usage](USAGE.md) |
-| Current code layout and reading path | [Architecture](ARCHITECTURE.md) |
-| Developer commands, data profiles and recovery | This document |
-| Approved product scope | [Product baseline](PRODUCT_BASELINE.md) |
-| Verification coverage and limits | [Validation](VALIDATION.md) |
-| Lasting collaboration rules | [AGENTS.md](../AGENTS.md) |
-| Change-specific results and history | The corresponding PR and Git history |
-
-Update the main location when information changes. Link to it elsewhere instead of copying temporary task status. Keep future features in Issues until a selected task needs an implementation.
+| Launch and everyday use | [README](../README.md) and [Usage](USAGE.md) |
+| Product decisions and code layout | [Product baseline](PRODUCT_BASELINE.md) and [Architecture](ARCHITECTURE.md) |
+| Data paths, commands and recovery | This document |
+| Collaboration rules | [AGENTS.md](../AGENTS.md) |
+| Work to do and owner acceptance | GitHub Issues, including [Windows acceptance](https://github.com/gh01wzx/focusflow/issues/68) |
+| Results for a change, known failures and development history | Its pull request and Git history |
 
 ## Tasks and PRs
 
-Use the [task template](../.github/ISSUE_TEMPLATE/task.md) for one user story and the [PR template](../.github/pull_request_template.md) for its proposed change. Explain maintenance work through the owner's problem and an observable result too.
-
-After GitHub creates an Issue, add its actual number to the title; do not guess the next number. Follow [AGENTS.md](../AGENTS.md#work-with-the-owner) for naming and owner decisions. For example, task 21 uses [21] Create tasks that repeat daily or weekly and branch 21-repeat-daily-or-weekly. The PR uses the same task ID and Closes #21; its GitHub PR number is separate.
+Use the [task template](../.github/ISSUE_TEMPLATE/task.md) and [PR template](../.github/pull_request_template.md). Use the assigned Issue number in the branch and PR title. Explain the user-facing change, how to try the proposed build and what remains unverified. Record the exact revision and profile for each observed result.
 
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
-| npm start | Clean/build and open separate development sample data |
-| npm run review -- pr-72 | Clean/build and open named review sample data |
-| npm run start:web | Open development sample data in a browser |
-| npm run check:language | Check maintained source/docs for accidental Han-script text |
-| npm run diagnose:desktop | Try the built Windows runtime once, without opening task data; report bounded startup evidence |
-| npm run typecheck | Dependency boundaries plus strict Node, browser, desktop and tooling checks |
-| npm run check:boundaries | Static module boundaries, unresolved imports and runtime cycles |
-| npm run build | Clean ignored dist output, compile TypeScript and bundle assets |
-| npm test | Run compiled tests |
-| npm run test:source | Optional Node type-stripping execution; not a type check |
-| npm run ai:install | Explicitly install pinned Codex into the separate product runtime; no login or model turn |
+| `Start-FocusFlow.cmd` | Build and open the everyday app |
+| `Start-FocusFlow.cmd --review NAME` | Build and open a named, separate workspace |
+| `npm start` / `npm run start:web` | Open a development workspace in Electron or a browser |
+| `npm run typecheck` | Check module boundaries and compile all TypeScript without writing output |
+| `npm run check:language` | Check maintained source and documentation language |
+| `npm run build` | Rebuild the ignored `dist` directory |
+| `npm run diagnose:desktop` | Try the built Windows runtime once without opening task data |
+| `npm run ai:install` | Install the pinned Codex runtime before first use |
+| `npm test` / `npm run test:source` | Run compiled tests or source tests when authorized |
+| `npm run codex:write-trial -- --sandbox-only` | Check a disposable Windows write using the existing trial setup without a model |
 
-Start-FocusFlow.cmd builds and opens fixed personal data using npm start -- --personal. Start-FocusFlow.cmd --review pr-72 opens separate sample data. npm start without --personal remains a developer sample launch. Existing development/review data is not automatically imported into the personal profile. Run npm ci again when dependencies change.
-
-## Source and generated files
-
-[Architecture](ARCHITECTURE.md) maps the folders and the code-reading path. Source lives in public and src; scripts prepare or check the app; test contains automated scenarios. Generated dist files and installer output are ignored by Git.
-
-The build removes only the validated project dist directory before compiling. Deleted source files therefore cannot survive as stale compiled code.
+Use [Codex commands](CODEX.md) for runtime diagnostics and [GitHub connection](GITHUB_CONNECTION.md) for authorization. GitHub verification workflows are manual-only. Tests use disposable storage, simulated providers and no personal data. Record build checks, hosted results, Windows owner acceptance and live provider evidence separately.
 
 ## Data paths
 
-| Launch | Directory under %LOCALAPPDATA%\FocusFlow |
+| Launch | Directory under `%LOCALAPPDATA%\FocusFlow` |
 | --- | --- |
-| Start-FocusFlow.cmd / source --personal / legacy installed default | desktop |
-| npm start / browser developer default without --personal | development\CHECKOUT_ID\schema-N |
-| Source or installed --review pr-72 | reviews\pr-72\schema-N |
+| `Start-FocusFlow.cmd` or source with `--personal` | `desktop` |
+| `npm start` or browser development default | `workspaces\development\CHECKOUT_ID\schema-N` |
+| `--review NAME` | `workspaces\reviews\NAME\schema-N` |
 
-Each directory contains data\tracker.db. N is the running build's database format; CHECKOUT_ID is a stable hash of the source directory. Reopening the same directory/name and format keeps changes. Named reviews can be reopened from another checkout; use a distinct name for each PR or independent trial. A schema change opens a separate sample workspace. No automatic import, reset or deletion occurs.
+Each directory stores `data\tracker.db` and its own connection settings. The development ID comes from the checkout path. A named workspace is shared across checkouts that use the same name and format. Open another name for a fresh workspace. Previous `development` and `reviews` folders stay on disk. Launch uses the current paths in the table.
 
-Coding worktrees are retained in coding-workspaces\TICKET_ID beside data in the selected profile. Runs, publication journals and review decisions stay in that profile's database. Pending permission requests are memory-only and never automatically approved on restart. Schema 13-16 append these tables without rewriting applied migrations. Reopening only reconciles saved state; another model turn or remote write requires its own explicit action.
+`FOCUSFLOW_TEST_PROFILE` overrides the desktop test directory. The browser development service accepts `FOCUSFLOW_DATA_DIR`. Use disposable directories for these overrides. The desktop rejects combinations of test, personal and review modes that would make the selected directory ambiguous.
 
-Development/review windows show a sample-data notice and title. Examples are added only when creating a database; reopening an existing database, including a deliberate migration copy, does not add examples. First-time examples are written in one transaction. A failed initial seed fails startup without partial examples; it does not delete the new database. Use a new review name for a fresh trial after investigating that failure.
-
-Explicit developer overrides remain available for existing tools: FOCUSFLOW_TEST_PROFILE selects a desktop-test directory, and FOCUSFLOW_DATA_DIR selects browser-service data directly. Neither seeds examples. Clear FOCUSFLOW_TEST_PROFILE before using --review; a conflict is refused. Browser review mode ignores FOCUSFLOW_DATA_DIR and uses the named review. These overrides are not everyday/review launch instructions.
-
-Previous spike, development/review data and the separate Codex profile are never imported or deleted by source cleanup. The personal source launcher reuses the established desktop everyday-data location. Its path does not change with checkout or schema version, and it never seeds examples. --personal refuses --review or FOCUSFLOW_TEST_PROFILE conflicts rather than silently choosing another profile.
-
-Private plan drafts use the current profile database and its snapshots. Reopening a draft reads local storage only. The shared current shutdown path cancels planning before data closure. No new schema version is introduced for enabling this interface.
-
-## AI account setup and validation
-
-The AI connection preview uses official Codex app-server over owned stdio, pinned to 0.166.0, with a shared codex-product runtime, a codex-profile directory in the selected app profile, and keyring credential mode. The existing codex-phase0 probe remains separate and keeps its established commands. Runtime installation needs Node 24/npm; the desktop bundles neither a model nor this external runtime.
-
-The route follows [official app-server authentication](https://developers.openai.com/codex/app-server/) and [credential-storage guidance](https://developers.openai.com/codex/auth/). Account checks read sanitized account/plan fields. Sign-in is explicit and stays in an owned process until completion, cancellation or timeout. Windows starts the version-checked native executable with a hidden window; it does not use the npm wrapper for background requests. Cancel sign-in closes the local protocol and waits for owned-process cleanup rather than waiting for a provider reply. A timeout gives a retry message. The read-only model check uses the existing tool-denying probe in a disposable directory and requires a fresh server-side ChatGPT account check plus explicit allowance confirmation. No automatic API-key fallback exists.
-
-The shared AI provider service exposes connection status, model discovery and read-only responses. Plan generation checks the connection and reloads model metadata before sending a prompt. The pinned Codex app-server has no forced-refresh option. FocusFlow removes its own profile's model cache before discovery and requires a replacement from the runtime. DeepSeek Harness checks the DeepSeek API key and reads the official model catalog. Its isolated SDK handles model requests.
-
-
-Automated account, quota and login results are simulated. Before accepting the product integration gate, the owner must install the pinned runtime, explicitly sign in on Windows, confirm OS credential-store use, run one opted-in read-only check and record the exact app commit and result in its PR. Do not treat earlier Phase 0 results as verification of this new profile or UI. No new model run or authorization occurs on app launch.
-
-Do not point test overrides at real data. Do not commit databases, credentials, local config or logs.
-
-### Deliberate migration trials
-
-Ordinary review never copies everyday data. Prefer synthetic fixtures for migration checks. If a copy is explicitly needed, close every app using its source, preserve that source and its backups, and copy to a new trial directory before opening the candidate build. Use SQLite's verified snapshot tooling for live/WAL data; copying only tracker.db while it is open is not a consistent backup.
-
-For a verified snapshot, run restore-snapshot.ts below with a new destination at %LOCALAPPDATA%\FocusFlow\reviews\migration-trial\schema-N\data\tracker.db, using the candidate build's format for N. Then open --review migration-trial. Only the explicit copy is upgraded and it gets its own pre-upgrade snapshot. Retain the original snapshot and manifest. Do not put a newer database into an older format's directory; older builds keep using their separate data. Builds predating review mode need their existing disposable-test override rather than an unrecognized --review argument.
+The selected profile also keeps `coding-workspaces\TICKET_ID`, run records, preview receipts and publication journals. Opening the app reconciles persisted state. It does not start another model turn or approve a pending write.
 
 ## Backup and recovery
 
-Format 9 appends coding intent and optional immutable publication identity in a separate table without rebuilding existing tasks. Existing tickets remain Manual. Format 8 added four ticket statuses with independent blocker notices. Old Ready becomes Backlog; old Blocked becomes Backlog with a manual reason that remains until explicitly cleared. Upgrades retain prerequisite links and take the normal verified pre-change snapshot. Published draft-storage format 7 remains compatible. Named review/development profiles use separate directories for the running database format, without copying, resetting or deleting earlier sample data. Use a new review name for fresh examples; reopen the same name and format to retain edits.
+Migrations take a verified snapshot of recognised existing data before changing its schema. Backups are stored beside the database in `data\backups`. Append migrations without changing already-applied SQL.
 
-Existing product schema changes take a verified snapshot before transactional migration. Schema 5 adds weekday selection while retaining Personal/project data and existing weekly periods. Append migrations; do not rewrite an applied migration. A fresh database needs no pre-upgrade snapshot.
-
-To restore a snapshot manually, close all app instances and preserve the original database plus any WAL/SHM sidecars. Keep the snapshot and matching .db.json manifest together, then run:
+Close the app and retain the original database and any WAL/SHM sidecars. Keep a snapshot and its matching `.db.json` manifest together. Restore to a **new** destination:
 
 ~~~powershell
 node scripts/restore-snapshot.ts BACKUP_DB NEW_DATABASE_PATH
 ~~~
 
-The destination must be new. The helper verifies checksum, integrity and schema, and refuses existing files/sidecars. Use a compatible app with the restored data; later edits remain in the preserved original database.
+The helper checks the manifest, checksum, schema and SQLite integrity. For a deliberate migration check, restore to a new review destination such as `%LOCALAPPDATA%\FocusFlow\workspaces\reviews\migration-trial\schema-N\data\tracker.db`, then open `Start-FocusFlow.cmd --review migration-trial` using the candidate build. Keep the source snapshot and use the app version compatible with its format.
 
-This is developer recovery tooling, not an automatic updater or user recovery UI.
-
-## Checks before review
-
-- Remove superseded code and update its callers, tests, commands and docs. Keep migrations, compatibility behavior and tools that are still used; check references before deleting them.
-- During this owner-authorized implementation batch, do not run automated tests, the native app, live models or packaging. Static language/compiler inspection may be recorded separately. The owner builds and tests through Start-FocusFlow.cmd. Retained verification commands are available for later acceptance.
-- Give an exact build or launch command and data profile for app changes. State any missing review setup rather than claiming data isolation that has not been implemented. For documentation changes, link the changed documents and explain what to inspect.
-- Record executed checks, failures, unverified behavior and the tested commit in the PR. Label owner-reported results, code observations and inference separately. Keep implementation details in the PR's expandable notes.
-- After the owner merges, confirm the merge and update affected Issues/overviews. Leave temporary PR status out of stable documents.
-
-Verification workflows are currently workflow_dispatch only. No PR/main push starts tests or packaging. If manually enabled later, standard hosted Windows/Linux jobs require a public repository; private-repository jobs are skipped. Existing concurrency rules, real failure reporting and no persistent uploads/caches are retained.
-
-Installed task, review and synthetic prior-schema recovery checks use the same disposable installation in one job. Recovery still requires earlier steps to pass. This avoids transferring an installer through artifact storage. Real failures still fail the job; existing native-close failures are not suppressed.
-
-CI does not upload installers, screenshots, reports or dependency caches. Result/failure reports are printed in run logs; screenshots and installer files exist only on the disposable runner. The scripts still produce local files when run by a developer. Distribution tooling is historical and outside the personal-use scope; historical artifacts remain subject to their existing expiration dates.
-
-### Personal account controls
-
-Repository workflow edits do not change personal GitHub email delivery or billing budgets. At [notification settings](https://github.com/settings/notifications), under System / Actions, turn off Email and use On GitHub if desired. At [billing settings](https://github.com/settings/billing), open Budgets and alerts, set a zero paid-usage Actions budget and enable Stop usage when budget limit is reached. A budget that only sends alerts does not stop paid usage. These are owner account settings and must be checked directly; a PR is not proof that either setting changed.
-
-Existing retained artifacts are not deleted by this change. Use the repository Actions pages to inspect or remove unwanted old artifacts if needed. Prior accrued storage is not erased by deleting files. See [GitHub budget controls](https://docs.github.com/en/billing/how-tos/set-up-budgets) and [Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
-
-Tests never use a live model, authenticated GitHub writes or real personal data. Keep evidence tied to the reviewed commit. See [validation](VALIDATION.md) and [Codex commands](CODEX.md).
-
-## When a check fails
-
-Before retrying, record the observed failure, the hypothesis to test, one controlled experiment, its expected result and a stopping condition in the PR or relevant Issue. Record the actual result before choosing another step. A retry passing is evidence of that run, not an explanation of the earlier failure.
-
-After a native crash, stop repeated launches. Preserve user data and directory permissions. Do not delete the personal database, reset project permissions or disable the sandbox as a routine diagnostic step. The temporary Electron-path workaround does not establish a permanent fix. [Task #73](https://github.com/gh01wzx/focusflow/issues/73) holds the startup observations and remaining diagnostic work.
-
-## GitHub product connection
-
-See [GitHub connection](GITHUB_CONNECTION.md) for the authorization comparison, owner setup and disposable review steps. Review profile credentials are separate from everyday credentials. Connecting alone performs no repository writes.
-
-## Historical distribution tooling
-
-Old packaging scripts and the [release-route experiment](RELEASE_ROUTE.md) remain for their historical consumers and evidence. They are not part of personal-use acceptance and must not introduce installer/update work, paid services or release gates. Source-run data migration snapshots and separate-path recovery remain in scope.
+Source, committed files and diagnostics must exclude real databases, credentials, private configuration and raw execution logs.

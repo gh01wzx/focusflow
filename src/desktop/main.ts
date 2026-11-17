@@ -56,7 +56,6 @@ async function startDesktop(): Promise<void> {
         if (!interfaceReady) return;
         if (window?.isMinimized()) window.restore();
         window?.show();
-      if (profile.sampleLabel && process.env.FOCUSFLOW_PREVIEW_READY === '1') console.log('FocusFlow review window ready');
         window?.focus();
       });
 
@@ -84,7 +83,7 @@ async function startDesktop(): Promise<void> {
       const github = createGitHubService(createGitHubVault(join(profileDirectory, 'github'), crypto));
       const dsh = createDshService(createProviderCredential(join(profileDirectory, 'ai'), crypto));
       const compatible = createCompatibleService(createProviderCredential(join(profileDirectory, 'ai'), crypto, 'compatible'));
-      service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), sampleLabel: profile.sampleLabel,
+      service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), workspaceLabel: profile.workspaceLabel,
         github, ai, dsh, compatible, onShutdown: traceShutdown, onInterfaceReady: confirmReady, appVersion: app.getVersion() });
       void ready.then(() => Promise.allSettled([ai.check(), dsh.restore(), compatible.restore()]));
       const origin = service.origin;
@@ -95,7 +94,7 @@ async function startDesktop(): Promise<void> {
         minHeight: 640,
         show: false,
         backgroundColor: '#f8f9f6',
-        title: profile.sampleLabel ? `FocusFlow - ${profile.sampleLabel} - Sample data` : 'FocusFlow',
+        title: profile.workspaceLabel ? `FocusFlow - ${profile.workspaceLabel} - Separate workspace` : 'FocusFlow',
         webPreferences: {
           nodeIntegration: false,
           contextIsolation: true,
@@ -121,12 +120,13 @@ async function startDesktop(): Promise<void> {
       await awaitInterfaceReady(() => window!.loadURL(origin), ready);
       interfaceReady = true;
       window?.show();
+      if (profile.workspaceLabel && process.env.FOCUSFLOW_PREVIEW_READY === '1') console.log('FocusFlow review window ready');
     }
   } catch (error: unknown) {
     const message = preparingProfile
       ? 'FocusFlow could not prepare its data profile. Check the review name, conflicting launch settings and write access. Keep existing data; do not reset or delete the profile.'
       : error instanceof NewerDatabaseError
-      ? 'This data belongs to a newer app version. Reinstall that version, or restore a verified backup to a separate location before using an older version.'
+      ? 'This data belongs to a newer app version. Open that version, or restore a verified backup to a separate location before using an older version.'
       : error instanceof MigrationError
       ? 'The database upgrade failed and was rolled back. Keep the data directory and its backups. Use a compatible previous version or follow the recovery guide.'
       : error instanceof StartupFailure && error.code === 'WINDOW_LOAD_FAILED'

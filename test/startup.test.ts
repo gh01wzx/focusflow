@@ -38,10 +38,10 @@ test('data-free diagnostic fails if a runtime touches its disposable guard profi
 
 test('Build information excludes local paths/data; readiness is explicit same-origin and idempotent', async t => {
   const root = await mkdtemp(join(tmpdir(), 'focusflow-build-info-')); let signals = 0;
-  const server = await startWorkspaceServer({ dataDirectory: root, sampleLabel: 'Test', appVersion: '1.2.3-test.4', onInterfaceReady: () => { signals++; } });
+  const server = await startWorkspaceServer({ dataDirectory: root, workspaceLabel: 'Test', appVersion: '1.2.3-test.4', onInterfaceReady: () => { signals++; } });
   t.after(async () => { await server.close(); await rm(root, { recursive: true, force: true }); });
   const transport: typeof fetch = (path, options) => fetch(server.origin + String(path), { ...options, headers: { ...options?.headers, Origin: server.origin } });
-  const info = await readBuild(transport); assert.equal(info.version, '1.2.3-test.4'); assert.equal(info.profile, 'sample'); assert.deepEqual(parseBuildInfo(info), info);
+  const info = await readBuild(transport); assert.equal(info.version, '1.2.3-test.4'); assert.equal(info.profile, 'isolated'); assert.deepEqual(parseBuildInfo(info), info);
   assert.doesNotMatch(JSON.stringify(info), /tracker.db|LOCALAPPDATA|credential|FocusFlow.*Temp/i); assert.equal(signals, 0);
   assert.equal((await fetch(server.origin + '/api/runtime/ready', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"ready":true}' })).status, 403);
   assert.equal(signals, 0); await reportInterfaceReady(transport); await reportInterfaceReady(transport); assert.equal(signals, 1);

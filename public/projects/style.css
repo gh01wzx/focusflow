@@ -31,11 +31,6 @@
   color: #304d35;
   box-shadow: 0 1px 4px #304d3510;
 }
-.project-heading {
-  font-size: 24px;
-  font-weight: 500;
-  overflow-wrap: anywhere;
-}
 .project-description {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -90,36 +85,38 @@ nav[aria-label="Project list"] .nav-item {
 .new-project-link { width: 100%; margin-top: 10px; color: #3d5d40; }
 .actions-main { max-width: 1600px; min-width: 0; padding: 32px; }
 .actions-main .page-header { padding: 24px 0; }
-.action-board { display: grid; grid-template-columns: repeat(3, minmax(230px, 1fr)); gap: 18px; overflow-x: auto; padding: 8px 2px 16px; }
-.action-board:focus-visible { outline: 3px solid #92b79b; outline-offset: 3px; }
-.action-column { min-width: 0; padding: 18px 14px; border: 1px solid; border-top-width: 4px; border-radius: 12px; }
-.review-column { background: #f8f1e4; border-color: #c8ad74; }
-.progress-column { background: #eef3f8; border-color: #90a9c1; }
-.next-column { background: #edf3e9; border-color: #91ac80; }
-.action-column-heading { display: flex; align-items: center; gap: 12px; }
+.action-board { display: grid; gap: 24px; max-width: 920px; padding: 4px 0 20px; }
+.action-column { min-width: 0; }
+.action-column-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .action-column-heading h2 { margin: 0; font-size: 16px; font-weight: 650; }
-.action-column-heading .count { color: #344b35; background: #ffffffb3; }
-.action-hint { color: #59665c; font-size: 12px; line-height: 1.6; }
-.action-order { margin-top: 20px; }
-.action-empty { padding: 22px 14px; border: 1px dashed #aab4a5; border-radius: 8px; background: #ffffff80; color: #556250; line-height: 1.7; font-size: 13px; }
-.action-list { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 12px; }
-.action-card { min-width: 0; background: white; border: 1px solid #d4ded0; border-radius: 9px; padding: 18px; overflow-wrap: anywhere; }
-.action-card h3 { margin: 8px 0 14px; font-size: 16px; line-height: 1.5; }
-.action-card > p:not(.eyebrow) { color: #667260; font-size: 11px; }
-.action-card .eyebrow { line-height: 1.7; font-size: 9px; }
-.action-card button { margin-top: 16px; }
-.action-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.6; }
-.action-card summary { cursor: pointer; font-size: 13px; color: #3e5b41; }
+.action-empty { margin: 0; padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; color: #475569; line-height: 1.6; }
+.action-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.action-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px 16px;
+  min-width: 0; padding: 12px 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow-wrap: anywhere; }
+.action-card h3 { margin: 0; font-size: 15px; line-height: 1.5; }
+.action-card h3 .text-button { padding: 2px 0; font-size: inherit; font-weight: 650; text-align: left; }
+.action-card-content > p { margin: 4px 0 0; color: #475569; font-size: 13px; }
+.action-blockers { grid-column: 1 / -1; }
 @media (max-width: 760px) {
   .actions-main { padding: 20px; }
-  .action-board { gap: 12px; }
+}
+@media (max-width: 480px) {
+  .action-card { grid-template-columns: minmax(0, 1fr); }
+  .action-card > button { justify-self: start; }
 }
 
 .project-main .page-header { padding: 16px 0; }
 .project-main .page-header h1 { font-size: 34px; }
 .project-main .page-header .subtitle { margin-top: 8px; }
 .project-main .feedback:empty { display: none; }
-.project-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.project-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.project-ticket-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 20px 0 12px; }
+.project-ticket-toolbar .project-layout-buttons, .project-ticket-toolbar .milestone-picker { margin: 0; }
+.project-ticket-toolbar .primary { padding: 9px 14px; }
+.run-scope { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 12px 0; }
+.run-scope dt { font-size: 12px; color: #475569; }
+.run-scope dd { margin: 3px 0 0; overflow-wrap: anywhere; }
+.preview-details { overflow-wrap: anywhere; }
 .milestone-picker { flex-wrap: wrap; margin-top: 18px; }
 .milestone-picker select { max-width: min(100%, 320px); border: 1px solid #d9e2d1; border-radius: 6px; padding: 9px 12px; background: white; color: #31482e; }
 .ticket-list-heading { align-items: center; margin-top: 24px; }

@@ -2,7 +2,6 @@ import { createProjectSettings } from '../projects/settings.ts';
 import { createPersonalRepository } from '../tasks/personal-repository.ts';
 import { createPersonalService } from '../tasks/personal-service.ts';
 import { randomUUID } from 'node:crypto';
-import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createSnapshot } from '../database/backup.ts';
 import { openDatabase, inTransaction } from '../database/connection.ts';
@@ -13,18 +12,15 @@ import type { TaskTransaction } from '../tasks/service.ts';
 import { createProjectRepository } from '../projects/repository.ts';
 import { createProjectService } from '../projects/service.ts';
 import type { ProjectTransaction } from '../projects/service.ts';
-import { seedSampleData } from './sample-data.ts';
 import { createPlanRepository, createPlanApprovalRepository } from '../plans/repository.ts';
 import { createPlanApprovalService } from '../plans/approval.ts';
 import { createPublicationRepository } from '../publication/repository.ts';
 import { createLinkedWorkRepository } from '../sync/repository.ts';
 import { createExecutionRepository } from '../execution/repository.ts';
 
-export async function openWorkspaceStore(path: string, clock: () => Date = () => new Date(), sampleData = false) {
-  const existed = existsSync(path);
+export async function openWorkspaceStore(path: string, clock: () => Date = () => new Date()) {
   const db = await openDatabase(path);
   try {
-    if (sampleData && !existed) seedSampleData(db, clock());
     const repository = createTaskRepository(db);
     const taskTransaction: TaskTransaction = operation => inTransaction(db, () => {
       const now = clock();

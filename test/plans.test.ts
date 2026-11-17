@@ -177,12 +177,16 @@ test('HTTP planning persists a private draft across restart, never creates tasks
   const root = await mkdtemp(join(tmpdir(), 'focusflow-plan-http-'));
   let calls = 0; let failure = false;
   const generator: PlanGenerator = { async generate() { calls++; if (failure) throw new Error('private provider error'); return suggested(); } };
-  let server = await startWorkspaceServer({ dataDirectory: root, sampleLabel: 'Test', planGenerator: generator });
+  const store = await openWorkspaceStore(join(root, 'tracker.db'));
+  const savedProject = store.projects.addProject({ title: 'Planning fixture' });
+  const initial = draft(savedProject.id);
+  store.planDrafts.save(initial); store.close();
+  let server = await startWorkspaceServer({ dataDirectory: root, planGenerator: generator });
   t.after(async () => { await server.close(); await rm(root, { recursive: true, force: true }); });
   const transport: typeof fetch = (path, options) => fetch(server.origin + String(path), { ...options, headers: { ...options?.headers, Origin: server.origin } });
   const projects = createProjectClient(transport), plans = createPlanClient(transport);
   const before = await projects.read(); const id = before.projects[0]!.id;
-  assert.match((await plans.read(id)).draft!.goal, /without a model call/); assert.equal(calls, 0);
+  assert.deepEqual((await plans.read(id)).draft, initial); assert.equal(calls, 0);
   await assert.rejects(plans.generate(id, 'Goal', false), /Confirm/);
   assert.equal((await fetch(server.origin + `/api/projects/${id}/plan-draft/generate`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"goal":"Goal","confirmAllowance":true}',
@@ -198,7 +202,7 @@ test('HTTP planning persists a private draft across restart, never creates tasks
   state = await plans.read(id); for (let i = 0; state.busy && i < 100; i++) state = await plans.read(id);
   assert.deepEqual(state.draft, saved); assert.doesNotMatch(state.message, /private provider/);
   await server.close();
-  server = await startWorkspaceServer({ dataDirectory: root, sampleLabel: 'Test', planGenerator: generator });
+  server = await startWorkspaceServer({ dataDirectory: root, planGenerator: generator });
   assert.deepEqual((await plans.read(id)).draft, saved); assert.equal(calls, 2);
   assert.deepEqual(await projects.read(), before);
   const wrong = createPlanClient(async () => new Response(JSON.stringify({ draft: draft(randomUUID()), busy: false, cancelling: false, message: '' })));
@@ -255,7 +259,10 @@ test('private drafts are included in verified local snapshots', async t => {
 test('workspace shutdown cancels planning before SQLite closes and cannot save a late result', async t => {
   const root = await mkdtemp(join(tmpdir(), 'focusflow-plan-close-'));
   const phases: string[] = []; let aborted = false;
-  const server = await startWorkspaceServer({ dataDirectory: root, sampleLabel: 'Test',
+  const setup = await openWorkspaceStore(join(root, 'tracker.db'));
+  const savedProject = setup.projects.addProject({ title: 'Shutdown fixture' });
+  setup.planDrafts.save(draft(savedProject.id)); setup.close();
+  const server = await startWorkspaceServer({ dataDirectory: root,
     onShutdown: stage => { phases.push(stage); }, planGenerator: {
       async generate(_goal, signal) {
         await new Promise<void>(resolve => signal.addEventListener('abort', () => { aborted = true; resolve(); }, { once: true }));

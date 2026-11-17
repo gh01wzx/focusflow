@@ -23,7 +23,7 @@ try {
   let page = await context.newPage();
   page.setDefaultTimeout(10000);
   await page.goto(server.origin, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('heading', { name: 'Today.', exact: true }).waitFor();
+  await page.getByRole('heading', { name: 'Today', exact: true }).waitFor();
   stage = 'simulated-ai-ui';
   await exerciseAiUI(page, join(artifacts, 'ai-connection-simulated.png'));
   stage = 'project-interactions';

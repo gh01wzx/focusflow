@@ -57,7 +57,7 @@ export function ProjectTicketCard({ ticket, repository, context, view, editingPr
           if (child) onVisit(child);
         }} />
         {ticket.executionMode === 'codex' && ticket.status === 'backlog' && !blockers.length && !ticket.blockReason &&
-          <QuickRunPanel ticketId={ticket.id} projectId={ticket.projectId} onChanged={onChanged} onBusy={setAiBusy} />}
+          <QuickRunPanel ticketId={ticket.id} onChanged={onChanged} onBusy={setAiBusy} />}
         <CodingNotice ticket={ticket} repository={repository} />
         {ticket.coding?.issueNumber && <>
           <CodingWorkspacePanel ticketId={ticket.id} projectId={ticket.projectId} disabled={busy || editingPrerequisites || syncLocked} onLock={setCodingLocked} />

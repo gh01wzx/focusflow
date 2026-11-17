@@ -14,13 +14,18 @@ export function usePersonal(revision: object | null, refreshTasks: () => Promise
   useEffect(() => {
     return () => { if (sound.current) void sound.current.close(); };
   }, []);
-  useEffect(() => {
+  async function refresh() {
+    if (pending.current) return;
     const current = ++generation.current;
-    void readPersonal().then(result => {
-      if (current === generation.current) setData(result.view);
-    }, failure => {
-      if (current === generation.current) setError(failure.message);
-    });
+    try {
+      const result = await readPersonal();
+      if (current === generation.current) { setData(result.view); setError(''); }
+    } catch (failure) {
+      if (current === generation.current) setError(failure instanceof Error ? failure.message : 'Could not load rewards.');
+    }
+  }
+  useEffect(() => {
+    if (revision) void refresh();
   }, [revision]);
   function prepareSound() {
     if (!data?.preferences.sound) return;
@@ -65,19 +70,25 @@ export function usePersonal(revision: object | null, refreshTasks: () => Promise
       return false;
     } finally { pending.current = false; setBusy(false); }
   }
-  async function resolve(task: Task, status: TaskResolution, run: (id: string, status: TaskResolution) => Promise<void>) {
-    if (status !== 'completed' || !data) return run(task.id, status);
+  async function resolve(task: Task, status: TaskResolution, run: (id: string, status: TaskResolution) => Promise<boolean>) {
+    if (pending.current) return;
+    if (status !== 'completed' || !data) { await run(task.id, status); return; }
+    pending.current = true;
+    ++generation.current;
+    setBusy(true); setError('');
     prepareSound();
     const oldEntries = new Set(data.entries.map(entry => entry.id));
-    await run(task.id, status);
-    const current = ++generation.current;
-    const result = await readPersonal().catch(() => null);
-    if (!result || current !== generation.current) return;
-    setData(result.view);
-    const entry = result.view.entries.find(item => item.subject === task.id && item.kind === 'earn' && !oldEntries.has(item.id));
-    if (entry) celebrate(entry.id, entry.amount, false);
+    try {
+      if (!await run(task.id, status)) return;
+      const result = await readPersonal();
+      setData(result.view);
+      const entry = result.view.entries.find(item => item.subject === task.id && item.kind === 'earn' && !oldEntries.has(item.id));
+      if (entry) celebrate(entry.id, entry.amount, false);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Could not refresh points.');
+    } finally { pending.current = false; setBusy(false); }
   }
-  return { data, error, busy, reward, mutate, resolve };
+  return { data, error, busy, reward, mutate, resolve, refresh };
 }
 
 export type PersonalController = ReturnType<typeof usePersonal>;

@@ -18,9 +18,10 @@ export function WorkspaceShell({ workspace, busy, navigation, children, onWorksp
   return (
     <div className="shell">
       <aside className="sidebar">
-        <a className="brand" href="/" aria-label="FocusFlow home">
-          <span className="brand-mark">f<span>.</span></span>FocusFlow
-        </a>
+        <button type="button" className="brand" aria-label="FocusFlow home" disabled={busy}
+          onClick={() => onWorkspaceChange('personal')}>
+          <span className="brand-mark" aria-hidden="true">f<span>.</span></span>FocusFlow
+        </button>
         <nav className="workspace-nav" aria-label="Workspaces">
           <button aria-current={workspace === 'personal' ? 'page' : undefined}
             disabled={busy} onClick={() => onWorkspaceChange('personal')}>Personal</button>

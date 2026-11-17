@@ -18,11 +18,11 @@ if errorlevel 1 (
   call npm ci --no-audit --no-fund
   if errorlevel 1 goto failed
 )
-node --input-type=module -e "import {resolveCodexCommand} from './src/codex/runtime.ts';import {join} from 'node:path';await resolveCodexCommand(join(process.env.LOCALAPPDATA,'FocusFlow','codex-product','runtime'))" >nul 2>nul
+node -e "const fs=require('node:fs');const executable=require('electron');process.exit(typeof executable==='string'&&fs.existsSync(executable)?0:1)" >nul 2>nul
 if errorlevel 1 (
-  echo Preparing the official AI runtime. No sign-in or model request is started.
-  call npm run ai:install
-  if errorlevel 1 echo AI setup was not completed. You can still use local tasks.
+  echo Preparing the pinned Electron runtime.
+  node node_modules\electron\install.js
+  if errorlevel 1 goto failed
 )
 if /i "%~1"=="--review" (
   if "%~2"=="" (

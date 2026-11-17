@@ -82,7 +82,7 @@ export function PointsJar({ state, openRewards }: { state: PersonalController; o
   const settled = Math.min(80, Math.ceil(Math.max(0, data.earned) * 0.008));
   const moving = Math.min(12, Math.ceil((state.reward?.points ?? 0) / 100));
   return <aside className="points-rail">
-    <div className="points-label"><strong>{points(data.earned)}</strong> earned today</div>
+    <div className="points-label" aria-live="polite"><strong>{points(data.earned)}</strong> earned today</div>
     <div className={`points-jar ${data.preferences.reducedMotion ? 'still' : ''}`} aria-hidden="true">
       {Array.from({ length: settled }, (_, index) => <i key={index} className="settled-bead" />)}
       {state.reward && <div key={state.reward.id} className={`bead-fall ${state.reward.target ? 'target-hit' : ''}`}>
@@ -92,8 +92,9 @@ export function PointsJar({ state, openRewards }: { state: PersonalController; o
     </div>
     <strong>{points(data.balance)} available</strong>
     {pinned && <p>{pinned.title} - {data.balance >= pinned.cost ? 'Ready to redeem' : points(pinned.cost - data.balance) + ' points to go'}</p>}
-    <button className="quiet-button" onClick={openRewards}>Open rewards</button>
-    <button className="quiet-button" onClick={() => void state.mutate('preferences', { ...data.preferences, sound: !data.preferences.sound })}>
+    <button className="quiet-button" disabled={state.busy} onClick={openRewards}>Open rewards</button>
+    <button className="quiet-button" disabled={state.busy}
+      onClick={() => void state.mutate('preferences', { ...data.preferences, sound: !data.preferences.sound })}>
       {data.preferences.sound ? 'Mute sound' : 'Enable sound'}
     </button>
   </aside>;

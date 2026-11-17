@@ -1,6 +1,6 @@
-import { localDay } from '../shared/calendar.ts';
+import { localDay, nextOccurrence, validDate } from '../shared/calendar.ts';
 import { firstSelectedDate, nextScheduledDate, periodEnd } from '../shared/weekdays.ts';
-import { HISTORY_LIMIT } from '../shared/tasks.ts';
+import { FOCUS_LIMIT, HISTORY_LIMIT } from '../shared/tasks.ts';
 import type { RecurrenceRule, Task } from '../shared/tasks.ts';
 import type { TaskRepository } from './repository.ts';
 import { recurrenceInput, taskInput, TaskInputError } from './validation.ts';
@@ -12,10 +12,44 @@ export function createTaskService(repository: TaskRepository, transaction: TaskT
   onComplete: (task: Task, now: Date) => void = () => {},
   onCreate: (subject: string, repeating: boolean, input: unknown) => void = () => {},
   onReopen: (task: Task, now: Date) => void = () => {}) {
+  const tomorrowOf = (today: string) => nextOccurrence(today, 'daily') ?? today;
   return {
-    view: () => transaction(now => buildTaskView(
-      localDay(now), repository.listPendingTasks(), repository.listRecentHistory(HISTORY_LIMIT), repository.listActiveRules(),
-    )),
+    view: () => transaction(now => {
+      const today = localDay(now);
+      return buildTaskView(today, repository.listPendingTasks(), repository.listRecentHistory(HISTORY_LIMIT),
+        repository.listActiveRules(), { today: repository.focus(today), tomorrow: repository.focus(tomorrowOf(today)) });
+    }),
+    // Replace the focus for today or tomorrow. A new choice must be an open one-off task due by that day;
+    // tasks already in the list stay allowed after they are completed.
+    setFocus: (input: unknown) => transaction(now => {
+      const value = typeof input === 'object' && input !== null ? input as Record<string, unknown> : {};
+      const today = localDay(now), tomorrow = tomorrowOf(today);
+      const day = value.day === today ? today : value.day === tomorrow ? tomorrow : null;
+      if (!day) throw new TaskInputError('Choose a focus for today or tomorrow.');
+      const ids = value.taskIds;
+      if (!Array.isArray(ids) || ids.length > FOCUS_LIMIT || new Set(ids).size !== ids.length || !ids.every(id => typeof id === 'string')) {
+        throw new TaskInputError('Choose up to three different tasks.');
+      }
+      const kept = new Set(repository.focus(day));
+      for (const id of ids as string[]) {
+        const task = repository.findTask(id);
+        if (!task || task.recurrenceId !== null || (!kept.has(id) && (task.status !== 'pending' || task.plannedDate > day))) {
+          throw new TaskInputError('Choose open one-off tasks that are due by that day.');
+        }
+      }
+      repository.replaceFocus(day, ids as string[]);
+    }),
+    // Move an open one-off task to another date, for example during the evening close.
+    reschedule: (id: string, input: unknown): Task | undefined => transaction(now => {
+      const plannedDate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>).plannedDate : undefined;
+      if (!validDate(plannedDate)) throw new TaskInputError('Choose a valid date.');
+      if (plannedDate < localDay(now)) throw new TaskInputError('Choose today or a later date.');
+      const task = repository.findTask(id);
+      if (!task) return undefined;
+      if (task.status !== 'pending' || task.recurrenceId !== null) throw new TaskInputError('Only an open one-off task can move to another date.');
+      repository.rescheduleTask(id, plannedDate);
+      return repository.findTask(id);
+    }),
     add: (input: unknown): Task => transaction(now => {
       const { title, plannedDate } = taskInput(input);
       const task: Task = {

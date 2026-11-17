@@ -29,11 +29,15 @@ export interface TaskView {
   upcoming: Task[];
   history: Task[];
   recurrences: RecurrenceRule[];
+  // One-off task IDs chosen as the focus, in order, for today and tomorrow.
+  focus: { today: string[]; tomorrow: string[] };
 }
 
 export type TaskResolution = 'completed' | 'cancelled';
 // History returns the most recent resolved tasks. Older records stay in the database.
 export const HISTORY_LIMIT = 200;
+// A day's focus is a short list on purpose: picking at most three keeps the choice easy.
+export const FOCUS_LIMIT = 3;
 export interface TaskDraft {
   title: string;
   plannedDate: string;

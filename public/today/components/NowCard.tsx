@@ -4,35 +4,20 @@ import type { ScoringRule } from '../../../src/shared/personal.ts';
 import type { Task } from '../../../src/shared/tasks.ts';
 import { cueLine } from '../../../src/shared/habits.ts';
 import { spring } from './Animated.tsx';
-import { PlayIcon, SkipIcon } from './Icons.tsx';
+import { PlayIcon, SkipIcon, StarIcon } from './Icons.tsx';
+import type { Timer } from '../local-state.ts';
 
-const TIMER_KEY = 'focusflow.timer';
 const START_SECONDS = 120;
-interface Timer { taskId: string; startedAt: number }
-
-// The timer is a start time, so it survives tab changes, reloads and a hidden window.
-function readTimer(): Timer | null {
-  try {
-    const value = JSON.parse(localStorage.getItem(TIMER_KEY) ?? 'null') as Timer | null;
-    return value && typeof value.taskId === 'string' && Number.isFinite(value.startedAt) ? value : null;
-  } catch { return null; }
-}
-function writeTimer(timer: Timer | null) {
-  try {
-    if (timer) localStorage.setItem(TIMER_KEY, JSON.stringify(timer)); else localStorage.removeItem(TIMER_KEY);
-  } catch { /* The timer still works for this page. */ }
-}
 const clock = (seconds: number) => Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
 
 // One next action at a time. Starting is the two-minute rule: begin small, then keep going if you like.
-export function NowCard({ candidates, due, rules, busy, sound, skipped, onComplete, onLog, onSkip, onShowSkipped }: {
+export function NowCard({ candidates, due, rules, busy, sound, skipped, timer, focus, onTimer, onComplete, onLog, onSkip, onShowSkipped }: {
   candidates: Task[]; due: Task[]; rules: Map<string, ScoringRule>; busy: boolean; sound: { on: boolean; volume: number } | null;
-  skipped: number;
+  skipped: number; timer: Timer | null; focus: string[]; onTimer(timer: Timer | null): void;
   // Each returns whether the save succeeded.
   onComplete(task: Task): Promise<boolean>; onLog(task: Task, minutes: number): Promise<boolean>;
   onSkip(task: Task): void; onShowSkipped(): void;
 }) {
-  const [timer, setTimer] = useState<Timer | null>(readTimer);
   const [now, setNow] = useState(Date.now());
   const audio = useRef<AudioContext | null>(null);
   const chimed = useRef(false);
@@ -46,8 +31,20 @@ export function NowCard({ candidates, due, rules, busy, sound, skipped, onComple
   const goal = minutesHabit ? Math.max(START_SECONDS, rule.target * 60) : START_SECONDS;
 
   useEffect(() => {
-    if (timer && !timed) { setTimer(null); writeTimer(null); }
+    if (timer && !timed) onTimer(null);
   }, [timer, timed]);
+  // A timer can start here or from the Close the day window. Either way the chime is prepared
+  // right after the click, while the browser still allows sound.
+  useEffect(() => {
+    // A timer that passed two minutes while this card was hidden does not chime late.
+    chimed.current = !!timer && Date.now() - timer.startedAt >= START_SECONDS * 1000;
+    setNow(Date.now());
+    if (!timer || !sound?.on) return;
+    try {
+      audio.current ??= new AudioContext();
+      if (audio.current.state === 'suspended') void audio.current.resume().catch(() => {});
+    } catch { /* Sound is optional. */ }
+  }, [timer?.startedAt]);
   useEffect(() => {
     if (!running) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -80,16 +77,8 @@ export function NowCard({ candidates, due, rules, busy, sound, skipped, onComple
   }
   const cue = cueLine(rule);
   const later = !running && rule?.time && rule.time > new Date(now).toTimeString().slice(0, 5);
-  function start() {
-    try {
-      audio.current ??= new AudioContext();
-      if (audio.current.state === 'suspended') void audio.current.resume().catch(() => {});
-    } catch { /* Sound is optional. */ }
-    chimed.current = false;
-    const next = { taskId: task!.id, startedAt: Date.now() };
-    setTimer(next); writeTimer(next); setNow(next.startedAt);
-  }
-  function stop() { setTimer(null); writeTimer(null); }
+  function start() { onTimer({ taskId: task!.id, startedAt: Date.now() }); }
+  function stop() { onTimer(null); }
   async function finish() {
     const saved = minutesHabit ? await onLog(task!, Math.min(1440, Math.max(1, Math.round(elapsed / 60))))
       : await onComplete(task!);
@@ -98,7 +87,8 @@ export function NowCard({ candidates, due, rules, busy, sound, skipped, onComple
 
   return <section className={`now-card glass ${running ? 'running' : ''}`} aria-label="Next">
     <div className="now-main">
-      <p className="eyebrow">{running ? 'In progress' : later ? 'Next at ' + rule!.time : 'Next'}
+      <p className="eyebrow">{focus.includes(task.id) && <span className="focus-mark"><StarIcon />Focus</span>}
+        {running ? 'In progress' : later ? 'Next at ' + rule!.time : 'Next'}
         {candidates.length > 1 && !running ? ` · ${candidates.length - 1} more after this` : ''}</p>
       <h2 className="now-title"><span className="sr-only">Next: </span>{task.title}</h2>
       {cue && <p className="cue">{cue}</p>}

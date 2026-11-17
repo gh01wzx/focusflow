@@ -45,4 +45,5 @@ test('Next puts arrived planned times first, then untimed habits and tasks, then
     ['early-habit', 'untimed-habit', 'timed-habit', 'plain-task', 'late-habit']);
   assert.equal(nextUp(due, rules, { 'timed-habit': 5 }, '09:00').some(item => item.id === 'timed-habit'), false);
   assert.equal(nextUp(due, rules, { 'timed-habit': 2 }, '09:00').at(-1)?.id, 'timed-habit');
+  assert.deepEqual(nextUp(due, rules, {}, '09:00', ['plain-task']).slice(0, 2).map(item => item.id), ['early-habit', 'plain-task']);
 });

@@ -96,6 +96,30 @@ test('a habit keeps its plan, plan edits apply, an invalid plan saves nothing an
   } finally { store.close(); }
 });
 
+test('focus keeps up to three one-off tasks and rescheduling moves a task out of earlier focus', async t => {
+  const { path } = await fixture(t);
+  const store = await openWorkspaceStore(path, () => new Date(2026, 10, 4, 20));
+  try {
+    const a = store.tasks.add({ title: 'A', plannedDate: '2026-11-04' });
+    const b = store.tasks.add({ title: 'B', plannedDate: '2026-11-03' });
+    const c = store.tasks.add({ title: 'C', plannedDate: '2026-11-05' });
+    const d = store.tasks.add({ title: 'D', plannedDate: '2026-11-04' });
+    store.tasks.setFocus({ day: '2026-11-04', taskIds: [a.id, b.id] });
+    assert.deepEqual(store.tasks.view().focus, { today: [a.id, b.id], tomorrow: [] });
+    assert.throws(() => store.tasks.setFocus({ day: '2026-11-04', taskIds: [c.id] }), /due by that day/);
+    assert.throws(() => store.tasks.setFocus({ day: '2026-11-04', taskIds: [a.id, b.id, c.id, d.id] }), /up to three/);
+    assert.throws(() => store.tasks.setFocus({ day: '2026-11-06', taskIds: [] }), /today or tomorrow/);
+    store.tasks.setFocus({ day: '2026-11-05', taskIds: [c.id, a.id] });
+    store.tasks.resolve(a.id, 'completed');
+    store.tasks.setFocus({ day: '2026-11-04', taskIds: [a.id, d.id] });
+    store.tasks.reschedule(d.id, { plannedDate: '2026-11-05' });
+    assert.deepEqual(store.tasks.view().focus, { today: [a.id], tomorrow: [c.id, a.id] });
+    assert.equal(store.tasks.view().upcoming.find(item => item.id === d.id)?.plannedDate, '2026-11-05');
+    assert.throws(() => store.tasks.reschedule(a.id, { plannedDate: '2026-11-06' }), /open one-off/);
+    assert.throws(() => store.tasks.reschedule(b.id, { plannedDate: '2026-11-01' }), /today or a later date/);
+  } finally { store.close(); }
+});
+
 test('history returns the latest resolved tasks within the display limit', async t => {
   const { path } = await fixture(t);
   let seconds = 0;

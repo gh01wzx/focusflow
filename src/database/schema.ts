@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 21;
+export const SCHEMA_VERSION = 22;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -204,4 +204,12 @@ export const MIGRATIONS = [
     ALTER TABLE personal_scoring ADD COLUMN place TEXT NOT NULL DEFAULT '';
     ALTER TABLE personal_scoring ADD COLUMN starter TEXT NOT NULL DEFAULT '';
     ALTER TABLE personal_scoring ADD COLUMN bundle TEXT NOT NULL DEFAULT '';` },
+  // Up to three one-off tasks chosen as the focus for a local day.
+  { version: 22, sql: `CREATE TABLE day_focus (
+    day TEXT NOT NULL,
+    task_id TEXT NOT NULL REFERENCES tasks(id),
+    position INTEGER NOT NULL CHECK(position BETWEEN 0 AND 2),
+    PRIMARY KEY(day, task_id),
+    UNIQUE(day, position)
+  );` },
 ] as const;

@@ -501,6 +501,66 @@ nav { display: grid; gap: 2px; }
 .step-dots li.current { background: var(--accent); }
 .consistency { padding: 1px 8px; border-radius: 999px; background: var(--green-soft); color: var(--green-text); font-weight: 700; font-variant-numeric: tabular-nums; }
 
+/* Today's focus */
+.focus-mark {
+  display: inline-flex; align-items: center; gap: 3px; margin-right: 8px; padding: 1px 8px 1px 6px; border-radius: 999px;
+  background: var(--orange-soft); color: var(--orange-text); vertical-align: 1px;
+}
+.focus-mark .icon { width: 12px; height: 12px; fill: currentColor; stroke-width: 1.4; }
+.icon-button.star.on { color: var(--orange); }
+.icon-button.star.on .icon { fill: currentColor; }
+.icon-button.star:disabled:not(.on) { opacity: .3; }
+.focus-group { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 0 0 1.5px rgba(255, 149, 0, .3), var(--shadow-md); }
+.focus-group .group-heading h2 { color: var(--orange-text); }
+.focus-progress {
+  padding: 2px 9px; border-radius: 999px; background: var(--fill); color: var(--text-secondary);
+  font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.fold-button { margin-left: auto; }
+.list-group > .group-note { padding: 0 18px 12px; }
+.focus-done { display: flex; align-items: center; gap: 6px; color: var(--green-text); font-weight: 600; }
+.focus-done .icon { width: 16px; height: 16px; stroke-width: 2.4; }
+
+/* Close the day */
+.evening-prompt {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 12px; padding: 12px 14px 12px 16px;
+  background: linear-gradient(135deg, rgba(88, 86, 214, .13), rgba(255, 149, 0, .09)), var(--glass);
+}
+.evening-icon {
+  flex: none; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px;
+  background: linear-gradient(135deg, #7a78ea, var(--accent)); color: #fff; box-shadow: 0 8px 18px -10px rgba(88, 86, 214, .9);
+}
+.evening-prompt p { flex: 1 1 240px; margin: 0; color: var(--text-secondary); font-size: 13px; }
+.evening-prompt strong { display: block; color: var(--text); font-size: 15px; font-weight: 650; }
+.evening-actions { display: flex; align-items: center; gap: 4px; }
+.close-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; }
+.close-list { position: relative; display: grid; margin: 0; padding: 0; list-style: none; }
+.close-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 0; }
+.close-row + .close-row { border-top: 1px solid var(--separator); }
+.close-item { flex: 1 1 200px; min-width: 0; display: grid; gap: 4px; }
+.close-item strong { font-size: 14.5px; font-weight: 600; overflow-wrap: anywhere; }
+.close-item .task-meta { margin: 0; }
+.close-item .nudge { justify-self: start; font-size: 12px; line-height: 1.4; }
+.close-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.close-actions .primary, .close-actions .secondary-button, .close-actions .quiet-button { min-height: 32px; padding: 5px 12px; font-size: 13px; }
+.close-actions .icon { width: 15px; height: 15px; }
+.close-actions .primary .icon { fill: currentColor; }
+.close-actions .text-button { color: var(--muted); }
+.date-choice { width: 148px; min-height: 32px; padding: 4px 8px; font-size: 13px; }
+.focus-count { margin-left: auto; color: var(--muted); font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.focus-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.focus-choice {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 34px; padding: 6px 14px 6px 10px;
+  border: 1px solid var(--separator-strong); border-radius: 999px; background: rgba(255, 255, 255, .8); color: var(--text-secondary);
+  font-size: 13.5px; font-weight: 600; text-align: left;
+}
+.focus-choice span { overflow-wrap: anywhere; }
+.focus-choice .icon { width: 16px; height: 16px; color: var(--muted); }
+.focus-choice:hover:not(:disabled) { border-color: rgba(255, 149, 0, .6); }
+.focus-choice.on { border-color: transparent; background: var(--orange-soft); color: var(--orange-text); }
+.focus-choice.on .icon { color: var(--orange); fill: currentColor; }
+.focus-choice:disabled:not(.on) { opacity: .4; }
+
 @media (max-width: 1100px) {
   .personal-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "panel" "lists"; gap: 16px; }
   .progress-panel {

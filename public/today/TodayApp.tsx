@@ -6,7 +6,8 @@ import type { ScoringRule } from '../../src/shared/personal.ts';
 import { FOCUS_LIMIT, HISTORY_LIMIT } from '../../src/shared/tasks.ts';
 import type { Task } from '../../src/shared/tasks.ts';
 import { localDay } from '../../src/shared/calendar.ts';
-import { habitInsight, nextUp, todayProgress } from '../../src/shared/habits.ts';
+import { habitInsight, identityKey, nextUp, reviewHabits, todayProgress } from '../../src/shared/habits.ts';
+import type { HabitReview } from '../../src/shared/habits.ts';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
 import { useTodayController } from './useTodayController.ts';
@@ -20,9 +21,10 @@ import { RepeatingTasks } from './components/RepeatingTasks.tsx';
 import { NowCard } from './components/NowCard.tsx';
 import { QuickAdd } from './components/QuickAdd.tsx';
 import { CloseDaySheet, EVENING, EveningPrompt } from './components/CloseDaySheet.tsx';
+import { WeeklyReview, WeekPrompt, weekOf } from './components/WeeklyReview.tsx';
 import { ListItem, spring } from './components/Animated.tsx';
 import { CheckIcon, PlusIcon, SparkIcon } from './components/Icons.tsx';
-import { readClosed, readSkipped, readTimer, writeClosed, writeSkipped, writeTimer } from './local-state.ts';
+import { readClosed, readReviewed, readSkipped, readTimer, writeClosed, writeReviewed, writeSkipped, writeTimer } from './local-state.ts';
 import type { Timer } from './local-state.ts';
 
 export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
@@ -35,6 +37,8 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const [timer, setTimerState] = useState<Timer | null>(readTimer);
   const [closing, setClosing] = useState(false);
   const [closedDay, setClosedDay] = useState(readClosed);
+  const [reviewing, setReviewing] = useState(false);
+  const [reviewedWeek, setReviewedWeek] = useState(readReviewed);
   // Other tasks fold away while focus tasks are open. Starring keeps them open until the next
   // visit, so choosing one focus task never hides the next choice.
   const [othersOpen, setOthersOpen] = useState(false);
@@ -66,6 +70,10 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const upNext = view && data ? nextUp(view.due, rules, data.progress, minute, focusIds) : [];
   const candidates = upNext.filter(task => !skipped.includes(task.id));
   const anchors = useMemo(() => [...new Set((data?.rules ?? []).map(rule => rule.cue).filter(Boolean))], [data]);
+  const reviews = useMemo(() => view && data ? reviewHabits(view.today, view.recurrences, rules, data.recent) : [], [view, data, rules]);
+  const week = today ? weekOf(today) : '';
+  // The weekly prompt waits until at least one habit has enough days to say something useful.
+  const reviewDue = reviewedWeek !== week && reviews.some(review => review.suggestion.kind !== 'new');
 
   useEffect(() => {
     if (!today) return;
@@ -77,10 +85,14 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   }, []);
 
   const edit = (task: Task) => setSheet({ mode: 'edit', id: crypto.randomUUID(), task, rule: ruleFor(task) });
-  // Each completion is framed as a vote for the identity the habit supports.
-  const vote = (task: Task) => {
-    const identity = ruleFor(task)?.identity;
-    return identity ? ` A vote for “${identity}”.` : '';
+  const votesFor = (rule: ScoringRule | undefined) => rule?.identity ? data?.votes[identityKey(rule.identity)] ?? 0 : 0;
+  // Doing or starting a habit is a vote for the identity it supports. More minutes on the same day
+  // add to the log, not to the votes. The count comes from before the save, plus this vote.
+  const vote = (task: Task, counted = true) => {
+    const rule = ruleFor(task);
+    if (!rule?.identity || !counted) return '';
+    const count = votesFor(rule) + 1;
+    return count === 1 ? ` Your first vote for “${rule.identity}”.` : ` That makes ${count} votes for “${rule.identity}”.`;
   };
   async function complete(task: Task) {
     const saved = await personal.resolve(task, 'completed', state.resolve);
@@ -89,12 +101,13 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   }
   async function log(task: Task, minutes: number) {
     if (!data) return false;
+    const first = (data.progress[task.id] ?? 0) === 0;
     const saved = await personal.mutate('log', { id: crypto.randomUUID(), day: data.day, subject: task.id, minutes }, ruleFor(task)?.target);
-    if (saved) logged(task, minutes);
+    if (saved) logged(task, minutes, first);
     return saved;
   }
-  function logged(task: Task, minutes: number) {
-    state.announce(`Logged ${minutes} min for ${task.title}.` + vote(task));
+  function logged(task: Task, minutes: number, first: boolean) {
+    state.announce(`Logged ${minutes} min for ${task.title}.` + vote(task, first));
   }
   function rest(task: Task) { void personal.resolve(task, 'cancelled', state.resolve); }
   function skip(task: Task) {
@@ -122,6 +135,29 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
     if (finished) state.announce(chosen ? 'Day closed. Tomorrow starts with your focus.' : 'Day closed. Rest well.');
   }
 
+  function finishReview(finished: boolean) {
+    setReviewing(false); setReviewedWeek(week); writeReviewed(week);
+    if (finished) state.announce('Week reviewed. Have a good week.');
+  }
+  // A new daily target from the weekly review keeps the rest of the plan.
+  function setTarget(review: HabitReview, target: number) {
+    const rule = rules.get(review.id);
+    if (!rule) return Promise.resolve('Open the habit plan to change its target.');
+    return personal.savePlan(review.id, { mode: rule.mode, rate: rule.rate, target, cue: rule.cue, identity: rule.identity,
+      time: rule.time, place: rule.place, starter: rule.starter, bundle: rule.bundle });
+  }
+  function editPlan(review: HabitReview) {
+    setReviewing(false);
+    const task = view && [...view.due, ...view.upcoming, ...view.history].find(item => item.recurrenceId === review.id);
+    if (task) setSheet({ mode: 'edit', id: crypto.randomUUID(), task, rule: rules.get(review.id) });
+  }
+  // Habit stacking: the new habit starts right after this one, so its title becomes the cue.
+  function stack(review: HabitReview) {
+    setReviewing(false);
+    const cue = /^[A-Z][a-z]/.test(review.title) ? review.title.charAt(0).toLowerCase() + review.title.slice(1) : review.title;
+    setSheet({ mode: 'create', id: crypto.randomUUID(), guided: true, cue });
+  }
+
   function insight(task: Task) {
     const rule = ruleFor(task), minutes = data?.progress[task.id] ?? 0;
     const minutesByDay = data?.week.minutes[task.recurrenceId ?? ''] ?? {};
@@ -138,6 +174,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
       <TaskRow task={task} today={view!.today} busy={saving || !!task.recurrenceId && !data} completable={rule?.mode !== 'minutes'} rule={rule}
         focus={tab === 'due' && !task.recurrenceId
           ? { on: liveFocus.includes(task.id), full: liveFocus.length >= FOCUS_LIMIT, toggle: toggleFocus } : undefined}
+        votes={votesFor(rule)}
         {...(tab === 'due' && task.recurrenceId ? { insight: insight(task) } : {})}
         {...(tab !== 'history' && data ? { onEdit: edit } : {})}
         {...(tab === 'history' && canReopen(task, view!) ? { onReopen: (id: string) => void state.reopen(id) } : {})}
@@ -199,6 +236,8 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
             {tab === 'due' && view && <QuickAdd disabled={saving}
               onAdd={title => state.add({ title, plannedDate: view.today, frequency: 'none' })}
               onMore={title => setSheet({ mode: 'create', id: crypto.randomUUID(), title })} />}
+            {tab === 'due' && view && reviewDue && <WeekPrompt busy={saving}
+              onOpen={() => setReviewing(true)} onDismiss={() => finishReview(false)} />}
             {tab === 'due' && view && minute >= EVENING && closedDay !== today && <EveningPrompt busy={saving}
               onOpen={() => setClosing(true)} onDismiss={() => closeDay(false)} />}
             {tab === 'due' && view && data && <NowCard candidates={candidates} due={view.due} rules={rules} busy={saving}
@@ -262,9 +301,13 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
             {tab === 'history' && <ActivityHistory state={personal} />}
           </div>
           {tab === 'due' && progress && <ProgressPanel state={personal} habits={progress.habits} tasks={progress.tasks}
-            onOpenRewards={() => setRewards(true)} onCloseDay={() => setClosing(true)} />}
+            onOpenRewards={() => setRewards(true)} onCloseDay={() => setClosing(true)} onReview={() => setReviewing(true)} />}
         </div>}
-        <TaskSheet request={sheet} today={today} busy={saving} anchors={anchors}
+        {/* Before the task window, so the review closes before a window it opens takes focus. */}
+        {view && data && <WeeklyReview open={reviewing} today={view.today} reviews={reviews} votes={data.votes} busy={saving}
+          onTarget={setTarget} onGraduate={review => state.graduate(review.id, review.title)} onEditPlan={editPlan} onStack={stack}
+          onFinish={() => finishReview(true)} onClose={() => setReviewing(false)} />}
+        <TaskSheet request={sheet} today={today} busy={saving} anchors={anchors} habits={view?.recurrences.length ?? 0}
           reward={pinned && data ? { title: pinned.title, remaining: pinned.cost - data.balance } : null}
           onCreate={state.add}
           onSavePlan={(task, update) => personal.savePlan(task.id, { ...update })}

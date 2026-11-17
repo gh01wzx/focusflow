@@ -561,6 +561,19 @@ nav { display: grid; gap: 2px; }
 .focus-choice.on .icon { color: var(--orange); fill: currentColor; }
 .focus-choice:disabled:not(.on) { opacity: .4; }
 
+/* Weekly review and identity votes */
+.week-prompt { background: linear-gradient(135deg, rgba(52, 199, 89, .12), rgba(88, 86, 214, .1)), var(--glass); }
+.week-prompt .evening-icon { background: linear-gradient(135deg, #34c759, #30b0c7); box-shadow: 0 8px 18px -10px rgba(48, 176, 199, .9); }
+.votes { color: var(--muted); font-variant-numeric: tabular-nums; }
+.soft-note { margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--orange-soft); color: var(--text-secondary); font-size: 13px; line-height: 1.45; }
+.review-summary .preview-title { font-size: 17px; }
+.vote-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; padding: 0; list-style: none; }
+.vote-chips li { padding: 3px 10px; border-radius: 999px; background: rgba(255, 255, 255, .75); color: var(--text-secondary); font-size: 12.5px; }
+.vote-chips strong { color: var(--accent-text); font-weight: 650; }
+.review-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.review-row .dots { margin-top: 2px; }
+.review-note { margin: 2px 0 0; color: var(--text-secondary); font-size: 13px; line-height: 1.45; }
+
 @media (max-width: 1100px) {
   .personal-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "panel" "lists"; gap: 16px; }
   .progress-panel {

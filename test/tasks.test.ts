@@ -96,6 +96,32 @@ test('a habit keeps its plan, plan edits apply, an invalid plan saves nothing an
   } finally { store.close(); }
 });
 
+test('Personal view counts identity votes and recent habit outcomes', async t => {
+  const { path } = await fixture(t);
+  let now = new Date(2026, 10, 2, 9);
+  const store = await openWorkspaceStore(path, () => now);
+  try {
+    const plan = { rate: 100, target: 10, cue: '', identity: 'A reader', time: '', place: '', starter: '', bundle: '' };
+    const read = store.tasks.addRecurrence({ title: 'Read', plannedDate: '2026-11-02', frequency: 'daily', habit: true, plan });
+    const journal = store.tasks.addRecurrence({ title: 'Journal', plannedDate: '2026-11-02', frequency: 'daily',
+      plan: { ...plan, identity: 'a reader' } });
+    const occurrence = (rule: { id: string }) => store.tasks.view().due.find(task => task.recurrenceId === rule.id)!;
+    // November 2: three minutes on Read (below its target) and Journal done.
+    store.personal.mutate('log', { id: randomUUID(), day: '2026-11-02', subject: occurrence(read).id, minutes: 3 });
+    store.tasks.resolve(occurrence(journal).id, 'completed');
+    // November 3: Read rests and Journal is missed.
+    now = new Date(2026, 10, 3, 9);
+    store.tasks.resolve(occurrence(read).id, 'cancelled');
+    // November 4: twelve minutes on Read cast today's vote.
+    now = new Date(2026, 10, 4, 9);
+    store.personal.mutate('log', { id: randomUUID(), day: '2026-11-04', subject: occurrence(read).id, minutes: 12 });
+    const view = store.personal.view();
+    assert.deepEqual({ ...view.recent[read.id] }, { '2026-11-02': 'started', '2026-11-03': 'rest' });
+    assert.deepEqual({ ...view.recent[journal.id] }, { '2026-11-02': 'done', '2026-11-03': 'missed' });
+    assert.deepEqual({ ...view.votes }, { 'a reader': 3 });
+  } finally { store.close(); }
+});
+
 test('focus keeps up to three one-off tasks and rescheduling moves a task out of earlier focus', async t => {
   const { path } = await fixture(t);
   const store = await openWorkspaceStore(path, () => new Date(2026, 10, 4, 20));

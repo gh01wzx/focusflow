@@ -5,7 +5,7 @@ import type { Task, TaskResolution } from '../../../src/shared/tasks.ts';
 import { dateText } from '../view-options.ts';
 import { cueLine } from '../../../src/shared/habits.ts';
 import type { HabitInsight } from '../../../src/shared/habits.ts';
-import { HabitTrack } from './HabitCard.tsx';
+import { HabitTrack, VoteCount } from './HabitCard.tsx';
 import { CheckIcon, CloseIcon, MoonIcon, PencilIcon, StarIcon } from './Icons.tsx';
 
 interface TaskRowProps {
@@ -21,9 +21,11 @@ interface TaskRowProps {
   onEdit?(task: Task): void;
   // Today's focus: a star on open one-off tasks. A full focus disables new stars.
   focus?: { on: boolean; full: boolean; toggle(task: Task): void } | undefined;
+  // Votes cast so far for the identity in this habit's plan.
+  votes?: number;
 }
 
-export function TaskRow({ task, today, busy, completable = true, rule, insight, onResolve, onReopen, onEdit, focus }: TaskRowProps) {
+export function TaskRow({ task, today, busy, completable = true, rule, insight, onResolve, onReopen, onEdit, focus, votes = 0 }: TaskRowProps) {
   // The circle fills at once; it empties again only if saving fails.
   const [checking, setChecking] = useState(false);
   const pending = task.status === 'pending';
@@ -61,7 +63,7 @@ export function TaskRow({ task, today, busy, completable = true, rule, insight, 
           </>}
         </div>
         {pending && rule?.starter && <p className="starter">Two-minute start: {rule.starter}</p>}
-        {pending && rule?.identity && <p className="identity"><span>Vote for </span>{rule.identity}</p>}
+        {pending && rule?.identity && <p className="identity"><span>Vote for </span>{rule.identity}<VoteCount votes={votes} /></p>}
         {insight && <HabitTrack insight={insight} />}
       </div>
       {pending && rule?.mode === 'complete' && rule.rate > 0 && <span className="points-badge" title="Points when done">+{points(rule.rate)}</span>}

@@ -20,3 +20,15 @@ export function nextOccurrence(date: string, frequency: Frequency): string | nul
   if (result.getUTCFullYear() > 9999) return null;
   return result.toISOString().slice(0, 10);
 }
+
+// Moves a date by whole days, for example the 14 days before today.
+export function addDays(date: string, count: number): string {
+  const result = new Date(date + 'T12:00:00Z');
+  result.setUTCDate(result.getUTCDate() + count);
+  return result.toISOString().slice(0, 10);
+}
+
+// Whole days from one date to a later one.
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(to + 'T12:00:00Z') - Date.parse(from + 'T12:00:00Z')) / 86_400_000);
+}

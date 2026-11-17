@@ -12,6 +12,6 @@ export async function readPersonal(action?: string, input?: unknown): Promise<{ 
   if (!view || typeof view.day !== 'string' || !Number.isSafeInteger(view.balance)
       || !Number.isSafeInteger(view.earned) || !Array.isArray(view.entries) || !Array.isArray(view.rules)
       || !Array.isArray(view.rewards) || !view.progress || !view.week || !Array.isArray(view.week.days) || !view.week.minutes
-      || !view.week.points || !view.preferences) throw new Error('Could not read Personal data.');
+      || !view.week.points || !view.recent || !view.votes || !view.preferences) throw new Error('Could not read Personal data.');
   return { view, award: action && typeof result.award === 'number' && Number.isSafeInteger(result.award) ? result.award : 0 };
 }

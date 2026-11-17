@@ -16,6 +16,16 @@ Under a project, use **Context and settings** to save requirements, the local re
 
 After a coding result, **Preview** uses the ticket worktree. Use `focusflow` for a named FocusFlow sample profile or `npm run SCRIPT` for a repository script. A web script can report its loopback address for **Open preview**. Use the existing PR actions to inspect and publish reviewed changes.
 
+Select a habit to see its last seven days. **Correct log** can move a recorded activity to another scheduled date and adjust its minutes. Saved points use the rate from the original activity.
+
+In **Context and settings**, save the local repository folder, then choose **Read repository references**. Select a document at the displayed commit, trim its excerpt, and add it to the project references. Save settings to keep the draft. Reading an excerpt uses no model calls.
+
+**Run AI** shows the original acceptance items for a breakdown. Assign every item to at least one selected child before creating tickets. Coding runs keep the exact prompt and project revision locally. Refresh review evidence after changing ticket requirements or project context.
+
+A DeepSeek or compatible API coding result waits for approval. Inspect the saved diff, then choose **Apply this patch** or **Discard patch**. A pending patch is restored when you reopen the app. Changes to the ticket, worktree or selected files can require a fresh run. The bounded patch supports tracked text files with no runtime commands.
+
+If a preview process survives a restart, FocusFlow checks its process identity before reusing or stopping it. Review profiles show Ready when the preview reports that its window opened.
+
 ## Repeating tasks
 
 Choose **Repeat** and a start date of today or later. Daily tasks reset at local midnight. For **Weekly**, select one or more weekdays, such as Mon, Tue and Sat. Each selected date is a separate task, starting on the first matching date on or after the start date. Unselected days have no task. Dates follow the computer's current local timezone.

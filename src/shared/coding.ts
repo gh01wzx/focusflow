@@ -4,12 +4,28 @@ import { executionRecord } from './execution.ts';
 export const CODING_STAGES=['starting','coding','permission','cancelling','ready','publishing','review','stopped','failed','interrupted','uncertain','merged'] as const;
 export type CodingStage=typeof CODING_STAGES[number];
 export interface CodingCommand { command:string;exitCode:number|null;output:string;source:'runtime';at:string }
+export interface ProviderPatch {
+  diff: string;
+  files: { path: string; sha256: string }[];
+}
 export interface CodingRun {
   id:string;ticketId:string;stage:CodingStage;createdAt:string;updatedAt:string;
   processId:number|null;threadId:string|null;turnId:string|null;headSha:string|null;
   summary:string;errorCode:string;message:string;commands:CodingCommand[];events:{at:string;text:string}[];
   feedback:string;previousRunId:string|null;allowChecks:boolean;
   requirementsToken?:string;
+  pendingPatch?: ProviderPatch;
+  contextSnapshot?: {
+    projectRevision: number;
+    ticketRevision: string;
+    dependencies: { id: string; revision: string; status: string }[];
+    repository: string;
+    baseSha: string;
+    reviewHeadSha: string | null;
+    files: string[];
+    budget: number;
+    prompt: string;
+  };
   selection?: AiModelSelection;
   inputEstimate?: number;
   usage?: { input: number; output: number; reasoning: number; cached: number; total: number };

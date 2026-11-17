@@ -1,3 +1,4 @@
+import type { PreviewReceipt } from './preview.ts';
 import type { DatabaseSync } from 'node:sqlite';
 import type { CodingWorkspace } from '../shared/execution.ts';
 import type { CodingRun } from '../shared/coding.ts';
@@ -7,6 +8,14 @@ import {emptyReview} from '../shared/review.ts';
 
 export function createExecutionRepository(db: DatabaseSync) {
   return {
+    preview(id: string): PreviewReceipt | null {
+      const row = db.prepare('SELECT receipt_json FROM ticket_previews WHERE ticket_id=?').get(id);
+      return row ? JSON.parse(String(row.receipt_json)) as PreviewReceipt : null;
+    },
+    savePreview(id: string, value: PreviewReceipt) {
+      db.prepare('INSERT INTO ticket_previews VALUES(?,?) ON CONFLICT(ticket_id) DO UPDATE SET receipt_json=excluded.receipt_json')
+        .run(id, JSON.stringify(value));
+    },
     review(id:string):ReviewRecord {const row=db.prepare('SELECT review_json FROM coding_reviews WHERE ticket_id=?').get(id);return row?JSON.parse(String(row.review_json)) as ReviewRecord:emptyReview();},
     reviews():{ticketId:string;value:ReviewRecord}[]{return db.prepare('SELECT ticket_id,review_json FROM coding_reviews').all().map(row=>({ticketId:String(row.ticket_id),value:JSON.parse(String(row.review_json)) as ReviewRecord}));},
     saveReview(id:string,value:ReviewRecord){db.prepare('INSERT INTO coding_reviews(ticket_id,review_json) VALUES(?,?) ON CONFLICT(ticket_id) DO UPDATE SET review_json=excluded.review_json').run(id,JSON.stringify(value));},

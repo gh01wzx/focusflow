@@ -28,7 +28,7 @@ export function CodingRunPanel({ticketId,projectId,disabled,onChanged}:{ticketId
     void read();const timer=setInterval(()=>void read(),2000);return()=>{alive.current=false;clearInterval(timer);sequence.current++;};
   },[ticketId]);
   async function act(action:string){if(requestBusy.current)return;requestBusy.current=true;sequence.current++;setBusy(true);setError('');
-    try{const next=await api.act(ticketId,action,{confirmScope:true,confirmAllowance:true,selection,files,requirementsToken:state?.requirementsToken,feedback,allowChecks:checks,headSha:state?.linkedHeadSha});if(alive.current){setState(next);setRevisionPreview(null);onChanged();}}
+    try{const next=await api.act(ticketId,action,{confirm:true,runId:state?.run?.id,confirmScope:true,confirmAllowance:true,selection,files,requirementsToken:state?.requirementsToken,feedback,allowChecks:checks,headSha:state?.linkedHeadSha});if(alive.current){setState(next);setRevisionPreview(null);onChanged();}}
     catch(cause){if(alive.current)setError(cause instanceof Error?cause.message:'The coding action failed.');}
     finally{requestBusy.current=false;if(alive.current)setBusy(false);}
   }
@@ -53,12 +53,21 @@ export function CodingRunPanel({ticketId,projectId,disabled,onChanged}:{ticketId
     {!state?.run?<p>No coding run has started for this ticket.</p>:<>
       <p role="status"><strong>{state.run.stage.replaceAll('_',' ')}</strong> / {state.run.message}</p>
       <details><summary>Model and token usage</summary>
-        <p>{state.run.selection?.provider ?? 'codex'} � {state.run.selection?.model || 'Provider default'} � {state.run.selection?.effort || 'Default effort'}</p>
+        <p>{state.run.selection?.provider ?? 'codex'} - {state.run.selection?.model || 'Provider default'} - {state.run.selection?.effort || 'Default effort'}</p>
         <p>Estimated initial input: {state.run.inputEstimate ?? 'Unavailable'}</p>
-        {state.run.usage ? <p>{state.run.usage.input} input � {state.run.usage.output} output � {state.run.usage.cached} cached � {state.run.usage.reasoning} reasoning</p> : <p>Provider token usage unavailable.</p>}
+        {state.run.usage ? <p>{state.run.usage.input} input - {state.run.usage.output} output - {state.run.usage.cached} cached - {state.run.usage.reasoning} reasoning</p> : <p>Provider token usage unavailable.</p>}
       </details>
+      {state.run.contextSnapshot && <details><summary>Run context snapshot</summary>
+        <p>Project revision {state.run.contextSnapshot.projectRevision} - Base {state.run.contextSnapshot.baseSha.slice(0, 12)}</p>
+        <pre>{state.run.contextSnapshot.prompt}</pre>
+      </details>}
       <p>Run <code>{state.run.id}</code> / updated {new Date(state.run.updatedAt).toLocaleString()}</p>
-      {['starting','coding','permission','cancelling'].includes(state.run.stage)&&<button disabled={busy||state.run.stage==='cancelling'} onClick={()=>void act('cancel')}>Stop coding run</button>}
+      {state.run.stage === 'permission' && state.run.pendingPatch && <details open><summary>Review file changes before applying</summary>
+        <pre>{state.run.pendingPatch.diff}</pre>
+        <button className="primary" disabled={busy || disabled} onClick={() => void act('apply-patch')}>Apply this patch</button>
+        <button disabled={busy || disabled} onClick={() => void act('cancel')}>Discard patch</button>
+      </details>}
+      {['starting','coding','permission','cancelling'].includes(state.run.stage)&&!(state.run.stage==='permission'&&state.run.pendingPatch)&&<button disabled={busy||state.run.stage==='cancelling'} onClick={()=>void act('cancel')}>Stop coding run</button>}
       {state.run.stage==='uncertain'&&<><p>Previous process: {state.run.processId??'unknown'}. The app will not kill or reattach an unknown process.</p><button disabled={busy||disabled} onClick={()=>void act('recover')}>Check previous process</button></>}
       {state.run.summary&&<details><summary>Developer statement</summary><pre>{state.run.summary}</pre><p>This is the coding model's statement, not independent verification.</p></details>}
       {state.run.commands.length>0&&<details><summary>Runtime command evidence ({state.run.commands.length})</summary>

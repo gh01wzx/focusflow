@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-interface PreviewState { stage: string; revision: string; command: string; url: string }
+interface PreviewState { stage: string; revision: string; command: string; url: string; profile: string }
 const route = (id: string) => '/api/project-tickets/' + id + '/preview';
 export function PreviewPanel({ ticketId }: { ticketId: string }) {
   const [preview, setPreview] = useState<PreviewState | null>(null);
@@ -32,11 +32,12 @@ export function PreviewPanel({ ticketId }: { ticketId: string }) {
   }
   const running = preview?.stage === 'ready' || preview?.stage === 'starting';
   return <section aria-label="Preview">
-    <button className="primary" disabled={busy || preview?.stage === 'stopping'} onClick={() => void act(running ? 'stop' : 'start')}>
+    <button className="primary" disabled={busy || preview?.stage === 'stopping' || preview?.stage === 'uncertain'} onClick={() => void act(running ? 'stop' : 'start')}>
       {running ? 'Stop preview' : 'Preview'}
     </button>
-    {preview && <p role="status">{preview.stage} � {preview.revision} � {preview.command}
-      {preview.url && running && <> � <a href={preview.url} target="_blank" rel="noreferrer">Open preview</a></>}</p>}
+    {preview && <p role="status">{preview.stage} - {preview.revision} - {preview.command}{preview.profile && <> - Review profile {preview.profile}</>}
+      {preview.url && running && <> - <a href={preview.url} target="_blank" rel="noreferrer">Open preview</a></>}</p>}
+    {preview?.stage === 'uncertain' && <p role="alert">Could not identify the saved preview process. Close the old preview if it is still open.</p>}
     {error && <p role="alert">{error}</p>}
   </section>;
 }

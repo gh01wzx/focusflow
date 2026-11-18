@@ -25,14 +25,20 @@ if errorlevel 1 (
   if errorlevel 1 goto failed
 )
 if /i "%~1"=="--review" (
+  rem Review and preview launches stay in this window, which reports when the app is ready.
   if "%~2"=="" (
     call npm run review -- local
   ) else (
     call npm run review -- "%~2"
   )
-) else (
-  call npm start -- --personal
+  if errorlevel 1 goto failed
+  exit /b 0
 )
+call npm run build
+if errorlevel 1 goto failed
+for /f "delims=" %%E in ('node -e "process.stdout.write(require('electron'))"') do set "FOCUSFLOW_ELECTRON=%%E"
+rem Start the everyday app on its own, so this window closes while FocusFlow keeps running in the tray.
+start "" "%FOCUSFLOW_ELECTRON%" . --personal
 if errorlevel 1 goto failed
 exit /b 0
 :failed

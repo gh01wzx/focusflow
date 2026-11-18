@@ -1055,4 +1055,6 @@ export const chinese: Record<string, string> = {
   "First up: {0} at {1}": "第一件：{1} 的 {0}",
   "The new schedule starts on this date, up to four weeks ahead. Until then the current schedule continues. Recorded activity keeps its original dates.": "新安排从这个日期开始，最多可设在四周后。在那之前沿用当前安排，已记录的活动保留原日期。",
   "Checked off once each time it comes up. This plan keeps that way of recording.": "每次安排时打卡一次。这个计划会保持这种记录方式。",
+  "{0} points": "{0} 积分",
+  "Show {0} more": "再显示 {0} 条",
 };

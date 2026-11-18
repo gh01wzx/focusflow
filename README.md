@@ -20,6 +20,8 @@ cd focusflow
 
 After cloning, you can also double-click `Start-FocusFlow.command` in Finder. The first launch downloads the pinned dependencies and builds the app. The Mac launcher refreshes dependencies when the lockfile changes. On Windows, run `npm ci` if dependencies change after a Git update.
 
+Closing the window keeps FocusFlow running in the Windows notification area or the Mac menu bar. Click the tray icon, or open the launcher again, to bring the window back. To end FocusFlow, choose **Quit FocusFlow** from the tray icon's menu, or press Cmd+Q on a Mac. The launcher window closes once the app opens. Review workspaces opened with `--review` keep their launcher window open.
+
 Everyday data stays outside the checkout, in `~/Library/Application Support/FocusFlow/desktop` on Mac and `%LOCALAPPDATA%\FocusFlow\desktop` on Windows. New profiles start empty.
 
 Personal opens on **Today**. Add a one-off task or a repeating habit, track points and redeem your own rewards. In **Projects**, the Action center lists tickets to review, work in progress and the next eligible ticket. Open a project for its milestones and status board.

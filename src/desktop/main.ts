@@ -19,9 +19,11 @@ import { createGitHubService } from '../github/service.ts';
 import { isGitHubIssueUrl, isGitHubPullUrl, isGitHubEvidenceUrl } from '../shared/github.ts';
 import { awaitInterfaceReady, StartupFailure } from '../runtime/startup.ts';
 import { RUNTIME_MARKER } from '../runtime/diagnostic.ts';
+import { keepInTray } from './tray.ts';
 
 let window: BrowserWindow | null = null;
 let service: LocalServer | undefined;
+let tray: ReturnType<typeof keepInTray> | undefined;
 
 app.setName('FocusFlow');
 if (process.platform === 'win32') app.setAppUserModelId('dev.focusflow.desktop');
@@ -66,6 +68,7 @@ async function startDesktop(): Promise<void> {
         closing = true;
         traceShutdown('desktop:begin');
         // Release renderer connections before awaiting the local HTTP service.
+        tray?.destroy();
         window?.destroy();
         void service.close().then(() => { traceShutdown('desktop:complete'); app.quit(); },
           () => { traceShutdown('desktop:failed'); app.exit(1); });
@@ -123,6 +126,15 @@ async function startDesktop(): Promise<void> {
       window.webContents.session.setPermissionCheckHandler(() => false);
       window.webContents.session.on('will-download', event => event.preventDefault());
       window.on('closed', () => { window = null; });
+      // Signing out or shutting down Windows quits instead of hiding to the tray.
+      window.on('session-end', () => app.quit());
+      // Automated previews close normally, so stopping a preview never leaves a hidden app.
+      if (process.env.FOCUSFLOW_PREVIEW_READY !== '1') {
+        tray = keepInTray(window, { origin, title: profile.workspaceLabel ? `FocusFlow - ${profile.workspaceLabel}` : 'FocusFlow',
+          onQuit: () => app.quit() });
+      }
+      // Clicking the Dock icon on a Mac brings the hidden window back.
+      app.on('activate', () => tray?.show());
       await awaitInterfaceReady(() => window!.loadURL(origin), ready);
       interfaceReady = true;
       window?.show();

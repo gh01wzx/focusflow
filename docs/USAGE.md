@@ -2,6 +2,8 @@
 
 Open `Start-FocusFlow.cmd` on Windows or `Start-FocusFlow.command` on macOS to build and open your everyday workspace. Personal and manual project work are available as soon as the local app opens. See [the README](../README.md) for setup.
 
+Closing the window keeps FocusFlow running in the tray (Windows) or the menu bar (Mac). Click its icon to open the window again, and choose **Quit FocusFlow** from the icon's menu to end it. Long lists in **Upcoming**, **History** and **Points history** show 20 entries at first; choose **Show more** for older ones.
+
 ## Personal
 
 **Today** groups **Habits** separately from both one-off and repeating **Tasks**. Use **Upcoming** for future tasks and **History** for resolved tasks. A missed one-off task keeps its original date and stays open until you complete or cancel it.

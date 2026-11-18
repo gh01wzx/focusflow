@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { points } from '../../../src/shared/personal.ts';
 import type { ActivityEntry, Reward } from '../../../src/shared/personal.ts';
 import type { PersonalController } from '../usePersonal.ts';
+import { PAGE, ShowMore } from './ShowMore.tsx';
 
 function RewardForm({ initial, state, onClose }: { initial: Reward; state: PersonalController; onClose: () => void }) {
   const [draft, setDraft] = useState(initial);
@@ -78,6 +79,8 @@ export function ActivityHistory({ state }: { state: PersonalController }) {
   const [edit, setEdit] = useState<{ entry: ActivityEntry; id: string; minutes: string; day: string }>();
   // Undo is permanent for that entry, so it takes a second click.
   const [undoing, setUndoing] = useState<string>();
+  // The newest entries first; older ones on request.
+  const [limit, setLimit] = useState(PAGE);
   const entries = state.data?.entries;
   // One pass over the ledger instead of searching it again for every row.
   const adjustments = useMemo(() => {
@@ -91,13 +94,13 @@ export function ActivityHistory({ state }: { state: PersonalController }) {
   }, [entries]);
   return <section className="activity-history"><h2>{t("Points history")}</h2>
     {!entries?.length && <p className="list-note">{t("No points activity yet.")}</p>}
-    {!!entries?.length && <ul className="reward-list glass">{entries.map(entry => {
+    {!!entries?.length && <ul className="reward-list glass">{entries.slice(0, limit).map(entry => {
       const undone = adjustments.reversed.has(entry.id);
       const original = entry.kind === 'earn' || entry.kind === 'redeem';
       return <li key={entry.id} className="reward-row">
         <div className="reward-info"><strong>{entry.title}</strong><p>{[entry.day,
-          entry.kind === 'reverse' ? 'Undone' : entry.kind === 'edit' ? 'Corrected' : entry.kind === 'redeem' ? 'Redeemed' : 'Earned',
-          (entry.amount > 0 ? '+' : '') + points(entry.amount) + ' points', entry.minutes ? entry.minutes + ' ' + t(entry.unit === 'count' ? 'counts' : 'min') : ''].filter(Boolean).join(' · ')}</p></div>
+          t(entry.kind === 'reverse' ? 'Undone' : entry.kind === 'edit' ? 'Corrected' : entry.kind === 'redeem' ? 'Redeemed' : 'Earned'),
+          t('{0} points', (entry.amount > 0 ? '+' : '') + points(entry.amount)), entry.minutes ? entry.minutes + ' ' + t(entry.unit === 'count' ? 'counts' : 'min') : ''].filter(Boolean).join(' · ')}</p></div>
         {original && !undone && (undoing === entry.id ? <div className="confirm-actions" role="group" aria-label={t("Undo {0}?", entry.title)}>
           <span>{entry.kind === 'redeem' ? t('Refund these points?') : t('Remove these points?')}</span>
           <button className="danger-button" disabled={state.busy} onClick={async () => {
@@ -122,5 +125,6 @@ export function ActivityHistory({ state }: { state: PersonalController }) {
         </form>}
       </li>;
     })}</ul>}
+    <ShowMore hidden={(entries?.length ?? 0) - limit} onMore={() => setLimit(current => current + PAGE)} />
   </section>;
 }

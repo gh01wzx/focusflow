@@ -24,6 +24,7 @@ import { RepeatingTasks } from './components/RepeatingTasks.tsx';
 import { NowCard } from './components/NowCard.tsx';
 import { QuickAdd } from './components/QuickAdd.tsx';
 import { CloseDaySheet, EVENING, EveningPrompt } from './components/CloseDaySheet.tsx';
+import { PAGE, ShowMore } from './components/ShowMore.tsx';
 import { WeeklyReview, WeekPrompt, weekOf } from './components/WeeklyReview.tsx';
 import { ListItem, spring } from './components/Animated.tsx';
 import { CheckIcon, PlusIcon, SparkIcon } from './components/Icons.tsx';
@@ -46,6 +47,8 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   // Other tasks fold away while focus tasks are open. Starring keeps them open until the next
   // visit, so choosing one focus task never hides the next choice.
   const [othersOpen, setOthersOpen] = useState(false);
+  // Upcoming and History show a page per group at first; Today always shows everything.
+  const [limits, setLimits] = useState<Record<string, number>>({});
   // A minute clock keeps "Next" in step with planned times.
   const [minute, setMinute] = useState(() => new Date().toTimeString().slice(0, 5));
   const saving = busy || personal.busy;
@@ -269,6 +272,8 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               if (focus ? liveFocus.length === 0 : group.items.length === 0) return null;
               const late = group.items.filter(task => !task.frequency && task.plannedDate < view.today).length;
               const folded = others && !othersShown;
+              const limitKey = tab + ':' + group.key;
+              const limit = tab === 'due' ? group.items.length : limits[limitKey] ?? PAGE;
               return <motion.section key={group.key} layout="position" transition={spring}
                 className={`list-group glass ${focus ? 'focus-group' : ''}`} aria-label={t(group.title)} aria-busy={saving}>
                 <div className="group-heading">
@@ -282,8 +287,10 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
                 {others && liveFocus.length === 0 && group.items.length > 1 && <p className="group-note">
                   {t("Star up to {0} that matter most today. They move to the top and Next starts with them.", FOCUS_LIMIT)}</p>}
                 {!folded && group.items.length > 0 && <ul className="task-list">
-                  <AnimatePresence initial={false} mode="popLayout">{group.items.map(row)}</AnimatePresence>
+                  <AnimatePresence initial={false} mode="popLayout">{group.items.slice(0, limit).map(row)}</AnimatePresence>
                 </ul>}
+                {!folded && <ShowMore hidden={group.items.length - limit}
+                  onMore={() => setLimits(current => ({ ...current, [limitKey]: limit + PAGE }))} />}
               </motion.section>;
             })}
             {tab === 'history' && rows.length >= HISTORY_LIMIT && <p className="list-note">

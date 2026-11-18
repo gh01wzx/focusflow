@@ -35,4 +35,12 @@ if [ "$(cat "$stamp" 2>/dev/null || true)" != "$expected" ] ||
 fi
 
 node node_modules/electron/install.js
-exec npm "$@"
+if [ "$1" != "start" ]; then
+  # Review and preview launches stay in this window, which reports when the app is ready.
+  exec npm "$@"
+fi
+npm run build
+electron=$(node -e 'process.stdout.write(require("electron"))')
+# Start the everyday app on its own, so this Terminal window can close while FocusFlow keeps
+# running in the menu bar.
+"$electron" . --personal >/dev/null 2>&1 &

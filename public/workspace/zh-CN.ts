@@ -1070,4 +1070,10 @@ export const chinese: Record<string, string> = {
   "Previous habit": "上一个习惯",
   "Next habit": "下一个习惯",
   "Stop · check in": "停止 · 打卡",
+  "A good start": "开了个好头",
+  "One left": "只差一个了",
+  "Keep going": "继续保持",
+  "Every habit done today": "今天的习惯都完成了",
+  "{0} days in a row": "连续 {0} 天",
+  "A quiet win. See you tomorrow.": "安静的一胜，明天见。",
 };

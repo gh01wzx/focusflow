@@ -159,3 +159,17 @@ export function reviewHabits(today: string, schedules: RecurrenceRule[], rules: 
     return { id: schedule.id, title: schedule.title, identity: rule?.identity ?? '', marks: held(lastWeek), week, before, suggestion };
   });
 }
+
+// Days in a row, before today, on which every scheduled habit reached done. Rest days and days
+// with nothing scheduled neither count nor break the run. The window is the recent outcomes kept.
+export function fullDaysBefore(today: string, habitIds: string[], recent: Record<string, Record<string, Outcome>>): number {
+  let run = 0;
+  for (let back = 1; back <= 14; back++) {
+    const day = addDays(today, -back);
+    const outcomes = habitIds.map(id => recent[id]?.[day]).filter((outcome): outcome is Outcome => !!outcome && outcome !== 'rest');
+    if (!outcomes.length) continue;
+    if (outcomes.some(outcome => outcome !== 'done')) break;
+    run++;
+  }
+  return run;
+}

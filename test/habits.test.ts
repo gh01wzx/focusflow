@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { habitInsight, nextUp, outcomeOf, reviewHabits } from '../src/shared/habits.ts';
+import { fullDaysBefore, habitInsight, nextUp, outcomeOf, reviewHabits } from '../src/shared/habits.ts';
 import { addDays } from '../src/shared/calendar.ts';
 import type { Outcome, ScoringRule } from '../src/shared/personal.ts';
 import type { RecurrenceRule, Task, TaskStatus } from '../src/shared/tasks.ts';
@@ -90,4 +90,13 @@ test('the weekly review suggests one next step from the last two weeks', () => {
   assert.deepEqual(reviewHabits(today, [schedule('reader', '2026-10-01')], rules, { reader: all('started') })[0]!.suggestion,
     { kind: 'steady' });
   assert.equal(reviewHabits(today, [schedule('later', '2026-11-20')], rules, {}).length, 0);
+});
+
+test('full days count back from yesterday, skip rest days and stop at a day not fully done', () => {
+  const recent: Record<string, Record<string, Outcome>> = {
+    read: { '2026-11-15': 'done', '2026-11-14': 'done', '2026-11-13': 'rest', '2026-11-12': 'done', '2026-11-11': 'started' },
+    walk: { '2026-11-15': 'done', '2026-11-14': 'done', '2026-11-13': 'rest', '2026-11-12': 'done', '2026-11-11': 'done' },
+  };
+  assert.equal(fullDaysBefore('2026-11-16', ['read', 'walk'], recent), 3);
+  assert.equal(fullDaysBefore('2026-11-16', [], recent), 0);
 });

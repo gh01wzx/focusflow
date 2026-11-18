@@ -1,7 +1,7 @@
 import { InterfaceContext } from '../workspace/interface-context.ts';
 import { defaultInterface } from '../../src/shared/interface.ts';
 import { t } from '../workspace/locale.ts';
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { usePersonal } from './usePersonal.ts';
 import { ActivityHistory, RewardShop } from './components/PersonalRewards.tsx';
@@ -9,7 +9,7 @@ import type { ScoringRule } from '../../src/shared/personal.ts';
 import { isHabit, FOCUS_LIMIT, HISTORY_LIMIT } from '../../src/shared/tasks.ts';
 import type { RecurrenceRule, Task } from '../../src/shared/tasks.ts';
 import { localDay } from '../../src/shared/calendar.ts';
-import { habitInsight, identityKey, nextUp, reviewHabits, todayProgress } from '../../src/shared/habits.ts';
+import { fullDaysBefore, habitInsight, identityKey, nextUp, reviewHabits, todayProgress } from '../../src/shared/habits.ts';
 import type { HabitReview } from '../../src/shared/habits.ts';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
@@ -25,6 +25,8 @@ import { NowCard } from './components/NowCard.tsx';
 import { QuickAdd } from './components/QuickAdd.tsx';
 import { CloseDaySheet, EVENING, EveningPrompt } from './components/CloseDaySheet.tsx';
 import { PAGE, ShowMore } from './components/ShowMore.tsx';
+import { Celebration } from './components/Celebration.tsx';
+import type { Moment } from './components/Celebration.tsx';
 import { WeeklyReview, WeekPrompt, weekOf } from './components/WeeklyReview.tsx';
 import { ListItem, spring } from './components/Animated.tsx';
 import { CheckIcon, PlusIcon, SparkIcon } from './components/Icons.tsx';
@@ -58,6 +60,19 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const completedToday = useMemo(() => view?.history.filter(task => task.status === 'completed' && task.resolvedAt
     && localDay(new Date(task.resolvedAt)) === view.today) ?? [], [view]);
   const progress = view ? todayProgress(view, rules, data?.progress ?? {}, completedToday) : null;
+  // Each habit finished today gets a quiet moment that grows as the day fills. Only increases
+  // after the page has loaded count, so opening the app or undoing never celebrates.
+  const [moment, setMoment] = useState<Moment | null>(null);
+  const seen = useRef<{ day: string; done: number } | null>(null);
+  const habitsDone = data && progress ? progress.habits.done : null;
+  useEffect(() => {
+    if (habitsDone === null || !view || !data || !progress) return;
+    const last = seen.current;
+    seen.current = { day: view.today, done: habitsDone };
+    if (!last || last.day !== view.today || habitsDone <= last.done || !progress.habits.total) return;
+    const habitIds = view.recurrences.filter(isHabit).map(rule => rule.id);
+    setMoment({ id: Date.now(), done: habitsDone, total: progress.habits.total, streak: fullDaysBefore(view.today, habitIds, data.recent) });
+  }, [habitsDone, view?.today]);
   const pinned = data?.rewards.find(item => item.id === data.preferences.pinnedReward);
   const rows = view?.[tab] ?? [];
   const due = view?.due ?? [];
@@ -330,6 +345,8 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
           onCreate={state.add}
           onSavePlan={(id, update) => personal.savePlan(id, { ...update })} onRemove={personal.remove}
           onClose={() => setSheet(null)} />
+        <Celebration moment={moment} sound={{ on: settings.sound, volume: settings.volume }} onEnd={() => setMoment(null)}
+          reduced={settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches} />
         {view && <CloseDaySheet open={closing} view={view} rules={rules} minutes={data?.progress ?? {}} busy={saving} insightFor={insight}
           onCancel={task => state.settle(task.id, 'cancelled', true)}
           onMove={(task, date) => state.reschedule(task.id, date, true)}

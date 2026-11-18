@@ -641,3 +641,34 @@ html[data-motion="reduced"] *, html[data-motion="reduced"] *::before, html[data-
 
 /* Long lists grow a page at a time. */
 .show-more { display: block; margin: 4px auto 12px; }
+
+/* Completion moments: hairline ripples from the habit just finished, a quiet note at the top,
+   and a closing ring when the day's habits are all done. Nothing blocks the page. */
+.celebrate { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+.ripple {
+  position: fixed; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%;
+  border: 1.5px solid rgba(88, 86, 214, .5); box-shadow: inset 0 0 22px rgba(88, 86, 214, .12);
+}
+.whisper {
+  position: fixed; top: 18px; left: 0; right: 0; width: max-content; max-width: calc(100vw - 32px); margin: 0 auto;
+  display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-radius: 999px; color: var(--text); font-size: 13px; font-weight: 600;
+}
+.whisper-dots { display: inline-flex; gap: 4px; }
+.whisper-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--fill-strong); }
+.whisper-dots i.on { background: var(--accent); }
+.whisper-count { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+.finale {
+  position: fixed; inset: 0; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 46%, rgba(255, 255, 255, .6), rgba(255, 255, 255, 0) 52%),
+    radial-gradient(circle at 50% 46%, rgba(88, 86, 214, .1), rgba(88, 86, 214, 0) 62%);
+}
+.finale-card {
+  display: grid; justify-items: center; gap: 4px; min-width: 240px; padding: 26px 34px 22px; border-radius: 24px;
+  text-align: center; cursor: pointer;
+}
+.finale-card svg { width: 76px; height: 76px; margin-bottom: 8px; }
+.finale-track { fill: none; stroke: var(--fill-strong); stroke-width: 5; }
+.finale-fill { fill: none; stroke-width: 5; stroke-linecap: round; }
+.finale-check { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.finale-title { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.finale-sub { margin: 0; color: var(--muted); font-size: 13px; }

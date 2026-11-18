@@ -29,7 +29,8 @@ export async function openWorkspaceStore(path: string, clock: () => Date = () =>
       reconcileRecurrences(repository, now, randomUUID, personal.reachedTarget);
       return operation(now);
     });
-    const personal = createPersonalService(createPersonalRepository(db), repository, taskTransaction);
+    const personalRepository = createPersonalRepository(db);
+    const personal = createPersonalService(personalRepository, repository, taskTransaction);
     const projectTransaction: ProjectTransaction = operation => inTransaction(db, () => operation(clock()));
     const projectRepository = createProjectRepository(db);
     const planDrafts = createPlanRepository(db);
@@ -38,12 +39,17 @@ export async function openWorkspaceStore(path: string, clock: () => Date = () =>
       personal,
       interfaceSettings() {
         const row = db.prepare("SELECT value FROM personal_preferences WHERE key='interface'").get();
-        const value: unknown = row ? JSON.parse(String(row.value)) : defaultInterface;
+        const { sound, volume, reducedMotion } = personal.preferences();
+        const value: unknown = { ...(row ? JSON.parse(String(row.value)) : defaultInterface), sound, volume, reducedMotion };
         return isInterface(value) ? value : defaultInterface;
       },
       saveInterface(settings: InterfaceSettings) {
-        db.prepare("INSERT INTO personal_preferences(key,value) VALUES('interface',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value")
-          .run(JSON.stringify({ language: settings.language, start: settings.start, size: settings.size }));
+        inTransaction(db, () => {
+          const { language, start, size, sound, volume, reducedMotion } = settings;
+          db.prepare("INSERT INTO personal_preferences(key,value) VALUES('interface',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value")
+            .run(JSON.stringify({ language, start, size }));
+          personalRepository.savePreferences(JSON.stringify({ ...personal.preferences(), sound, volume, reducedMotion }));
+        });
       },
       projects: createProjectService(projectRepository, projectTransaction, randomUUID),
       planDrafts,

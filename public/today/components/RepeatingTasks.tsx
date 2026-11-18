@@ -6,17 +6,18 @@ import { WEEKDAYS } from '../../../src/shared/weekdays.ts';
 
 interface RepeatingTasksProps {
   rules: RecurrenceRule[];
+  habits?: boolean;
   busy: boolean;
   onStop(id: string): Promise<void>;
 }
 
-export function RepeatingTasks({ rules, busy, onStop }: RepeatingTasksProps) {
+export function RepeatingTasks({ rules, habits, busy, onStop }: RepeatingTasksProps) {
   // Stopping cancels every future occurrence and cannot be undone, so it takes a second click.
   const [confirming, setConfirming] = useState<string | null>(null);
   if (rules.length === 0) return null;
   return (
     <details className="recurrences">
-      <summary>{t("Repeating tasks (")}{rules.length})</summary>
+      <summary>{t(habits ? "Habit schedules (" : "Repeating tasks (")}{rules.length})</summary>
       <p>{t("Stop future repeats here. The current period stays available; cancelling a task only skips that occurrence.")}</p>
       <ul className="task-list">
         {rules.map(rule => (

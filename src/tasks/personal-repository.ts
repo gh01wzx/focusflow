@@ -60,9 +60,10 @@ export function createPersonalRepository(db: DatabaseSync) {
   // Visit only occurrences of rules with an identity. CROSS JOIN keeps this index
   // lookup inside the rule loop even on a database without planner statistics.
   const identityVotes = db.prepare(`SELECT s.identity, COUNT(*) AS votes
-    FROM personal_scoring s CROSS JOIN tasks t ON t.recurrence_id=s.subject
+    FROM personal_scoring s CROSS JOIN tasks t ON (t.recurrence_id=s.subject OR (t.id=s.subject AND t.recurrence_id IS NULL))
     WHERE s.identity<>'' AND (t.status='completed' OR (t.status IN ('pending','missed') AND ${occurrenceMinutes}>0))
     GROUP BY s.identity`);
+  const identityList = db.prepare("SELECT DISTINCT identity FROM personal_scoring WHERE identity<>'' ORDER BY identity COLLATE NOCASE, identity");
   const storedPreferences = db.prepare("SELECT value FROM personal_preferences WHERE key='settings'");
   function reward(row: Record<string, unknown>): Reward {
     return { id: String(row.id), title: String(row.title), cost: Number(row.cost), note: String(row.note),
@@ -71,6 +72,14 @@ export function createPersonalRepository(db: DatabaseSync) {
   return {
     rule(subject: string) {
       return ruleBySubject.get(subject) as ScoringRule | undefined;
+    },
+    identities() {
+      const names = new Map<string, string>();
+      for (const row of identityList.all()) {
+        const name = String(row.identity), key = identityKey(name);
+        if (key && !names.has(key)) names.set(key, name);
+      }
+      return [...names.values()];
     },
     rules() { return currentRules.all() as unknown as ScoringRule[]; },
     saveRule(rule: ScoringRule) {
@@ -124,7 +133,7 @@ export function createPersonalRepository(db: DatabaseSync) {
       return result;
     },
     votes() {
-      const result: Record<string, number> = {};
+      const result: Record<string, number> = Object.create(null);
       for (const row of identityVotes.all()) {
         const key = identityKey(String(row.identity));
         result[key] = (result[key] ?? 0) + Number(row.votes);

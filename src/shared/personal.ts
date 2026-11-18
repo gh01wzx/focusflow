@@ -59,6 +59,7 @@ export interface PersonalView {
   earned: number;
   balance: number;
   rules: ScoringRule[];
+  identities: string[];
   rewards: Reward[];
   entries: ActivityEntry[];
   progress: Record<string, number>;

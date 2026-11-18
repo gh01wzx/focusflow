@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 22;
+export const SCHEMA_VERSION = 23;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -212,4 +212,6 @@ export const MIGRATIONS = [
     PRIMARY KEY(day, task_id),
     UNIQUE(day, position)
   );` },
+  // Older schedules all appeared as habits. The owner can correct their category in Edit plan.
+  { version: 23, sql: "ALTER TABLE recurrence_rules ADD COLUMN category TEXT NOT NULL DEFAULT 'habit' CHECK(category IN ('task','habit'));" },
 ] as const;

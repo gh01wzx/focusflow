@@ -1,3 +1,4 @@
+import { isHabit } from './tasks.ts';
 import { addDays, daysBetween } from './calendar.ts';
 import type { HabitPlan, Outcome, ScoringRule } from './personal.ts';
 import type { RecurrenceRule, Task, TaskStatus, TaskView } from './tasks.ts';
@@ -53,19 +54,19 @@ export function habitInsight(task: Task, history: Task[], today: { done: boolean
   };
 }
 
-// Today's rings: repeating habits and one-off tasks that are done out of those due today.
+// Count each occurrence in its own category. Timed habits can reach their target while open.
 export function todayProgress(view: TaskView, rules: Map<string, ScoringRule>, minutes: Record<string, number>,
   completedToday: Task[]): { habits: Progress; tasks: Progress } {
-  const habitsDue = view.due.filter(task => task.recurrenceId);
+  const habitsDue = view.due.filter(isHabit);
   const timedDone = habitsDue.filter(task => {
     const rule = rules.get(task.recurrenceId!);
     return rule?.mode === 'minutes' && (minutes[task.id] ?? 0) >= rule.target;
   }).length;
-  const routinesDone = completedToday.filter(task => task.recurrenceId).length;
-  const tasksDone = completedToday.filter(task => !task.recurrenceId).length;
+  const routinesDone = completedToday.filter(isHabit).length;
+  const tasksDone = completedToday.filter(task => !isHabit(task)).length;
   return {
     habits: { done: timedDone + routinesDone, total: habitsDue.length + routinesDone },
-    tasks: { done: tasksDone, total: view.due.filter(task => !task.recurrenceId).length + tasksDone },
+    tasks: { done: tasksDone, total: view.due.filter(task => !isHabit(task)).length + tasksDone },
   };
 }
 
@@ -79,7 +80,7 @@ export function nextUp(due: Task[], rules: Map<string, ScoringRule>, minutes: Re
     const time = rules.get(task.recurrenceId ?? task.id)?.time ?? '';
     if (time && time <= now) return 0;
     if (focus.includes(task.id)) return 1;
-    return !time ? (task.recurrenceId ? 2 : 3) : 4;
+    return !time ? (isHabit(task) ? 2 : 3) : 4;
   };
   const time = (task: Task) => rules.get(task.recurrenceId ?? task.id)?.time ?? '';
   return due.map((task, index) => ({ task, index })).filter(({ task }) => {
@@ -129,7 +130,7 @@ export function reviewHabits(today: string, schedules: RecurrenceRule[], rules: 
   const shown = (outcome: Outcome) => outcome === 'done' || outcome === 'started';
   const met = (outcome: Outcome) => outcome === 'done';
   const steady = (progress: Progress) => progress.total > 0 && progress.done / progress.total >= STEADY;
-  const started = schedules.filter(schedule => schedule.startDate <= today);
+  const started = schedules.filter(schedule => isHabit(schedule) && schedule.startDate <= today);
   return started.map(schedule => {
     const rule = rules.get(schedule.id);
     const outcomes = recent[schedule.id] ?? {};

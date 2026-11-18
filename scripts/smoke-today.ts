@@ -222,12 +222,13 @@ try {
     await page.getByRole('checkbox', { name: 'Complete Daily check-in', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Task completed.' }).waitFor();
     await add('Weekly review', today, 'weekly');
-    // Skipping a repeating occurrence is recorded as a rest day.
-    await page.getByRole('button', { name: 'Rest today Weekly review', exact: true }).click();
-    await page.getByRole('status').filter({ hasText: 'Rest day recorded.' }).waitFor();
+    // Cancelling a repeating task skips only this occurrence.
+    await page.getByRole('button', { name: 'Cancel Weekly review', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Task cancelled.' }).waitFor();
     await add('Daily unfinished', today, 'daily');
     await add('Future repeat', shift(1), 'weekly');
-    await page.locator('.recurrences summary').click();
+    await page.getByRole('navigation', { name: 'Personal views' }).getByRole('button', { name: /Today/ }).click();
+    await page.locator('.recurrences summary').filter({ hasText: 'Repeating tasks' }).click();
     await page.getByRole('button', { name: 'Stop repeating Future repeat', exact: true }).click();
     await page.getByRole('button', { name: 'Confirm stop repeating Future repeat', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Repeating stopped.' }).waitFor();

@@ -1,10 +1,12 @@
+import { InterfaceContext } from '../workspace/interface-context.ts';
+import { defaultInterface } from '../../src/shared/interface.ts';
 import { t } from '../workspace/locale.ts';
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { usePersonal } from './usePersonal.ts';
 import { ActivityHistory, RewardShop } from './components/PersonalRewards.tsx';
 import type { ScoringRule } from '../../src/shared/personal.ts';
-import { FOCUS_LIMIT, HISTORY_LIMIT } from '../../src/shared/tasks.ts';
+import { isHabit, FOCUS_LIMIT, HISTORY_LIMIT } from '../../src/shared/tasks.ts';
 import type { Task } from '../../src/shared/tasks.ts';
 import { localDay } from '../../src/shared/calendar.ts';
 import { habitInsight, identityKey, nextUp, reviewHabits, todayProgress } from '../../src/shared/habits.ts';
@@ -31,7 +33,8 @@ import type { Timer } from './local-state.ts';
 export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const state = useTodayController();
   const { view, tab, setTab, busy, error, message, undo, refresh } = state;
-  const personal = usePersonal(view, refresh);
+  const settings = useContext(InterfaceContext)?.settings ?? defaultInterface;
+  const personal = usePersonal(view, refresh, settings);
   const [rewards, setRewards] = useState(false);
   const [sheet, setSheet] = useState<SheetRequest | null>(null);
   const [skipped, setSkipped] = useState<string[]>([]);
@@ -62,11 +65,11 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   // Focus places held by tasks still open or done today. A dropped or moved task frees its place.
   const liveFocus = focusIds.filter(id => due.some(task => task.id === id) || completedToday.some(task => task.id === id));
   const othersShown = focusOpen.length === 0 || othersOpen;
-  const groups = tab === 'due' ? [
-    { key: 'focus', title: 'Focus', items: focusOpen },
-    { key: 'habits', title: 'Habits', items: rows.filter(task => task.recurrenceId) },
-    { key: 'tasks', title: focusOpen.length ? 'Other tasks' : 'Tasks', items: rows.filter(task => !task.recurrenceId && !focusIds.includes(task.id)) },
-  ] : [{ key: tab, title: labels[tab], items: rows }];
+  const groups = [
+    ...(tab === 'due' ? [{ key: 'focus', title: 'Focus', items: focusOpen }] : []),
+    { key: 'habits', title: 'Habits', items: rows.filter(isHabit) },
+    { key: 'tasks', title: tab === 'due' && focusOpen.length ? 'Other tasks' : 'Tasks', items: rows.filter(task => !isHabit(task) && (tab !== 'due' || !focusIds.includes(task.id))) },
+  ];
   const text = tabText[tab];
   const upNext = view && data ? nextUp(view.due, rules, data.progress, minute, focusIds) : [];
   const candidates = upNext.filter(task => !skipped.includes(task.id));
@@ -97,7 +100,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   };
   async function complete(task: Task) {
     const saved = await personal.resolve(task, 'completed', state.resolve);
-    if (saved && vote(task)) state.announce('Task completed.' + vote(task));
+    if (saved && vote(task)) state.announce(t(isHabit(task) ? 'Habit completed.' : 'Task completed.') + vote(task));
     return saved;
   }
   async function log(task: Task, minutes: number) {
@@ -176,7 +179,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
         focus={tab === 'due' && !task.recurrenceId
           ? { on: liveFocus.includes(task.id), full: liveFocus.length >= FOCUS_LIMIT, toggle: toggleFocus } : undefined}
         votes={votesFor(rule)}
-        {...(tab === 'due' && task.recurrenceId ? { insight: insight(task) } : {})}
+        {...(tab === 'due' && isHabit(task) ? { insight: insight(task) } : {})}
         {...(tab !== 'history' && data ? { onEdit: edit } : {})}
         {...(tab === 'history' && canReopen(task, view!) ? { onReopen: (id: string) => void state.reopen(id) } : {})}
         onResolve={(_id, status) => status === 'completed' ? complete(task) : personal.resolve(task, status, state.resolve)} />
@@ -184,7 +187,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   }
 
   return (
-    <MotionConfig reducedMotion={data?.preferences.reducedMotion ? 'always' : 'user'}>
+    <MotionConfig reducedMotion={settings.reducedMotion ? 'always' : 'user'}>
     <WorkspaceShell workspace="personal" busy={saving} onWorkspaceChange={onWorkspaceChange} navigation={
         <nav aria-label={t("Personal views")}>
           {(['due', 'upcoming', 'history'] as const).map(key => (
@@ -242,7 +245,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
             {tab === 'due' && view && minute >= EVENING && closedDay !== today && <EveningPrompt busy={saving}
               onOpen={() => setClosing(true)} onDismiss={() => closeDay(false)} />}
             {tab === 'due' && view && data && <NowCard candidates={candidates} due={view.due} rules={rules} busy={saving}
-              sound={{ on: data.preferences.sound, volume: data.preferences.volume }} skipped={upNext.length - candidates.length}
+              sound={{ on: settings.sound, volume: settings.volume }} skipped={upNext.length - candidates.length}
               timer={timer} focus={focusIds} onTimer={setTimer}
               onComplete={complete} onLog={log} onSkip={skip} onShowSkipped={() => { setSkipped([]); writeSkipped(today, []); }} />}
             <div className="feedback-row">
@@ -254,12 +257,12 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
             </div>
             {/* Groups move as one when the content above them changes, so their rows never slide on their own. */}
             {view && groups.map(group => {
-              const focus = group.key === 'focus', others = group.key === 'tasks';
+              const focus = group.key === 'focus', others = tab === 'due' && group.key === 'tasks';
               if (focus ? liveFocus.length === 0 : group.items.length === 0) return null;
               const late = group.items.filter(task => !task.frequency && task.plannedDate < view.today).length;
               const folded = others && !othersShown;
               return <motion.section key={group.key} layout="position" transition={spring}
-                className={`list-group glass ${focus ? 'focus-group' : ''}`} aria-label={t(group.title) + (tab === 'due' ? '' : t(' tasks'))} aria-busy={saving}>
+                className={`list-group glass ${focus ? 'focus-group' : ''}`} aria-label={t(group.title)} aria-busy={saving}>
                 <div className="group-heading">
                   <h2>{t(group.title)}{!focus && <span className="count">{group.items.length}</span>}</h2>
                   {focus && <span className="focus-progress">{focusDone} {t("of")} {liveFocus.length} {t("done")}</span>}
@@ -290,14 +293,18 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               </div>
             )}
             {tab === 'due' && <>
-              {completedToday.length > 0 && <details className="completions glass">
-                <summary>{t("Completed today (")}{completedToday.length})</summary>
-                <ul className="task-list">{completedToday.map(task => <li key={task.id} className="row-item">
+              {(['habit', 'task'] as const).map(category => {
+                const completed = completedToday.filter(task => isHabit(task) === (category === 'habit'));
+                return completed.length > 0 && <details key={category} className="completions glass">
+                <summary>{t(category === 'habit' ? "Habits completed today" : "Tasks completed today")} ({completed.length})</summary>
+                <ul className="task-list">{completed.map(task => <li key={task.id} className="row-item">
                   <TaskRow task={task} today={view!.today} busy={saving} onResolve={async () => false}
                     {...(canReopen(task, view!) ? { onReopen: (id: string) => void state.reopen(id) } : {})} />
                 </li>)}</ul>
-              </details>}
-              <RepeatingTasks rules={view?.recurrences ?? []} busy={saving} onStop={state.stopRecurrence} />
+              </details>;
+              })}
+              <RepeatingTasks habits rules={view?.recurrences.filter(isHabit) ?? []} busy={saving} onStop={state.stopRecurrence} />
+              <RepeatingTasks rules={view?.recurrences.filter(rule => !isHabit(rule)) ?? []} busy={saving} onStop={state.stopRecurrence} />
             </>}
             {tab === 'history' && <ActivityHistory state={personal} />}
           </div>
@@ -308,7 +315,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
         {view && data && <WeeklyReview open={reviewing} today={view.today} reviews={reviews} votes={data.votes} busy={saving}
           onTarget={setTarget} onGraduate={review => state.graduate(review.id, review.title)} onEditPlan={editPlan} onStack={stack}
           onFinish={() => finishReview(true)} onClose={() => setReviewing(false)} />}
-        <TaskSheet request={sheet} today={today} busy={saving} anchors={anchors} habits={view?.recurrences.length ?? 0}
+        <TaskSheet request={sheet} today={today} busy={saving} anchors={anchors} identities={data?.identities ?? []} habits={view?.recurrences.filter(isHabit).length ?? 0}
           reward={pinned && data ? { title: pinned.title, remaining: pinned.cost - data.balance } : null}
           onCreate={state.add}
           onSavePlan={(task, update) => personal.savePlan(task.id, { ...update })}

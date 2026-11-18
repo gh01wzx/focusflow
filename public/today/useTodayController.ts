@@ -119,8 +119,5 @@ export function useTodayController() {
     // From the weekly review: a steady habit leaves Today and keeps its history.
     graduate: (id: string, title: string) =>
       change(() => client.stopRecurrence(id), t('Graduated “{0}”. Its history stays.', title), { inline: true }),
-    async stopRecurrence(id: string) {
-      await change(() => client.stopRecurrence(id), 'Repeating stopped. Current-period tasks stay available.');
-    },
   };
 }

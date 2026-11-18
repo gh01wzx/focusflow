@@ -254,6 +254,18 @@ html[data-size="large"] { zoom: 1.125; }
 .group-heading { display: flex; align-items: center; gap: 10px; padding: 12px 18px 6px; }
 .group-heading h2 { font-size: 13px; font-weight: 650; color: var(--muted); letter-spacing: .02em; text-transform: uppercase; }
 .group-heading .count { margin-left: 0; }
+/* A card folds to its heading when clicked anywhere outside its rows and controls, with no arrow.
+   Folded, the heading keeps even space above and below. */
+.fold-card { cursor: pointer; transition: padding-bottom .28s var(--ease); }
+.fold-card.folded { padding-bottom: 10px; }
+.fold-card .task-list { cursor: auto; }
+.fold-toggle {
+  display: inline-flex; align-items: center; gap: 8px; padding: 0; border: 0; border-radius: 6px; background: none;
+  font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit;
+}
+.fold-toggle:active:not(:disabled) { transform: none; }
+.fold-card > .group-heading:hover .fold-toggle { color: color-mix(in srgb, currentColor 65%, var(--text)); }
+.fold-body { overflow: hidden; }
 .overdue-count { padding: 2px 9px; border-radius: 999px; background: var(--orange-soft); color: var(--orange-text); font-size: 12px; font-weight: 600; }
 .task-list { position: relative; list-style: none; margin: 0; padding: 0; }
 .task-list > li { position: relative; }
@@ -331,10 +343,6 @@ html[data-size="large"] { zoom: 1.125; }
 .empty-icon .icon { width: 26px; height: 26px; stroke-width: 2.4; }
 .empty h3 { margin-bottom: 4px; font-size: 17px; }
 .empty p { margin: 0; color: var(--muted); font-size: 13.5px; }
-.recurrences, .completions { margin-bottom: 16px; padding: 4px 0; }
-.recurrences > summary, .completions > summary { padding: 10px 18px; color: var(--text-secondary); font-size: 13.5px; font-weight: 600; cursor: pointer; }
-.recurrences > p { margin: 0 18px 6px; color: var(--muted); font-size: 12.5px; }
-.recurrences .task { align-items: center; }
 
 /* Progress panel */
 .progress-panel {
@@ -549,8 +557,7 @@ html[data-size="large"] { zoom: 1.125; }
   padding: 2px 9px; border-radius: 999px; background: var(--fill); color: var(--text-secondary);
   font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;
 }
-.fold-button { margin-left: auto; }
-.list-group > .group-note { padding: 0 18px 12px; }
+.fold-body > .group-note { padding: 0 18px 12px; }
 .focus-done { display: flex; align-items: center; gap: 6px; color: var(--green-text); font-weight: 600; }
 .focus-done .icon { width: 16px; height: 16px; stroke-width: 2.4; }
 

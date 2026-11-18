@@ -227,20 +227,21 @@ try {
     await page.getByRole('status').filter({ hasText: 'Task cancelled.' }).waitFor();
     await add('Daily unfinished', today, 'daily');
     await add('Future repeat', shift(1), 'weekly');
-    await page.getByRole('navigation', { name: 'Personal views' }).getByRole('button', { name: /Today/ }).click();
-    await page.locator('.recurrences summary').filter({ hasText: 'Repeating tasks' }).click();
-    await page.getByRole('button', { name: 'Stop repeating Future repeat', exact: true }).click();
-    await page.getByRole('button', { name: 'Confirm stop repeating Future repeat', exact: true }).click();
-    await page.getByRole('status').filter({ hasText: 'Repeating stopped.' }).waitFor();
+    // A repeating plan ends from its editor. Deleting it hides its open occurrence and keeps past records.
+    await page.getByRole('navigation', { name: 'Personal views' }).getByRole('button', { name: /Upcoming/ }).click();
+    await page.getByRole('button', { name: 'Edit plan for Future repeat', exact: true }).click();
+    await page.getByRole('button', { name: 'Delete plan', exact: true }).click();
+    await page.getByRole('button', { name: 'Confirm deletion', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit plan for Future repeat', exact: true }).waitFor({ state: 'detached' });
     let repeatView = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
     assert.equal(repeatView.recurrences.length, 3);
-    assert.equal(repeatView.history.find(task => task.title === 'Future repeat')?.status, 'cancelled');
+    assert.ok(![...repeatView.upcoming, ...repeatView.history].some(task => task.title === 'Future repeat'));
     mark('second-instance');
     await promisify(execFile)(executable, [], { env: environment, timeout: 20_000, windowsHide: true });
     mark('close-and-relaunch'); await closeApp(); page = await launch();
     await page.getByText('Review the first Today workflow', { exact: true }).waitFor();
     repeatView = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
-    assert.equal(repeatView.due.length, 4); assert.equal(repeatView.upcoming.length, 1); assert.equal(repeatView.history.length, 5);
+    assert.equal(repeatView.due.length, 4); assert.equal(repeatView.upcoming.length, 1); assert.equal(repeatView.history.length, 4);
     // Seed the disposable profile as if its last run was in the previous period.
     // The installed app then reconciles using its real clock, with no product clock override.
     mark('seed-previous-periods'); await closeApp();
@@ -259,7 +260,7 @@ try {
     await page.getByRole('checkbox', { name: 'Complete Weekly review', exact: true }).waitFor();
     await page.getByRole('checkbox', { name: 'Complete Daily unfinished', exact: true }).waitFor();
     const rolled = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
-    assert.equal(rolled.due.length, 6); assert.equal(rolled.upcoming.length, 1); assert.equal(rolled.history.length, 6);
+    assert.equal(rolled.due.length, 6); assert.equal(rolled.upcoming.length, 1); assert.equal(rolled.history.length, 5);
     assert.ok(rolled.due.filter(task => task.recurrenceId).every(task => task.plannedDate === today));
     assert.equal(rolled.history.find(task => task.title === 'Daily unfinished')?.status, 'missed');
     assert.equal(rolled.history.find(task => task.title === 'Daily check-in')?.status, 'completed');

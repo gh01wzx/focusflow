@@ -1,5 +1,5 @@
-// Small conveniences kept in this browser only: the running timer,
-// whether today was closed and whether this week was reviewed. Saved tasks, logged minutes and
+// Small conveniences kept in this browser only: the running timer, whether today was closed,
+// whether this week was reviewed and which cards are folded. Saved tasks, logged minutes and
 // focus are the record.
 const TIMER_KEY = 'focusflow.timer';
 const CLOSED_KEY = 'focusflow.closed';
@@ -35,6 +35,15 @@ export function readReviewed(): string {
   return typeof value === 'string' ? value : '';
 }
 export const writeReviewed = (week: string) => write(REVIEWED_KEY, week);
+
+// Cards folded or opened with a click, by view and card, so they stay that way after a restart.
+const FOLDED_KEY = 'focusflow.folded';
+export function readFolded(): Record<string, boolean> {
+  const value = read(FOLDED_KEY);
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter((entry): entry is [string, boolean] => typeof entry[1] === 'boolean'));
+}
+export const writeFolded = (folded: Record<string, boolean>) => write(FOLDED_KEY, folded);
 
 // Suggestions taken in this week's review, so reopening it does not suggest the same step again.
 const CHANGES_KEY = 'focusflow.reviewChanges';

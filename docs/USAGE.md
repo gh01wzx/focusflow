@@ -6,7 +6,7 @@ Closing the window keeps FocusFlow running in the tray (Windows) or the menu bar
 
 ## Personal
 
-**Today** shows what to do now. Timer cards for timed habits sit at the top, then **Habits**, then one-off and repeating **Tasks**. Use **Upcoming** for future tasks and **History** for resolved ones. A missed one-off task keeps its original date and stays open until you complete or cancel it.
+**Today** shows what to do now. Timer cards for timed habits sit at the top, then **Habits**, then one-off and repeating **Tasks**. Use **Upcoming** for future tasks and **History** for resolved ones. Click a card's heading or an empty part of the card to fold it to its title, and click again to open it; clicking a row or its buttons never folds the card. FocusFlow remembers folded cards. **Habits completed today** and **Tasks completed today** start folded. A missed one-off task keeps its original date and stays open until you complete or cancel it.
 
 ### Add tasks and habits
 
@@ -33,7 +33,7 @@ After you complete or cancel a task, choose **Undo** next to the message. **Hist
 
 ### Focus
 
-Choose the star on up to three one-off tasks to make them today's **Focus**. They move to their own group at the top and show how many are done. While focus tasks are open, **Other tasks** fold away; choose **Show** to see them. A task you move to another date leaves the focus.
+Choose the star on up to three one-off tasks to make them today's **Focus**. They move to their own group at the top and show how many are done; the rest stay under **Other tasks**. A task you move to another date leaves the focus.
 
 ### Close the day
 
@@ -45,9 +45,9 @@ Once a habit has about a week of records, Today offers a **Weekly review** each 
 
 ### Edit, delete and schedules
 
-Use the pencil on a task or habit to edit its plan, or open the editor from **Habit schedules** or **Repeating tasks**. For a repeat, choose the effective date, up to four weeks ahead, and daily or weekly frequency; a weekly plan can run on selected weekdays. Until the effective date the current schedule continues, so its remaining occurrences appear in **Upcoming**. Recorded activity keeps its original dates. A check-off habit made before counts existed stays a check-off habit when you edit it. Older repeating schedules keep their habit grouping; to change one, select **Repeating task** in **Edit plan** and save.
+Use the pencil on a task or habit to edit its plan. A repeat with nothing due today can be edited from its row in **Upcoming** or **History**. For a repeat, choose the effective date, up to four weeks ahead, and daily or weekly frequency; a weekly plan can run on selected weekdays. Until the effective date the current schedule continues, so its remaining occurrences appear in **Upcoming**. Recorded activity keeps its original dates. A check-off habit made before counts existed stays a check-off habit when you edit it. Older repeating schedules keep their habit grouping; to change one, select **Repeating task** in **Edit plan** and save.
 
-From the editor, delete a single task, one occurrence, or the whole repeating plan. Deleting a plan removes its open occurrences and keeps past records and earned points. Daily and selected-weekday occurrences follow the local calendar; older weekly schedules keep their seven-day periods, and a missed period is recorded once. To end a schedule, choose **Stop repeating** and confirm.
+From the editor, delete a single task, one occurrence, or the whole repeating plan. Deleting a plan removes its open occurrences and keeps past records and earned points. Daily and selected-weekday occurrences follow the local calendar; older weekly schedules keep their seven-day periods, and a missed period is recorded once. To end a repeating plan, delete it from the editor; a steady habit can also **Graduate** in the weekly review.
 
 ### Points and rewards
 

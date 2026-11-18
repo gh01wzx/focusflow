@@ -2,7 +2,7 @@ import { InterfaceContext } from '../workspace/interface-context.ts';
 import { defaultInterface } from '../../src/shared/interface.ts';
 import { t } from '../workspace/locale.ts';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, MotionConfig, motion } from 'motion/react';
+import { AnimatePresence, MotionConfig } from 'motion/react';
 import { usePersonal } from './usePersonal.ts';
 import { ActivityHistory, RewardShop } from './components/PersonalRewards.tsx';
 import type { ScoringRule } from '../../src/shared/personal.ts';
@@ -19,7 +19,6 @@ import { HabitCard } from './components/HabitCard.tsx';
 import { TaskSheet } from './components/TaskSheet.tsx';
 import type { SheetRequest } from './components/TaskSheet.tsx';
 import { ProgressPanel } from './components/ProgressPanel.tsx';
-import { RepeatingTasks } from './components/RepeatingTasks.tsx';
 import { NowCard } from './components/NowCard.tsx';
 import { QuickAdd } from './components/QuickAdd.tsx';
 import { CloseDaySheet, EVENING, EveningPrompt } from './components/CloseDaySheet.tsx';
@@ -27,9 +26,10 @@ import { PAGE, ShowMore } from './components/ShowMore.tsx';
 import { Celebration } from './components/Celebration.tsx';
 import type { Moment } from './components/Celebration.tsx';
 import { WeeklyReview, WeekPrompt, weekOf } from './components/WeeklyReview.tsx';
-import { ListItem, spring } from './components/Animated.tsx';
+import { ListItem } from './components/Animated.tsx';
 import { CheckIcon, PlusIcon, SparkIcon } from './components/Icons.tsx';
-import { readClosed, readReviewed, readTimer, writeClosed, writeReviewed, writeTimer } from './local-state.ts';
+import { FoldCard } from './components/FoldCard.tsx';
+import { readClosed, readFolded, readReviewed, readTimer, writeClosed, writeFolded, writeReviewed, writeTimer } from './local-state.ts';
 import type { Timer } from './local-state.ts';
 import { reportInterfaceReady } from '../../src/client/build.ts';
 
@@ -45,9 +45,14 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const [closedDay, setClosedDay] = useState(readClosed);
   const [reviewing, setReviewing] = useState(false);
   const [reviewedWeek, setReviewedWeek] = useState(readReviewed);
-  // Other tasks fold away while focus tasks are open. Starring keeps them open until the next
-  // visit, so choosing one focus task never hides the next choice.
-  const [othersOpen, setOthersOpen] = useState(false);
+  // Cards folded or opened with a click, by view and card.
+  const [folded, setFolded] = useState(readFolded);
+  const isFolded = (key: string, initially = false) => folded[key] ?? initially;
+  function toggleCard(key: string, initially = false) {
+    const next = { ...folded, [key]: !isFolded(key, initially) };
+    setFolded(next); writeFolded(next);
+  }
+  const reduced = settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   // Upcoming and History show a page per group at first; Today always shows everything.
   const [limits, setLimits] = useState<Record<string, number>>({});
   // A minute clock keeps the timer cards in step with planned times.
@@ -107,7 +112,6 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const focusDone = completedToday.filter(task => focusIds.includes(task.id)).length;
   // Focus places held by tasks still open or done today. A dropped or moved task frees its place.
   const liveFocus = focusIds.filter(id => due.some(task => task.id === id) || completedToday.some(task => task.id === id));
-  const othersShown = focusOpen.length === 0 || othersOpen;
   const groups = [
     ...(tab === 'due' ? [{ key: 'focus', title: 'Focus', items: focusOpen }] : []),
     { key: 'habits', title: 'Habits', items: rows.filter(isHabit) },
@@ -122,10 +126,6 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   // The weekly prompt waits until at least one habit has enough days to say something useful.
   const reviewDue = reviewedWeek !== week && reviews.some(review => review.suggestion.kind !== 'new');
 
-  useEffect(() => {
-    if (!today) return;
-    setOthersOpen(false);
-  }, [today]);
   useEffect(() => {
     const id = setInterval(() => setMinute(new Date().toTimeString().slice(0, 5)), 60_000);
     return () => clearInterval(id);
@@ -171,7 +171,6 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   function toggleFocus(task: Task) {
     const next = liveFocus.includes(task.id) ? liveFocus.filter(id => id !== task.id) : [...liveFocus, task.id];
     if (next.length > FOCUS_LIMIT) return;
-    setOthersOpen(true);
     void state.setFocus(today, next);
   }
   // From Close the day: start the two-minute timer at the top of Today.
@@ -306,27 +305,23 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               const focus = group.key === 'focus', others = tab === 'due' && group.key === 'tasks';
               if (focus ? liveFocus.length === 0 : group.items.length === 0) return null;
               const late = group.items.filter(task => !task.frequency && task.plannedDate < view.today).length;
-              const folded = others && !othersShown;
-              const limitKey = tab + ':' + group.key;
-              const limit = tab === 'due' ? group.items.length : limits[limitKey] ?? PAGE;
-              return <motion.section key={group.key} layout="position" transition={spring}
-                className={`list-group glass ${focus ? 'focus-group' : ''}`} aria-label={t(group.title)} aria-busy={saving}>
-                <div className="group-heading">
-                  <h2>{t(group.title)}{!focus && <span className="count">{group.items.length}</span>}</h2>
+              const key = tab + ':' + group.key;
+              const limit = tab === 'due' ? group.items.length : limits[key] ?? PAGE;
+              // Keyed by view as well, so a card folded in one view never animates open after switching views.
+              return <FoldCard key={key} title={t(group.title)} count={focus ? undefined : group.items.length}
+                className={focus ? 'focus-group' : ''} folded={isFolded(key)} reduced={reduced} busy={saving} onToggle={() => toggleCard(key)}
+                badges={<>
                   {focus && <span className="focus-progress">{t("{0} of {1} done", focusDone, liveFocus.length)}</span>}
                   {late > 0 && <span className="overdue-count">{t("{0} overdue", late)}</span>}
-                  {others && focusOpen.length > 0 && <button className="text-button fold-button" aria-expanded={!folded}
-                    onClick={() => setOthersOpen(folded)}>{folded ? t('Show') : t('Hide')}</button>}
-                </div>
+                </>}>
                 {focus && focusOpen.length === 0 && <p className="group-note focus-done"><CheckIcon />{t("Focus done. Anything else today is a bonus.")}</p>}
                 {others && liveFocus.length === 0 && group.items.length > 1 && <p className="group-note">
                   {t("Star up to {0} that matter most today. They move to the top.", FOCUS_LIMIT)}</p>}
-                {!folded && group.items.length > 0 && <ul className="task-list">
+                {group.items.length > 0 && <ul className="task-list">
                   <AnimatePresence initial={false} mode="popLayout">{group.items.slice(0, limit).map(row)}</AnimatePresence>
                 </ul>}
-                {!folded && <ShowMore hidden={group.items.length - limit}
-                  onMore={() => setLimits(current => ({ ...current, [limitKey]: limit + PAGE }))} />}
-              </motion.section>;
+                <ShowMore hidden={group.items.length - limit} onMore={() => setLimits(current => ({ ...current, [key]: limit + PAGE }))} />
+              </FoldCard>;
             })}
             {tab === 'history' && rows.length >= HISTORY_LIMIT && <p className="list-note">
               {t("Showing the latest {0} entries. Older history stays saved on this computer.", HISTORY_LIMIT)}</p>}
@@ -342,20 +337,18 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
                 )}
               </div>
             )}
-            {tab === 'due' && <>
-              {(['habit', 'task'] as const).map(category => {
-                const completed = completedToday.filter(task => isHabit(task) === (category === 'habit'));
-                return completed.length > 0 && <details key={category} className="completions glass">
-                <summary>{t(category === 'habit' ? "Habits completed today" : "Tasks completed today")} ({completed.length})</summary>
+            {/* What was finished today starts folded, below the open work. */}
+            {view && pointsReady && tab === 'due' && (['habit', 'task'] as const).map(category => {
+              const completed = completedToday.filter(task => isHabit(task) === (category === 'habit'));
+              const key = 'due:done-' + category;
+              return completed.length > 0 && <FoldCard key={key} title={t(category === 'habit' ? "Habits completed today" : "Tasks completed today")}
+                count={completed.length} folded={isFolded(key, true)} reduced={reduced} onToggle={() => toggleCard(key, true)}>
                 <ul className="task-list">{completed.map(task => <li key={task.id} className="row-item">
-                  <TaskRow task={task} today={view!.today} busy={saving} onResolve={async () => false} {...(data ? { onEdit: edit } : {})}
-                    {...(canReopen(task, view!) ? { onReopen: (id: string) => void state.reopen(id) } : {})} />
+                  <TaskRow task={task} today={view.today} busy={saving} onResolve={async () => false} {...(data ? { onEdit: edit } : {})}
+                    {...(canReopen(task, view) ? { onReopen: (id: string) => void state.reopen(id) } : {})} />
                 </li>)}</ul>
-              </details>;
-              })}
-              <RepeatingTasks habits rules={view?.recurrences.filter(isHabit) ?? []} busy={saving || !data} onEdit={editSeries} onStop={state.stopRecurrence} />
-              <RepeatingTasks rules={view?.recurrences.filter(rule => !isHabit(rule)) ?? []} busy={saving || !data} onEdit={editSeries} onStop={state.stopRecurrence} />
-            </>}
+              </FoldCard>;
+            })}
             {tab === 'history' && <ActivityHistory state={personal} />}
           </div>
           {tab === 'due' && progress && <ProgressPanel state={personal} habits={progress.habits} tasks={progress.tasks}
@@ -371,7 +364,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
           onSavePlan={(id, update) => personal.savePlan(id, { ...update })} onRemove={personal.remove}
           onClose={() => setSheet(null)} />
         <Celebration moment={moment} sound={{ on: settings.sound, volume: settings.volume }} onEnd={() => setMoment(null)}
-          reduced={settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches} />
+          reduced={reduced} />
         {view && <CloseDaySheet open={closing} view={view} rules={rules} minutes={data?.progress ?? {}} busy={saving} insightFor={insight}
           onCancel={task => state.settle(task.id, 'cancelled', true)}
           onMove={(task, date) => state.reschedule(task.id, date, true)}

@@ -70,6 +70,7 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
     if (!target || target.status === 'cancelled' || !recurrence) {
       throw new TaskInputError('Choose a date when this habit was scheduled.');
     }
+    if ((taskRule(target)?.unit ?? 'minutes') !== (entry.unit ?? 'minutes')) throw new TaskInputError('Choose a date with the same recording unit.');
     const end = occurrenceEnd(target, recurrence);
     if (end !== null && newDay >= end) throw new TaskInputError('Choose a date when this habit was scheduled.');
     return target.id;
@@ -96,25 +97,27 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
         if (!task && !recurrence) throw new TaskInputError('Choose an existing task or habit.');
         const subject = task?.recurrenceId ?? id;
         const mode = value.mode;
+        const unit = value.unit ?? 'minutes';
+        if (unit !== 'minutes' && unit !== 'count') throw new TaskInputError('Choose counts or minutes.');
         if (mode !== 'minutes' && mode !== 'complete') throw new TaskInputError('Choose how to record this activity.');
         if (mode === 'minutes' && !recurrence && !task?.recurrenceId) throw new TaskInputError('Set a repeating schedule for a duration habit.');
         const schedule = recurrence ?? (task?.recurrenceId ? tasks.findRule(task.recurrenceId) : undefined);
         const category = value.category ?? (mode === 'minutes' ? 'habit' : schedule?.category ?? 'task');
-        if (category !== 'task' && category !== 'habit' || category === 'habit' && !schedule || category === 'task' && mode === 'minutes') {
+        if (category !== 'task' && category !== 'habit' || category === 'habit' && !schedule) {
           throw new TaskInputError('Choose a valid activity category.');
         }
         if (schedule) tasks.setCategory(subject, category);
         const previous = repository.rule(subject);
-        if (previous && previous.mode !== mode && ((task && repository.minutes(task.id) > 0)
-          || tasks.listPendingOccurrences().some(item => item.recurrenceId === subject && repository.minutes(item.id) > 0))) {
+        if (previous && (previous.mode !== mode || (previous.unit ?? 'minutes') !== unit) && ((task && repository.hasActivity(task.id))
+          || tasks.listPendingOccurrences().some(item => item.recurrenceId === subject && repository.hasActivity(item.id)))) {
           throw new TaskInputError('Wait for the next scheduled occurrence before changing how this habit is logged.');
         }
         if (value.schedule !== undefined) {
           if (!schedule) throw new TaskInputError('Open an active plan to change its schedule.');
           editSchedule(tasks, schedule, value.schedule, now);
         }
-        repository.saveRule({ subject, mode, rate: integer(value.rate, 0, 100000, 'Enter a valid point value.'),
-          target: mode === 'minutes' ? integer(value.target, 1, 1440, 'Enter a target between 1 and 1440 minutes.') : 0,
+        repository.saveRule({ subject, mode, unit, rate: integer(value.rate, 0, 100000, 'Enter a valid point value.'),
+          target: mode === 'minutes' ? integer(value.target, 1, 1440, 'Enter a target from 1 to 1440.') : 0,
           ...planInput(value) });
       } else if (action === 'reward') {
         const id = operationId(value.id), previous = repository.reward(id);
@@ -141,10 +144,11 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
           if (!task || task.status !== 'pending' || task.plannedDate > day || rule?.mode !== 'minutes') {
             throw new TaskInputError('This habit is no longer available today.');
           }
-          const minutes = integer(value.minutes, 1, 1440, 'Enter whole minutes from 1 to 1440.');
+          if ((value.unit ?? 'minutes') !== (rule.unit ?? 'minutes')) throw new TaskInputError('The recording unit changed. Reopen this activity.');
+          const minutes = integer(value.minutes, 1, 1440, 'Enter a whole amount from 1 to 1440.');
           award = minutes * rule.rate;
           record(now, { id, kind: 'earn', subject: task.id, title: task.title, minutes,
-            rate: rule.rate, amount: award, reference: null });
+            rate: rule.rate, unit: rule.unit ?? 'minutes', amount: award, reference: null });
         } else if (action === 'redeem') {
           const reward = repository.reward(operationId(value.subject));
           if (!reward || reward.archived || (reward.onceOnly && reward.used)) throw new TaskInputError('This reward is unavailable.');
@@ -168,7 +172,7 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
           }
           const newDay = action === 'edit' && validDate(requestedDay) ? requestedDay : entry.day;
           const subject = newDay === entry.day ? entry.subject : correctionSubject(entry, newDay);
-          record(now, { id, kind: action, subject: entry.subject, title: entry.title, rate: entry.rate, reference: entry.id,
+          record(now, { id, kind: action, subject: entry.subject, title: entry.title, rate: entry.rate, unit: entry.unit ?? 'minutes', reference: entry.id,
             minutes: minutes - currentMinutes, amount: (action === 'edit' ? minutes * entry.rate : 0) - currentAmount }, entry.day);
           if (newDay !== entry.day) repository.moveActivity(entry, newDay, subject, id);
           if (entry.kind === 'earn' && entry.minutes > 0) {
@@ -195,15 +199,17 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
     createRule(subject: string, repeating: boolean, input: unknown) {
       const value = fields(input);
       const mode = value.mode ?? (value.habit === true ? 'minutes' : 'complete');
-      if (mode !== 'minutes' && mode !== 'complete' || mode === 'minutes' && (!repeating || value.category === 'task')) {
+      if (mode !== 'minutes' && mode !== 'complete' || mode === 'minutes' && !repeating) {
         throw new TaskInputError('Choose a valid recording method.');
       }
       if (!repeating && value.category !== undefined && value.category !== 'task') throw new TaskInputError('Habits need a repeating schedule.');
+      const unit = value.unit ?? 'minutes';
+      if (unit !== 'minutes' && unit !== 'count') throw new TaskInputError('Choose counts or minutes.');
       const timed = mode === 'minutes';
       const plan = value.plan === undefined ? {} : fields(value.plan);
-      repository.saveRule({ subject, mode,
+      repository.saveRule({ subject, mode, unit,
         rate: plan.rate === undefined ? (timed ? 100 : 500) : integer(plan.rate, 0, 100000, 'Enter a valid point value.'),
-        target: !timed ? 0 : plan.target === undefined ? 5 : integer(plan.target, 1, 1440, 'Enter a target between 1 and 1440 minutes.'),
+        target: !timed ? 0 : plan.target === undefined ? 5 : integer(plan.target, 1, 1440, 'Enter a target from 1 to 1440.'),
         ...planInput(plan) });
     },
     reachedTarget(task: NonNullable<ReturnType<TaskRepository['findTask']>>) {

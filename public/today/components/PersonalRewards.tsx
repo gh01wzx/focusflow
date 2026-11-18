@@ -97,7 +97,7 @@ export function ActivityHistory({ state }: { state: PersonalController }) {
       return <li key={entry.id} className="reward-row">
         <div className="reward-info"><strong>{entry.title}</strong><p>{[entry.day,
           entry.kind === 'reverse' ? 'Undone' : entry.kind === 'edit' ? 'Corrected' : entry.kind === 'redeem' ? 'Redeemed' : 'Earned',
-          (entry.amount > 0 ? '+' : '') + points(entry.amount) + ' points', entry.minutes ? entry.minutes + ' min' : ''].filter(Boolean).join(' · ')}</p></div>
+          (entry.amount > 0 ? '+' : '') + points(entry.amount) + ' points', entry.minutes ? entry.minutes + ' ' + t(entry.unit === 'count' ? 'counts' : 'min') : ''].filter(Boolean).join(' · ')}</p></div>
         {original && !undone && (undoing === entry.id ? <div className="confirm-actions" role="group" aria-label={t("Undo {0}?", entry.title)}>
           <span>{entry.kind === 'redeem' ? t('Refund these points?') : t('Remove these points?')}</span>
           <button className="danger-button" disabled={state.busy} onClick={async () => {
@@ -113,7 +113,7 @@ export function ActivityHistory({ state }: { state: PersonalController }) {
         {edit?.entry.id === entry.id && <form className="inline-settings" onSubmit={async event => {
           event.preventDefault();
           if (await state.mutate('edit', { subject: entry.id, id: edit.id, day: edit.day, minutes: Number(edit.minutes) })) setEdit(undefined);
-        }}><label>{t("Minutes")} <input type="number" min="1" max="1440" step="1" required value={edit.minutes}
+        }}><label>{t(entry.unit === 'count' ? "Counts" : "Minutes")} <input type="number" min="1" max="1440" step="1" required value={edit.minutes}
           onChange={event => setEdit({ ...edit, minutes: event.target.value })} /></label>
           <label>{t("Activity date")} <input type="date" required value={edit.day} max={state.data?.day}
             onChange={event => setEdit({ ...edit, day: event.target.value })} /></label>

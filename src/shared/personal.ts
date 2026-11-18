@@ -14,6 +14,8 @@ export const emptyPlan: HabitPlan = { cue: '', identity: '', time: '', place: ''
 export interface ScoringRule extends HabitPlan {
   subject: string;
   mode: 'minutes' | 'complete';
+  // Accumulated quantity uses the legacy minutes field for either unit.
+  unit?: 'minutes' | 'count';
   rate: number;
   target: number;
 }
@@ -42,6 +44,7 @@ export interface ActivityEntry {
   day: string;
   loggedAt: string;
   minutes: number;
+  unit?: 'minutes' | 'count';
   rate: number;
   amount: number;
   reference: string | null;

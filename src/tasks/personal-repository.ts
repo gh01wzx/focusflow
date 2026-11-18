@@ -3,8 +3,8 @@ import { identityKey, outcomeOf } from '../shared/habits.ts';
 import type { ActivityEntry, Outcome, Reward, ScoringRule } from '../shared/personal.ts';
 import type { TaskStatus } from '../shared/tasks.ts';
 
-const entryColumns = 'id,kind,subject,title,day,logged_at AS loggedAt,minutes,rate,amount,reference';
-const ruleColumns = 'subject,mode,rate,target,cue,identity,plan_time AS time,place,starter,bundle';
+const entryColumns = 'id,kind,subject,title,day,logged_at AS loggedAt,minutes,rate,amount,reference,unit';
+const ruleColumns = 'subject,mode,rate,target,cue,identity,plan_time AS time,place,starter,bundle,unit';
 const rewardColumns = 'r.id,r.title,r.cost,r.note,r.once_only AS onceOnly,r.archived';
 const activeRedemption = `p.kind='redeem' AND p.subject=r.id AND NOT EXISTS (
   SELECT 1 FROM personal_entries x WHERE x.reference=p.id AND x.kind='reverse')`;
@@ -18,9 +18,9 @@ export function createPersonalRepository(db: DatabaseSync) {
   const rewardsQuery = `SELECT ${rewardColumns}, EXISTS(SELECT 1 FROM personal_entries p WHERE ${activeRedemption}) AS used FROM personal_rewards r`;
   const ruleBySubject = db.prepare(`SELECT ${ruleColumns} FROM personal_scoring WHERE subject=?`);
   const currentRules = db.prepare(`SELECT ${ruleColumns} FROM personal_scoring WHERE subject IN (${currentSubjects})`);
-  const upsertRule = db.prepare(`INSERT INTO personal_scoring(subject,mode,rate,target,cue,identity,plan_time,place,starter,bundle)
-    VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(subject) DO UPDATE SET mode=excluded.mode,rate=excluded.rate,target=excluded.target,
-    cue=excluded.cue,identity=excluded.identity,plan_time=excluded.plan_time,place=excluded.place,starter=excluded.starter,bundle=excluded.bundle`);
+  const upsertRule = db.prepare(`INSERT INTO personal_scoring(subject,mode,rate,target,cue,identity,plan_time,place,starter,bundle,unit)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(subject) DO UPDATE SET mode=excluded.mode,rate=excluded.rate,target=excluded.target,
+    cue=excluded.cue,identity=excluded.identity,plan_time=excluded.plan_time,place=excluded.place,starter=excluded.starter,bundle=excluded.bundle,unit=excluded.unit`);
   // Reversing an earning reduces earned points. Reversing a redemption does not.
   const earnedEntry = `kind IN ('earn','edit') OR (kind='reverse' AND EXISTS (
     SELECT 1 FROM personal_entries original WHERE original.id=p.reference AND original.kind='earn'))`;
@@ -84,7 +84,7 @@ export function createPersonalRepository(db: DatabaseSync) {
     rules() { return currentRules.all() as unknown as ScoringRule[]; },
     saveRule(rule: ScoringRule) {
       upsertRule.run(rule.subject, rule.mode, rule.rate, rule.target, rule.cue, rule.identity, rule.time, rule.place,
-        rule.starter, rule.bundle);
+        rule.starter, rule.bundle, rule.unit ?? 'minutes');
     },
     reward(id: string) {
       const row = rewardById.get(id);
@@ -110,9 +110,9 @@ export function createPersonalRepository(db: DatabaseSync) {
       return completionCredit.get(subject) as ActivityEntry | undefined;
     },
     insert(entry: ActivityEntry, now: Date) {
-      db.prepare('INSERT INTO personal_entries VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
+      db.prepare('INSERT INTO personal_entries(id,kind,subject,title,day,logged_at,time_zone,offset_minutes,minutes,rate,amount,reference,unit) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')
         .run(entry.id, entry.kind, entry.subject, entry.title, entry.day, entry.loggedAt,
-          Intl.DateTimeFormat().resolvedOptions().timeZone, now.getTimezoneOffset(), entry.minutes, entry.rate, entry.amount, entry.reference);
+          Intl.DateTimeFormat().resolvedOptions().timeZone, now.getTimezoneOffset(), entry.minutes, entry.rate, entry.amount, entry.reference, entry.unit ?? 'minutes');
     },
     moveActivity(entry: ActivityEntry, day: string, subject: string, operation: string) {
       db.prepare('UPDATE personal_entries SET day=?,subject=? WHERE id=? OR reference=?').run(day, subject, entry.id, entry.id);
@@ -146,6 +146,9 @@ export function createPersonalRepository(db: DatabaseSync) {
     totals(day: string) {
       const row = dayTotals.get(day)!;
       return { balance: Number(row.balance), earned: Number(row.earned) };
+    },
+    hasActivity(subject: string) {
+      return !!db.prepare('SELECT 1 FROM personal_entries WHERE subject=? LIMIT 1').get(subject);
     },
     minutes(subject: string) {
       return Number(subjectMinutes.get(subject)?.total);

@@ -58,7 +58,7 @@ export function TaskRow({ task, today, busy, completable = true, rule, insight, 
         <div className="task-meta">
           <span>{task.frequency ? (task.frequency === 'daily' ? t('Daily') : t('Weekly')) + ' · ' : ''}{dateText(task.plannedDate)}</span>
           {late && <span className="overdue">{t("Overdue")}</span>}
-          {pending && !completable && <span>{t("Log minutes on the day")}</span>}
+          {pending && !completable && <span>{t(rule?.unit === 'count' ? "Log counts on the day" : "Log minutes on the day")}</span>}
           {cue && pending && <span className="cue">{cue}</span>}
           {!pending && <>
             <span className={`state ${task.status}`}>{t(statusLabel)}</span>

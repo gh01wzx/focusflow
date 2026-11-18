@@ -114,12 +114,12 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   async function log(task: Task, minutes: number) {
     if (!data) return false;
     const first = (data.progress[task.id] ?? 0) === 0;
-    const saved = await personal.mutate('log', { id: crypto.randomUUID(), day: data.day, subject: task.id, minutes }, ruleFor(task)?.target);
+    const saved = await personal.mutate('log', { id: crypto.randomUUID(), day: data.day, subject: task.id, minutes, unit: ruleFor(task)?.unit }, ruleFor(task)?.target);
     if (saved) logged(task, minutes, first);
     return saved;
   }
   function logged(task: Task, minutes: number, first: boolean) {
-    state.announce(t("Logged {0} min for {1}.", minutes, task.title) + vote(task, first));
+    state.announce(t(ruleFor(task)?.unit === 'count' ? 'Logged {0} counts for {1}.' : 'Logged {0} min for {1}.', minutes, task.title) + vote(task, first));
   }
   function rest(task: Task) { void personal.resolve(task, 'cancelled', state.resolve); }
   function skip(task: Task) {
@@ -155,7 +155,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   function setTarget(review: HabitReview, target: number) {
     const rule = rules.get(review.id);
     if (!rule) return Promise.resolve('Open the habit plan to change its target.');
-    return personal.savePlan(review.id, { mode: rule.mode, rate: rule.rate, target, cue: rule.cue, identity: rule.identity,
+    return personal.savePlan(review.id, { mode: rule.mode, unit: rule.unit ?? 'minutes', rate: rule.rate, target, cue: rule.cue, identity: rule.identity,
       time: rule.time, place: rule.place, starter: rule.starter, bundle: rule.bundle });
   }
   function editPlan(review: HabitReview) {

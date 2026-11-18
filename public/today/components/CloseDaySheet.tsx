@@ -64,7 +64,8 @@ function CloseDayBody({ view, rules, minutes, busy, insightFor, onCancel, onMove
   const tomorrow = nextOccurrence(view.today, 'daily') ?? view.today;
   // Habits with any logged minutes already count as showing up today.
   const habits = view.due.filter(task => isHabit(task) && (minutes[task.id] ?? 0) === 0);
-  const tasks = view.due.filter(task => !isHabit(task));
+  const tasks = view.due.filter(task => !isHabit(task) && !(rules.get(task.recurrenceId ?? task.id)?.mode === 'minutes'
+    && (minutes[task.id] ?? 0) >= rules.get(task.recurrenceId ?? task.id)!.target));
   const movable = tasks.filter(task => !task.recurrenceId);
   const choices = [...view.due, ...view.upcoming].filter(task => !task.recurrenceId && task.plannedDate <= tomorrow);
   // A chosen task that was dropped or done tonight no longer takes a place.

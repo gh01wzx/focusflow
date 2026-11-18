@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { TICKET_STATUSES, TICKET_STATUS_LABELS } from '../../../src/shared/projects.ts';
@@ -25,19 +26,19 @@ export function ProjectBoard({ view, renderTicket }: {
     if (element) element.scrollBy({ left: direction * element.clientWidth * 0.8, behavior: 'instant' });
   }
   return <>
-    <p className="board-hint" id="project-board-hint">All milestones. {scroll.overflow && 'Use the column controls to see every status. '}Open a ticket to change its status.</p>
-    {scroll.overflow && <div className="board-navigation" role="group" aria-label="Board columns">
-      <button type="button" disabled={!scroll.left} onClick={() => move(-1)}>Previous columns</button>
-      <button type="button" disabled={!scroll.right} onClick={() => move(1)}>Next columns</button>
+    <p className="board-hint" id="project-board-hint">{t("All milestones.")} {scroll.overflow && 'Use the column controls to see every status. '}{t("Open a ticket to change its status.")}</p>
+    {scroll.overflow && <div className="board-navigation" role="group" aria-label={t("Board columns")}>
+      <button type="button" disabled={!scroll.left} onClick={() => move(-1)}>{t("Previous columns")}</button>
+      <button type="button" disabled={!scroll.right} onClick={() => move(1)}>{t("Next columns")}</button>
     </div>}
-    <div ref={board} className="project-status-board" role="region" aria-label="Project status board"
+    <div ref={board} className="project-status-board" role="region" aria-label={t("Project status board")}
       aria-describedby="project-board-hint" tabIndex={0} onScroll={measure}>
       {TICKET_STATUSES.map(status => {
         const tickets = view.tickets.filter(ticket => ticket.status === status);
-        return <section className="status-column" data-status={status} key={status} aria-label={TICKET_STATUS_LABELS[status]}>
-          <h3>{TICKET_STATUS_LABELS[status]} <span className="count">{tickets.length}</span></h3>
+        return <section className="status-column" data-status={status} key={status} aria-label={t(TICKET_STATUS_LABELS[status])}>
+          <h3>{t(TICKET_STATUS_LABELS[status])} <span className="count">{tickets.length}</span></h3>
           {tickets.length ? <ul className="project-ticket-list">{tickets.map(renderTicket)}</ul>
-            : <p className="project-empty">No tickets.</p>}
+            : <p className="project-empty">{t("No tickets.")}</p>}
         </section>;
       })}
     </div>

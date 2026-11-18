@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { ModelPicker } from './ModelPicker.tsx';
 import { defaultAiModelSelection } from '../../../src/shared/ai.ts';
 import { projectSettings } from '../../../src/client/project-settings.ts';
@@ -31,38 +32,38 @@ export function CodingReviewPanel({ticketId,projectId,disabled,onChanged}:{ticke
     finally{owned.current=false;if(alive.current)setBusy(false);}
   }
   const evidence=state?.evidence,head=evidence?.pull.headSha;
-  return <section className="coding-review" aria-label="PR review"><h3>Understand and review this PR</h3>
-    {error&&<p role="alert" className="error">{error}</p>}{readError&&<p role="status" className="feedback">{readError}</p>}{state?.error&&<p role="alert" className="error">{state.error}</p>}
-    <button disabled={busy||disabled} onClick={()=>void act('refresh')}>Refresh PR evidence</button>{' '}
-    <button disabled={busy||disabled} onClick={()=>void act('observe')}>Check merge state</button>
-    {state&&<p><a href={state.pullUrl} target="_blank" rel="noreferrer">Open PR on GitHub to inspect or merge</a></p>}
+  return <section className="coding-review" aria-label={t("PR review")}><h3>{t("Understand and review this PR")}</h3>
+    {error&&<p role="alert" className="error">{t(error)}</p>}{readError&&<p role="status" className="feedback">{readError}</p>}{state?.error&&<p role="alert" className="error">{state.error}</p>}
+    <button disabled={busy||disabled} onClick={()=>void act('refresh')}>{t("Refresh PR evidence")}</button>{' '}
+    <button disabled={busy||disabled} onClick={()=>void act('observe')}>{t("Check merge state")}</button>
+    {state&&<p><a href={state.pullUrl} target="_blank" rel="noreferrer">{t("Open PR on GitHub to inspect or merge")}</a></p>}
     {state?.mergeNotice&&<p role="status">{state.mergeNotice}</p>}
-    {state?.issue&&<p>Linked Issue #{state.issue.number}: {state.issue.state}. Issue closure alone never makes a coding ticket Done.</p>}
-    {state?.issue?.state==='open'&&evidence?.pull.merged&&<div><label><input type="checkbox" checked={closeIssue} disabled={busy||disabled} onChange={event=>setCloseIssue(event.target.checked)} />Close this linked Issue after the observed PR merge.</label><button disabled={busy||disabled||!closeIssue} onClick={()=>void act('close-issue')}>Close linked Issue</button></div>}
-    {!evidence?<p>No saved PR evidence yet. Refresh reads GitHub without calling a model.</p>:<>
-      <p>PR #{evidence.pull.number} / {evidence.pull.merged?'Merged':evidence.pull.state} / head <code>{head}</code></p>
-      <p>Evidence read {new Date(evidence.fetchedAt).toLocaleString()}. {state?.stale?'Stale head: refresh before asking or approving.':'Saved evidence is tied to this commit.'}</p>
-      <p><strong>Code observations:</strong> {evidence.files.length} files, +{evidence.files.reduce((n,f)=>n+f.additions,0)} / -{evidence.files.reduce((n,f)=>n+f.deletions,0)} lines. {evidence.filesComplete?'Inline diff is available.':'Some diff/source content is omitted or incomplete; no complete-code claim is made.'}</p>
-      <p><strong>Recorded checks:</strong> {evidence.checksAvailable&&evidence.checksComplete&&evidence.checks.length?evidence.checks.length+' check records below.':'Missing, incomplete or not run. This is not a passing verification.'}</p>
-      <details><summary>Actual changed files and diff</summary>{evidence.files.map(file=><article key={file.path}><h4>{file.path}</h4><p>{file.status} / +{file.additions} / -{file.deletions} / {file.complete?'Diff available':'Incomplete or omitted'}</p><pre>{file.patch??'No inline patch is available.'}</pre></article>)}</details>
-      <details><summary>Dependency/import edits</summary>{evidence.files.flatMap(file=>(file.patch??'').split('\n').filter(line=>/^[+-].*(?:import |require\(|from |dependencies|devDependencies)/.test(line)).slice(0,20).map((line,index)=><p key={file.path+index}><code>{file.path}: {line}</code></p>))}</details>
-      <details><summary>GitHub check sources</summary>{evidence.checks.map((check,index)=><p key={index}>{check.name}: {check.conclusion??check.status} / {check.source} {check.url&&<a href={check.url} target="_blank" rel="noreferrer">Open check</a>}</p>)}</details>
-      <button type="button" onClick={() => setPicker(value => !value)}>Review model and effort</button>
+    {state?.issue&&<p>{t("Linked Issue #")}{state.issue.number}: {state.issue.state}{t(". Issue closure alone never makes a coding ticket Done.")}</p>}
+    {state?.issue?.state==='open'&&evidence?.pull.merged&&<div><label><input type="checkbox" checked={closeIssue} disabled={busy||disabled} onChange={event=>setCloseIssue(event.target.checked)} />{t("Close this linked Issue after the observed PR merge.")}</label><button disabled={busy||disabled||!closeIssue} onClick={()=>void act('close-issue')}>{t("Close linked Issue")}</button></div>}
+    {!evidence?<p>{t("No saved PR evidence yet. Refresh reads GitHub without calling a model.")}</p>:<>
+      <p>{t("PR #")}{evidence.pull.number} / {evidence.pull.merged?t('Merged'):evidence.pull.state} {t("/ head")} <code>{head}</code></p>
+      <p>{t("Evidence read")} {new Date(evidence.fetchedAt).toLocaleString()}. {state?.stale?t('Stale head: refresh before asking or approving.'):t('Saved evidence is tied to this commit.')}</p>
+      <p><strong>{t("Code observations:")}</strong> {evidence.files.length} {t("files, +")}{evidence.files.reduce((n,f)=>n+f.additions,0)} / -{evidence.files.reduce((n,f)=>n+f.deletions,0)} {t("lines.")} {evidence.filesComplete?t('Inline diff is available.'):'Some diff/source content is omitted or incomplete; no complete-code claim is made.'}</p>
+      <p><strong>{t("Recorded checks:")}</strong> {evidence.checksAvailable&&evidence.checksComplete&&evidence.checks.length?evidence.checks.length+t(' check records below.'):t('Missing, incomplete or not run. This is not a passing verification.')}</p>
+      <details><summary>{t("Actual changed files and diff")}</summary>{evidence.files.map(file=><article key={file.path}><h4>{file.path}</h4><p>{file.status} / +{file.additions} / -{file.deletions} / {file.complete?t('Diff available'):t('Incomplete or omitted')}</p><pre>{file.patch??t('No inline patch is available.')}</pre></article>)}</details>
+      <details><summary>{t("Dependency/import edits")}</summary>{evidence.files.flatMap(file=>(file.patch??'').split('\n').filter(line=>/^[+-].*(?:import |require\(|from |dependencies|devDependencies)/.test(line)).slice(0,20).map((line,index)=><p key={file.path+index}><code>{file.path}: {line}</code></p>))}</details>
+      <details><summary>{t("GitHub check sources")}</summary>{evidence.checks.map((check,index)=><p key={index}>{check.name}: {check.conclusion??check.status} / {check.source} {check.url&&<a href={check.url} target="_blank" rel="noreferrer">{t("Open check")}</a>}</p>)}</details>
+      <button type="button" onClick={() => setPicker(value => !value)}>{t("Review model and effort")}</button>
       {picker && <ModelPicker value={selection} onChange={setSelection} disabled={busy || disabled} />}
-      <div><label><input type="checkbox" checked={allowance} disabled={busy||disabled||state?.busy} onChange={event=>setAllowance(event.target.checked)} />Use the selected AI allowance for one read-only answer using this PR's requirements, diff and bounded source excerpts.</label>
-        <button disabled={busy||disabled||state?.busy||state?.stale||!allowance} onClick={()=>void act('ask','summary')}>Explain this change</button>{' '}
-        <button disabled={busy||disabled||state?.busy||state?.stale||!allowance} onClick={()=>void act('ask','independent')}>Run a separate AI review</button>
-        <label>Question about this code or library<textarea value={question} maxLength={4000} disabled={busy||disabled} onChange={event=>setQuestion(event.target.value)} /></label>
-        <button disabled={busy||disabled||state?.busy||state?.stale||!allowance||!question.trim()} onClick={()=>void act('ask','question')}>Ask about this PR</button>
-        {state?.busy&&<><p role="status">Read-only AI request in progress. It does not edit code or merge.</p><button disabled={busy} onClick={()=>void act('cancel')}>Cancel AI review</button></>}
+      <div><label><input type="checkbox" checked={allowance} disabled={busy||disabled||state?.busy} onChange={event=>setAllowance(event.target.checked)} />{t("Use the selected AI allowance for one read-only answer using this PR's requirements, diff and bounded source excerpts.")}</label>
+        <button disabled={busy||disabled||state?.busy||state?.stale||!allowance} onClick={()=>void act('ask','summary')}>{t("Explain this change")}</button>{' '}
+        <button disabled={busy||disabled||state?.busy||state?.stale||!allowance} onClick={()=>void act('ask','independent')}>{t("Run a separate AI review")}</button>
+        <label>{t("Question about this code or library")}<textarea value={question} maxLength={4000} disabled={busy||disabled} onChange={event=>setQuestion(event.target.value)} /></label>
+        <button disabled={busy||disabled||state?.busy||state?.stale||!allowance||!question.trim()} onClick={()=>void act('ask','question')}>{t("Ask about this PR")}</button>
+        {state?.busy&&<><p role="status">{t("Read-only AI request in progress. It does not edit code or merge.")}</p><button disabled={busy} onClick={()=>void act('cancel')}>{t("Cancel AI review")}</button></>}
       </div>
-      {state?.answers.map(answer=><details key={answer.id} open={answer.id===state.answers.at(-1)?.id}><summary>{answer.kind} / {answer.headSha===head&&answer.scope===state.scope?'This head and requirements':'Stale head or requirements'}</summary>
-        {answer.question&&<p>{answer.question}</p>}<pre>{answer.text}</pre><p>AI inference from attached evidence; not independent human verification. Head: <code>{answer.headSha}</code></p>
-        {answer.evidenceAt&&<p>Check/code evidence read: {new Date(answer.evidenceAt).toLocaleString()}. A later check result at the same head can differ.</p>}</details>)}
-      <div><label><input type="checkbox" checked={confirm} disabled={busy||disabled||state?.stale} onChange={event=>setConfirm(event.target.checked)} />Record my local review decision for this exact head and requirements.</label>
-        <label><input type="checkbox" checked={unverified} disabled={busy||disabled} onChange={event=>setUnverified(event.target.checked)} />I acknowledge any missing checks, incomplete source or missing separate review.</label>
-        <button disabled={busy||disabled||state?.busy||state?.stale||!confirm} onClick={()=>void act('approve')}>Record approval for this head</button>
-        <p>{state?.approved?'A matching local approval is recorded. Merge remains your explicit action on GitHub.':'No current matching local approval. New commits or changed requirements invalidate earlier decisions.'}</p>
+      {state?.answers.map(answer=><details key={answer.id} open={answer.id===state.answers.at(-1)?.id}><summary>{answer.kind} / {answer.headSha===head&&answer.scope===state.scope?t('This head and requirements'):t('Stale head or requirements')}</summary>
+        {answer.question&&<p>{answer.question}</p>}<pre>{answer.text}</pre><p>{t("AI inference from attached evidence; not independent human verification. Head:")} <code>{answer.headSha}</code></p>
+        {answer.evidenceAt&&<p>{t("Check/code evidence read:")} {new Date(answer.evidenceAt).toLocaleString()}{t(". A later check result at the same head can differ.")}</p>}</details>)}
+      <div><label><input type="checkbox" checked={confirm} disabled={busy||disabled||state?.stale} onChange={event=>setConfirm(event.target.checked)} />{t("Record my local review decision for this exact head and requirements.")}</label>
+        <label><input type="checkbox" checked={unverified} disabled={busy||disabled} onChange={event=>setUnverified(event.target.checked)} />{t("I acknowledge any missing checks, incomplete source or missing separate review.")}</label>
+        <button disabled={busy||disabled||state?.busy||state?.stale||!confirm} onClick={()=>void act('approve')}>{t("Record approval for this head")}</button>
+        <p>{state?.approved?t('A matching local approval is recorded. Merge remains your explicit action on GitHub.'):t('No current matching local approval. New commits or changed requirements invalidate earlier decisions.')}</p>
       </div>
     </>}
   </section>;

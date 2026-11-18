@@ -84,9 +84,14 @@ async function startDesktop(): Promise<void> {
       const github = createGitHubService(createGitHubVault(join(profileDirectory, 'github'), crypto));
       const dsh = createDshService(createProviderCredential(join(profileDirectory, 'ai'), crypto));
       const compatible = createCompatibleService(createProviderCredential(join(profileDirectory, 'ai'), crypto, 'compatible'));
+      const namedApis = {
+        openai: createCompatibleService(createProviderCredential(join(profileDirectory, 'ai'), crypto, 'openai'), 'openai'),
+        claude: createCompatibleService(createProviderCredential(join(profileDirectory, 'ai'), crypto, 'claude'), 'claude'),
+        deepseek: createCompatibleService(createProviderCredential(join(profileDirectory, 'ai'), crypto, 'deepseek-api'), 'deepseek'),
+      };
       service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), workspaceLabel: profile.workspaceLabel,
-        github, ai, dsh, compatible, onShutdown: traceShutdown, onInterfaceReady: confirmReady, appVersion: app.getVersion() });
-      void ready.then(() => Promise.allSettled([ai.check(), dsh.restore(), compatible.restore()]));
+        github, ai, dsh, compatible, namedApis, onShutdown: traceShutdown, onInterfaceReady: confirmReady, appVersion: app.getVersion() });
+      void ready.then(() => Promise.allSettled([ai.check(), dsh.restore(), compatible.restore(), ...Object.values(namedApis).map(api => api.restore())]));
       const origin = service.origin;
       window = new BrowserWindow({
         width: 1120,

@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import type { Outcome } from '../../../src/shared/personal.ts';
@@ -9,7 +10,7 @@ import { ListItem } from './Animated.tsx';
 import { CloseIcon, PencilIcon, SparkIcon } from './Icons.tsx';
 
 const outcomeText: Record<Outcome, string> = { done: 'done', started: 'showed up', missed: 'missed', rest: 'rest day' };
-const shortDate = (day: string) => new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+const shortDate = (day: string) => new Intl.DateTimeFormat(document.documentElement.lang, { month: 'short', day: 'numeric', timeZone: 'UTC' })
   .format(new Date(day + 'T12:00:00Z'));
 const rate = (progress: Progress) => progress.total ? progress.done / progress.total : 0;
 
@@ -20,12 +21,12 @@ export function weekOf(day: string): string {
 
 // A short prompt on Today at the start of a week. Not this week hides it until next Monday.
 export function WeekPrompt({ busy, onOpen, onDismiss }: { busy: boolean; onOpen(): void; onDismiss(): void }) {
-  return <section className="evening-prompt week-prompt glass" aria-label="New week">
+  return <section className="evening-prompt week-prompt glass" aria-label={t("New week")}>
     <span className="evening-icon"><SparkIcon /></span>
-    <p><strong>New week</strong> Take a minute to see how your habits went and tune them for the week ahead.</p>
+    <p><strong>{t("New week")}</strong> {t("Take a minute to see how your habits went and tune them for the week ahead.")}</p>
     <div className="evening-actions">
-      <button className="primary" disabled={busy} onClick={onOpen}>Review week</button>
-      <button className="text-button" disabled={busy} onClick={onDismiss}>Not this week</button>
+      <button className="primary" disabled={busy} onClick={onOpen}>{t("Review week")}</button>
+      <button className="text-button" disabled={busy} onClick={onDismiss}>{t("Not this week")}</button>
     </div>
   </section>;
 }
@@ -65,17 +66,17 @@ export function WeeklyReview(props: ReviewProps) {
 function advice(review: HabitReview): string {
   const { week, before, suggestion } = review;
   switch (suggestion.kind) {
-    case 'new': return 'New habit. Keep showing up; suggestions start after about two weeks.';
-    case 'steady': return 'Steady for two weeks. Keep the plan as it is.';
-    case 'stack': return 'Steady for two weeks. Build on it by stacking a new habit right after it.';
-    case 'grow': return `Target met steadily for two weeks. Ready for ${suggestion.target} min a day?`;
-    case 'ease': return `Showed up ${week.done} of ${week.total} times. `
-      + (suggestion.target ? `Make it easier: ${suggestion.target} min a day still counts.` : 'Try a smaller start or a different cue.');
-    case 'graduate': return `Steady after ${suggestion.days} days. If it feels automatic, graduate it: it leaves Today and its history stays.`;
+    case 'new': return t("New habit. Keep showing up; suggestions start after about two weeks.");
+    case 'steady': return t("Steady for two weeks. Keep the plan as it is.");
+    case 'stack': return t("Steady for two weeks. Build on it by stacking a new habit right after it.");
+    case 'grow': return t("Target met steadily for two weeks. Ready for {0} min a day?", suggestion.target);
+    case 'ease': return t("Showed up {0} of {1} times. ", week.done, week.total)
+      + (suggestion.target ? t("Make it easier: {0} min a day still counts.", suggestion.target) : t('Try a smaller start or a different cue.'));
+    case 'graduate': return t("Steady after {0} days. If it feels automatic, graduate it: it leaves Today and its history stays.", suggestion.days);
     case 'keep':
-      if (before.total && week.total && rate(week) > rate(before)) return 'Up on the week before. Keep going.';
-      if (before.total && week.total && rate(week) < rate(before)) return 'A dip from the week before. Never miss twice; two minutes counts.';
-      return 'Keep going.';
+      if (before.total && week.total && rate(week) > rate(before)) return t("Up on the week before. Keep going.");
+      if (before.total && week.total && rate(week) < rate(before)) return t("A dip from the week before. Never miss twice; two minutes counts.");
+      return t("Keep going.");
   }
 }
 
@@ -108,26 +109,25 @@ function ReviewBody({ today, reviews, votes, busy, onTarget, onGraduate, onEditP
   return <div className="sheet-form">
     <header className="sheet-header">
       <div>
-        <h2 id="review-title">Weekly review</h2>
-        <p className="step-label">{shortDate(addDays(today, -7))} to {shortDate(addDays(today, -1))}. A minute to tune the week ahead.</p>
+        <h2 id="review-title">{t("Weekly review")}</h2>
+        <p className="step-label">{shortDate(addDays(today, -7))} {t("to")} {shortDate(addDays(today, -1))}{t(". A minute to tune the week ahead.")}</p>
       </div>
-      <button type="button" className="icon-button" aria-label="Close" disabled={busy} onClick={onClose}><CloseIcon /></button>
+      <button type="button" className="icon-button" aria-label={t("Close")} disabled={busy} onClick={onClose}><CloseIcon /></button>
     </header>
     <div className="sheet-body">
-      <section className="sheet-preview review-summary" aria-label="Last seven days">
-        <p className="preview-title">{total ? `You showed up ${shown} of ${total} times.` : 'No habit was scheduled in the last seven days.'}</p>
-        {total > 0 && earlier > 0 && change !== 0 && <p>{Math.abs(change)} {change > 0 ? 'more' : 'fewer'} than the week before.</p>}
-        {identities.length > 0 && <ul className="vote-chips" aria-label="Identity votes">
+      <section className="sheet-preview review-summary" aria-label={t("Last seven days")}>
+        <p className="preview-title">{total ? t("You showed up {0} of {1} times.", shown, total) : t('No habit was scheduled in the last seven days.')}</p>
+        {total > 0 && earlier > 0 && change !== 0 && <p>{Math.abs(change)} {change > 0 ? 'more' : 'fewer'} {t("than the week before.")}</p>}
+        {identities.length > 0 && <ul className="vote-chips" aria-label={t("Identity votes")}>
           {identities.map(item => <li key={item.key}><strong>{item.label}</strong>
-            {' · ' + item.week + ' this week · ' + item.total + ' in all'}</li>)}
+            {' · ' + item.week + t(' this week · ') + item.total + ' in all'}</li>)}
         </ul>}
       </section>
-      {reviews.length > HABIT_LIMIT && <p className="soft-note">You are building {reviews.length} habits at once.
-        Habits stick better a few at a time; graduate or stop one when you are ready.</p>}
+      {reviews.length > HABIT_LIMIT && <p className="soft-note">{t("You are building")} {reviews.length} {t("habits at once. Habits stick better a few at a time; graduate or stop one when you are ready.")}</p>}
 
       <section className="sheet-group" aria-labelledby="review-habits">
-        <h3 id="review-habits">Your habits</h3>
-        {reviews.length === 0 ? <p className="group-note">Add a habit with New habit to see it here next week.</p> : <ul className="close-list">
+        <h3 id="review-habits">{t("Your habits")}</h3>
+        {reviews.length === 0 ? <p className="group-note">{t("Add a habit with New habit to see it here next week.")}</p> : <ul className="close-list">
           <AnimatePresence initial={false} mode="popLayout">{reviews.map(review => {
             const { suggestion } = review;
             const done = applied[review.id];
@@ -135,29 +135,29 @@ function ReviewBody({ today, reviews, votes, busy, onTarget, onGraduate, onEditP
               <div className="close-item">
                 <div className="review-head">
                   <strong>{review.title}</strong>
-                  {review.week.total > 0 && <span className="consistency" title="Shown up out of scheduled days, rest days aside">
+                  {review.week.total > 0 && <span className="consistency" title={t("Shown up out of scheduled days, rest days aside")}>
                     {review.week.done}/{review.week.total}</span>}
                 </div>
                 {review.marks.length > 0 && <span className="dots" role="img"
-                  aria-label={'Last seven days: ' + review.marks.map(mark => outcomeText[mark]).join(', ')}>
+                  aria-label={t('Last seven days: ') + review.marks.map(mark => outcomeText[mark]).join(', ')}>
                   {review.marks.map((mark, index) => <i key={index} data-mark={mark} />)}</span>}
-                <p className="review-note">{done ?? advice(review)}</p>
+                <p className="review-note">{done ? t(done) : advice(review)}</p>
               </div>
               {!done && confirming === review.id ? <div className="close-actions">
-                <button className="primary" disabled={busy} aria-label={`Confirm graduating ${review.title}`}
-                  onClick={() => void save(review, onGraduate(review), 'Graduated. Well done.')}>Graduate</button>
-                <button className="text-button" disabled={busy} onClick={() => setConfirming('')}>Keep it</button>
+                <button className="primary" disabled={busy} aria-label={t("Confirm graduating {0}", review.title)}
+                  onClick={() => void save(review, onGraduate(review), 'Graduated. Well done.')}>{t("Graduate")}</button>
+                <button className="text-button" disabled={busy} onClick={() => setConfirming('')}>{t("Keep it")}</button>
               </div> : !done && <div className="close-actions">
-                {(suggestion.kind === 'grow' || (suggestion.kind === 'ease' && suggestion.target)) && <button className="primary" disabled={busy}
-                  aria-label={`Change ${review.title} to ${suggestion.target} minutes a day`}
-                  onClick={() => void save(review, onTarget(review, suggestion.target!), `Now ${suggestion.target} min a day.`)}>
-                  Make it {suggestion.target} min</button>}
-                {suggestion.kind === 'ease' && <button className="secondary-button" disabled={busy} aria-label={`Edit plan for ${review.title}`}
-                  onClick={() => onEditPlan(review)}><PencilIcon />Edit plan</button>}
-                {suggestion.kind === 'stack' && <button className="primary" disabled={busy} aria-label={`Stack a new habit after ${review.title}`}
-                  onClick={() => onStack(review)}><SparkIcon />Stack a habit</button>}
-                {suggestion.kind === 'graduate' && <button className="primary" disabled={busy} aria-label={`Graduate ${review.title}`}
-                  onClick={() => setConfirming(review.id)}>Graduate</button>}
+                {(suggestion.kind === 'grow' || suggestion.kind === 'ease') && suggestion.target !== null && <button className="primary" disabled={busy}
+                  aria-label={t("Change {0} to {1} minutes a day", review.title, suggestion.target)}
+                  onClick={() => void save(review, onTarget(review, suggestion.target!), t("Now {0} min a day.", suggestion.target!))}>
+                  {t("Make it")} {suggestion.target} {t("min")}</button>}
+                {suggestion.kind === 'ease' && <button className="secondary-button" disabled={busy} aria-label={t("Edit plan for {0}", review.title)}
+                  onClick={() => onEditPlan(review)}><PencilIcon />{t("Edit plan")}</button>}
+                {suggestion.kind === 'stack' && <button className="primary" disabled={busy} aria-label={t("Stack a new habit after {0}", review.title)}
+                  onClick={() => onStack(review)}><SparkIcon />{t("Stack a habit")}</button>}
+                {suggestion.kind === 'graduate' && <button className="primary" disabled={busy} aria-label={t("Graduate {0}", review.title)}
+                  onClick={() => setConfirming(review.id)}>{t("Graduate")}</button>}
               </div>}
             </ListItem>;
           })}</AnimatePresence>
@@ -165,9 +165,9 @@ function ReviewBody({ today, reviews, votes, busy, onTarget, onGraduate, onEditP
       </section>
     </div>
     <footer className="sheet-footer">
-      {error && <p role="alert" className="error">{error}</p>}
-      <button type="button" className="secondary-button" disabled={busy} onClick={onClose}>Not now</button>
-      <button type="button" className="primary" disabled={busy} onClick={onFinish}>Done for this week</button>
+      {error && <p role="alert" className="error">{t(error)}</p>}
+      <button type="button" className="secondary-button" disabled={busy} onClick={onClose}>{t("Not now")}</button>
+      <button type="button" className="primary" disabled={busy} onClick={onFinish}>{t("Done for this week")}</button>
     </footer>
   </div>;
 }

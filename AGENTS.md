@@ -8,7 +8,7 @@
 
 ## Work with the owner
 
-- Discuss the work in Chinese. Use simple English in source, comments, UI, docs, Issues, commits and PRs. Preserve user-entered text; escape non-English test fixtures.
+- Discuss the work in Chinese. Use simple English in source, comments, docs, Issues, commits and PRs. Maintain English and Simplified Chinese interface text. Preserve user-entered text; escape non-English test fixtures.
 - Work through the owner-authorized implementation batch in dependency order, with self-review and one implementation PR at a time. The owner will perform unified local acceptance after implementation. Do not run automated tests or live model trials for this batch; record them as not run and retain failures already observed. Merge completed code within the batch authorization. New account scopes, live-model spending, paid services, release and deployment still need their own authorization.
 - A coding task is complete only after its linked PR is observed merged.
 - Use the Issue number as the task ID: [ID] Plain-English outcome for Issue/PR titles, ID-short-outcome for branches, and Closes #ID in the PR. GitHub's separate PR number is only a platform reference. Apply this from task 21 onward.

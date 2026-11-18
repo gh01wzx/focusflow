@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useLayoutEffect, useId, useRef } from 'react';
 import type { ReactNode } from 'react';
 
@@ -22,7 +23,7 @@ export function ProjectDialog({ title, locked, onClose, children, returnFocusId 
     <header className="dialog-heading">
       <h2 id={heading}>{title}</h2>
       <button type="button" className="secondary-button" disabled={locked} onClick={onClose}
-        aria-label={'Close ' + title}>Close</button>
+        aria-label={t('Close ') + title}>{t("Close")}</button>
     </header>
     {children}
   </dialog>;

@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useEffect, useState } from 'react';
 import { ProjectDialog } from './ProjectDialog.tsx';
 import { usePlanController } from '../usePlanController.ts';
@@ -78,15 +79,15 @@ export function PlanDraftPanel({ projectId, disabled, onOpenChange, onApproved }
     <button id={buttonId} className="secondary-button" disabled={disabled} onClick={() => {
       setConnections(null); setConnectionError(''); resetCatalog();
       setOpen(true); onOpenChange(true);
-    }}>AI plan draft</button>
-    {open && <ProjectDialog title="AI plan draft" locked={state.busy || mode !== 'view'} returnFocusId={buttonId} onClose={close}>
-      <p className="plan-notice">Suggestions stay private until you preview and approve the selected plan. Approval never starts work or publishes GitHub Issues.</p>
+    }}>{t("AI plan draft")}</button>
+    {open && <ProjectDialog title={t("AI plan draft")} locked={state.busy || mode !== 'view'} returnFocusId={buttonId} onClose={close}>
+      <p className="plan-notice">{t("Suggestions stay private until you preview and approve the selected plan. Approval never starts work or publishes GitHub Issues.")}</p>
       {connectionError && <p role="alert" className="error">{connectionError}</p>}
-      {!connections && !connectionError && <p role="status">Checking AI connections.</p>}
-      {connections && !provider && <p role="status">Connect a provider in AI connection to generate a draft.</p>}
+      {!connections && !connectionError && <p role="status">{t("Checking AI connections.")}</p>}
+      {connections && !provider && <p role="status">{t("Connect a provider in AI connection to generate a draft.")}</p>}
       {provider && <form className="project-form" onSubmit={event => { event.preventDefault(); if (canGenerate) void state.generate(selection); }}>
-        <p>FocusFlow sends your goal as text through {aiProviderNames[provider]}.</p>
-        <label htmlFor="plan-provider">Provider</label>
+        <p>{t("FocusFlow sends your goal as text through")} {aiProviderNames[provider]}.</p>
+        <label htmlFor="plan-provider">{t("Provider")}</label>
         <select id="plan-provider" value={provider} disabled={choosing} onChange={event => {
           const next = connected.find(item => item.provider === event.target.value);
           if (!next) return;
@@ -95,60 +96,60 @@ export function PlanDraftPanel({ projectId, disabled, onOpenChange, onApproved }
         }}>
           {connected.map(item => <option key={item.provider} value={item.provider}>{aiProviderNames[item.provider]}</option>)}
         </select>
-        <label htmlFor="plan-model">Model</label>
+        <label htmlFor="plan-model">{t("Model")}</label>
         <div className="plan-actions">
           <select id="plan-model" value={model?.id ?? ''} disabled={choosing || !models.length}
             onChange={event => choose({ provider, model: event.target.value, effort: '' })}>
-            {!models.length && <option value="">{modelError ? 'No models loaded' : 'Loading models'}</option>}
+            {!models.length && <option value="">{modelError ? t('No models loaded') : t('Loading models')}</option>}
             {models.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
           </select>
           <button type="button" className="secondary-button" disabled={choosing || (!catalog && !modelError)}
-            onClick={() => { resetCatalog(); refresh(count => count + 1); }}>Refresh models</button>
+            onClick={() => { resetCatalog(); refresh(count => count + 1); }}>{t("Refresh models")}</button>
         </div>
         {modelError && <p role="alert" className="error">{modelError}</p>}
-        <label htmlFor="plan-effort">Reasoning effort</label>
+        <label htmlFor="plan-effort">{t("Reasoning effort")}</label>
         <select id="plan-effort" value={model ? selection.effort : ''} disabled={choosing || !model?.efforts.length}
           onChange={event => choose({ ...selection, effort: event.target.value })}>
-          <option value="">{model?.defaultEffort ? `Default (${model.defaultEffort})` : 'Provider default'}</option>
+          <option value="">{model?.defaultEffort ? t("Default ({0})", model.defaultEffort) : t('Provider default')}</option>
           {model?.efforts.map(effort => <option key={effort} value={effort}>{effort}</option>)}
         </select>
-        <label htmlFor="plan-goal">Project goal</label>
+        <label htmlFor="plan-goal">{t("Project goal")}</label>
         <textarea id="plan-goal" rows={4} maxLength={3000} value={state.goal}
           disabled={state.busy || state.state?.busy || mode !== 'view'} onChange={event => state.setGoal(event.target.value)} />
         <label className="plan-consent"><input type="checkbox" checked={state.confirmed} disabled={choosing || !model}
-          onChange={event => state.setConfirmed(event.target.checked)} />I understand that generating this draft uses {
-            provider === 'codex' ? 'Codex allowance' : provider === 'dsh' ? 'my DeepSeek API balance' : 'my compatible API balance'}.</label>
-        <p>The previous saved draft stays available until a valid replacement is saved. Reopening a draft does not call a model.</p>
+          onChange={event => state.setConfirmed(event.target.checked)} />{t("I understand that generating this draft uses")} {
+            provider === 'codex' ? t('Codex allowance') : provider === 'dsh' ? t('my DeepSeek API balance') : aiProviderNames[provider] + t(' balance')}.</label>
+        <p>{t("The previous saved draft stays available until a valid replacement is saved. Reopening a draft does not call a model.")}</p>
         <div className="plan-actions">
-          <button className="primary" disabled={!canGenerate}>Generate draft</button>
+          <button className="primary" disabled={!canGenerate}>{t("Generate draft")}</button>
           {state.state?.busy && <button type="button" className="secondary-button" disabled={state.busy || state.state.cancelling}
-            onClick={() => void state.cancel()}>Cancel generation</button>}
+            onClick={() => void state.cancel()}>{t("Cancel generation")}</button>}
         </div>
       </form>}
-      <p className="feedback" role="status" aria-live="polite">{state.state?.message || (state.busy ? 'Opening the saved draft.' : '')}</p>
+      <p className="feedback" role="status" aria-live="polite">{state.state?.message || (state.busy ? t('Opening the saved draft.') : '')}</p>
       {state.error && <p className="error" role="alert">{state.error}</p>}
       {draft && mode === 'edit' && <PlanDraftEditor key={draft.revision ?? draft.id} draft={draft} busy={state.busy}
         onSave={state.save} onCancel={() => setMode('view')} />}
       {draft && mode === 'preview' && <PlanApprovalPreview draft={draft} busy={state.busy} onApprove={async confirmed => {
         const saved = await state.approve(draft, confirmed); if (saved) onApproved(); return saved;
       }} onCancel={() => setMode('view')} />}
-      {draft && <section className="plan-draft" aria-label="Saved AI draft">
-        <h3>Saved draft</h3>
-        <p>Goal: {draft.goal}</p>
-        {state.state?.approval ? <p role="status">Plan approved: {state.state.approval.ticketIds.length} saved tasks. Nothing started. Coding tasks remain unpublished.</p>
+      {draft && <section className="plan-draft" aria-label={t("Saved AI draft")}>
+        <h3>{t("Saved draft")}</h3>
+        <p>{t("Goal:")} {draft.goal}</p>
+        {state.state?.approval ? <p role="status">{t("Plan approved:")} {state.state.approval.ticketIds.length} {t("saved tasks. Nothing started. Coding tasks remain unpublished.")}</p>
           : <div className="plan-actions">
-            <button type="button" className="secondary-button" disabled={mode !== 'view' || state.busy || state.state?.busy} onClick={() => setMode('edit')}>Edit draft plan</button>
-            <button type="button" className="primary" disabled={mode !== 'view' || state.busy || state.state?.busy} onClick={() => setMode('preview')}>Preview selected plan</button>
+            <button type="button" className="secondary-button" disabled={mode !== 'view' || state.busy || state.state?.busy} onClick={() => setMode('edit')}>{t("Edit draft plan")}</button>
+            <button type="button" className="primary" disabled={mode !== 'view' || state.busy || state.state?.busy} onClick={() => setMode('preview')}>{t("Preview selected plan")}</button>
           </div>}
         {draft.plan.milestones.map(milestone => <section key={milestone.key} className="plan-milestone">
           <h3>{milestone.title}</h3><p>{milestone.description}</p>
           <ul>{milestone.tickets.map(ticket => <li key={ticket.key}>
             <details><summary>{ticket.title}</summary>
-              {draft.selectedTicketKeys && !draft.selectedTicketKeys.includes(ticket.key) && <p>Excluded from approval</p>}
-              <p className="plan-mode">Suggested: {ticket.executionMode === 'manual' ? 'Manual work' : 'Coding work (unpublished)'}</p>
-              <h4>Description</h4><p>{ticket.description}</p>
-              <h4>Acceptance criteria</h4><p>{ticket.acceptanceCriteria}</p>
-              {ticket.prerequisiteKeys.length > 0 && <p>Needs: {ticket.prerequisiteKeys.map(key => titles.get(key)).join(', ')}</p>}
+              {draft.selectedTicketKeys && !draft.selectedTicketKeys.includes(ticket.key) && <p>{t("Excluded from approval")}</p>}
+              <p className="plan-mode">{t("Suggested:")} {ticket.executionMode === 'manual' ? t('Manual work') : t('Coding work (unpublished)')}</p>
+              <h4>{t("Description")}</h4><p>{ticket.description}</p>
+              <h4>{t("Acceptance criteria")}</h4><p>{ticket.acceptanceCriteria}</p>
+              {ticket.prerequisiteKeys.length > 0 && <p>{t("Needs:")} {ticket.prerequisiteKeys.map(key => titles.get(key)).join(', ')}</p>}
             </details>
           </li>)}</ul>
         </section>)}

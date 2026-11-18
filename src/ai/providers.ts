@@ -1,7 +1,7 @@
 import { CodexFailure } from '../codex/client.ts';
 import { ProbeFailure, readOnlyResponse } from '../codex/read-only-probe.ts';
 import { aiProviderNames, supportsSelection } from '../shared/ai.ts';
-import type { AiConnection, AiModel, AiModelSelection, AiProvider } from '../shared/ai.ts';
+import type { ApiProvider, AiConnection, AiModel, AiModelSelection, AiProvider } from '../shared/ai.ts';
 import type { CompatibleService } from './compatible.ts';
 import type { DshService } from './dsh.ts';
 import { readCodexModels } from './models.ts';
@@ -10,9 +10,10 @@ import type { AiService } from './service.ts';
 export class AiProviderError extends Error {}
 type ResponseProgress = 'waiting' | 'responding' | 'retrying';
 
-export function createAiProviders(codex: AiService, dsh?: DshService, respond = readOnlyResponse, compatible?: CompatibleService) {
+export function createAiProviders(codex: AiService, dsh?: DshService, respond = readOnlyResponse, compatible?: CompatibleService, named: Partial<Record<ApiProvider, CompatibleService>> = {}) {
+  const api = { ...named, compatible };
   const isConnected = (provider: AiProvider) =>
-    provider === 'codex' ? codex.status().mode === 'chatgpt' : provider === 'dsh' ? dsh?.status().ready === true : compatible?.status().connected === true;
+    provider === 'codex' ? codex.status().mode === 'chatgpt' : provider === 'dsh' ? dsh?.status().ready === true : api[provider]?.status().connected === true;
   function requireConnection(provider: AiProvider) {
     if (!isConnected(provider)) throw new AiProviderError(`Connect ${aiProviderNames[provider]} in AI connection first.`);
   }
@@ -27,7 +28,7 @@ export function createAiProviders(codex: AiService, dsh?: DshService, respond = 
     async models(provider: AiProvider, signal: AbortSignal) {
       requireConnection(provider);
       if (provider === 'dsh' && dsh) return dsh.models(signal);
-      if (provider === 'compatible' && compatible) return compatible.models(signal);
+      if (provider !== 'codex' && provider !== 'dsh') return api[provider]!.models(signal);
       try {
         return await codex.runWithChatGPT((client, _cwd, combined, verify) => readCodexModels(client, combined, verify), signal, true);
       } catch (error) {
@@ -46,9 +47,9 @@ export function createAiProviders(codex: AiService, dsh?: DshService, respond = 
         progress('waiting');
         return dsh.respond(selection, prompt, signal, () => progress('responding'));
       }
-      if (selection.provider === 'compatible' && compatible) {
+      if (selection.provider !== 'codex' && selection.provider !== 'dsh') {
         progress('waiting');
-        return compatible.respond(selection, prompt, signal);
+        return api[selection.provider]!.respond(selection, prompt, signal);
       }
       return codex.runWithChatGPT(async (client, cwd, combined, verify) => {
         let models: AiModel[];

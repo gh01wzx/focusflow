@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useState } from 'react';
 import { points } from '../../../src/shared/personal.ts';
 import type { ScoringRule } from '../../../src/shared/personal.ts';
@@ -40,7 +41,7 @@ export function TaskRow({ task, today, busy, completable = true, rule, insight, 
         <input
           className="check"
           type="checkbox"
-          aria-label={`Complete ${task.title}`}
+          aria-label={t("Complete {0}", task.title)}
           checked={checking}
           disabled={busy || checking}
           onChange={async () => {
@@ -53,33 +54,33 @@ export function TaskRow({ task, today, busy, completable = true, rule, insight, 
       <div className="task-content">
         <span className="task-title">{task.title}</span>
         <div className="task-meta">
-          <span>{task.frequency ? (task.frequency === 'daily' ? 'Daily' : 'Weekly') + ' · ' : ''}{dateText(task.plannedDate)}</span>
-          {late && <span className="overdue">Overdue</span>}
-          {pending && !completable && <span>Log minutes on the day</span>}
+          <span>{task.frequency ? (task.frequency === 'daily' ? t('Daily') : t('Weekly')) + ' · ' : ''}{dateText(task.plannedDate)}</span>
+          {late && <span className="overdue">{t("Overdue")}</span>}
+          {pending && !completable && <span>{t("Log minutes on the day")}</span>}
           {cue && pending && <span className="cue">{cue}</span>}
           {!pending && <>
-            <span className={`state ${task.status}`}>{statusLabel}</span>
-            {task.resolvedAt && <span>{new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(new Date(task.resolvedAt))}</span>}
+            <span className={`state ${task.status}`}>{t(statusLabel)}</span>
+            {task.resolvedAt && <span>{new Intl.DateTimeFormat(document.documentElement.lang, { month: 'short', day: 'numeric' }).format(new Date(task.resolvedAt))}</span>}
           </>}
         </div>
-        {pending && rule?.starter && <p className="starter">Two-minute start: {rule.starter}</p>}
-        {pending && rule?.identity && <p className="identity"><span>Vote for </span>{rule.identity}<VoteCount votes={votes} /></p>}
+        {pending && rule?.starter && <p className="starter">{t("Two-minute start:")} {rule.starter}</p>}
+        {pending && rule?.identity && <p className="identity"><span>{t("Vote for")} </span>{rule.identity}<VoteCount votes={votes} /></p>}
         {insight && <HabitTrack insight={insight} />}
       </div>
-      {pending && rule?.mode === 'complete' && rule.rate > 0 && <span className="points-badge" title="Points when done">+{points(rule.rate)}</span>}
+      {pending && rule?.mode === 'complete' && rule.rate > 0 && <span className="points-badge" title={t("Points when done")}>+{points(rule.rate)}</span>}
       {pending && focus && <button className={`icon-button star ${focus.on ? 'on' : ''}`} disabled={busy || checking || (!focus.on && focus.full)}
-        aria-pressed={focus.on} aria-label={`Focus on ${task.title} today`}
-        title={focus.on ? "Remove from today's focus" : focus.full ? 'Focus already has three tasks' : "Add to today's focus"}
+        aria-pressed={focus.on} aria-label={t("Focus on {0} today", task.title)}
+        title={focus.on ? t("Remove from today's focus") : focus.full ? t('Focus already has three tasks') : t("Add to today's focus")}
         onClick={() => focus.toggle(task)}><StarIcon /></button>}
-      {onEdit && <button className="icon-button" disabled={busy} aria-label={`Edit plan for ${task.title}`} title="Edit plan"
+      {onEdit && <button className="icon-button" disabled={busy} aria-label={t("Edit plan for {0}", task.title)} title={t("Edit plan")}
         onClick={() => onEdit(task)}><PencilIcon /></button>}
       {/* Skipping a repeating occurrence is a planned rest day; it never breaks the habit chain. */}
-      {pending && task.recurrenceId && <button className="icon-button" disabled={busy || checking} aria-label={`Rest today ${task.title}`}
-        title="Rest today" onClick={() => void onResolve(task.id, 'cancelled')}><MoonIcon /></button>}
-      {pending && !task.recurrenceId && <button className="icon-button" disabled={busy || checking} aria-label={`Cancel ${task.title}`}
-        title="Cancel" onClick={() => void onResolve(task.id, 'cancelled')}><CloseIcon /></button>}
-      {!pending && onReopen && <button className="text-button" disabled={busy} aria-label={`Reopen ${task.title}`}
-        onClick={() => onReopen(task.id)}>Reopen</button>}
+      {pending && task.recurrenceId && <button className="icon-button" disabled={busy || checking} aria-label={t("Rest today {0}", task.title)}
+        title={t("Rest today")} onClick={() => void onResolve(task.id, 'cancelled')}><MoonIcon /></button>}
+      {pending && !task.recurrenceId && <button className="icon-button" disabled={busy || checking} aria-label={t("Cancel {0}", task.title)}
+        title={t("Cancel")} onClick={() => void onResolve(task.id, 'cancelled')}><CloseIcon /></button>}
+      {!pending && onReopen && <button className="text-button" disabled={busy} aria-label={t("Reopen {0}", task.title)}
+        onClick={() => onReopen(task.id)}>{t("Reopen")}</button>}
     </div>
   );
 }

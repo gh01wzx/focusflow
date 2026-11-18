@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { projectSettings } from '../../../src/client/project-settings.ts';
 import { useEffect, useState } from 'react';
 import { createCodingClient } from '../../../src/client/execution.ts';
@@ -33,23 +34,23 @@ export function CodingWorkspacePanel({ ticketId, projectId, disabled, onLock }: 
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Repository preparation failed.'); }
     finally { setBusy(false); }
   }
-  return <section className="coding-workspace" aria-label="Coding workspace">
-    <h3>Local coding workspace</h3>
-    <p>Choose the connected repository on this computer. Inspection reads Git metadata; preparing creates a separate worktree without resetting your original files.</p>
-    {error && <p role="alert" className="error">{error}</p>}
-    <label>Local repository folder<input value={sourcePath} maxLength={2000} disabled={busy || disabled || state?.workspace?.state === 'ready'}
-      onChange={event => { setSourcePath(event.target.value); setConfirm(false); setState(current => current ? { ...current, inspection: null } : null); }} placeholder="Absolute path to the repository" /></label>
+  return <section className="coding-workspace" aria-label={t("Coding workspace")}>
+    <h3>{t("Local coding workspace")}</h3>
+    <p>{t("Choose the connected repository on this computer. Inspection reads Git metadata; preparing creates a separate worktree without resetting your original files.")}</p>
+    {error && <p role="alert" className="error">{t(error)}</p>}
+    <label>{t("Local repository folder")}<input value={sourcePath} maxLength={2000} disabled={busy || disabled || state?.workspace?.state === 'ready'}
+      onChange={event => { setSourcePath(event.target.value); setConfirm(false); setState(current => current ? { ...current, inspection: null } : null); }} placeholder={t("Absolute path to the repository")} /></label>
     {state?.workspace?.state !== 'ready' && <>
-      <button className="primary" disabled={busy || disabled || !sourcePath.trim()} onClick={() => void act('prepare-saved')}>Prepare worktree</button>
-      <button disabled={busy || disabled || !sourcePath.trim()} onClick={() => void act('inspect')}>Inspect repository</button>
+      <button className="primary" disabled={busy || disabled || !sourcePath.trim()} onClick={() => void act('prepare-saved')}>{t("Prepare worktree")}</button>
+      <button disabled={busy || disabled || !sourcePath.trim()} onClick={() => void act('inspect')}>{t("Inspect repository")}</button>
     </>}
     {state?.inspection && <div>
-      <p>{state.inspection.repository.fullName} / {state.inspection.branch || 'Detached revision'}</p>
-      <p>Base commit: <code>{state.inspection.headSha}</code></p>
+      <p>{state.inspection.repository.fullName} / {state.inspection.branch || t('Detached revision')}</p>
+      <p>{t("Base commit:")} <code>{state.inspection.headSha}</code></p>
       <p>{state.inspection.notice}</p>
-      <label><input type="checkbox" checked={confirm} disabled={busy || disabled} onChange={event => setConfirm(event.target.checked)} />Prepare a separate coding workspace from this commit.</label>
-      <button disabled={busy || disabled || !confirm} onClick={() => void act('prepare')}>Prepare workspace</button>
+      <label><input type="checkbox" checked={confirm} disabled={busy || disabled} onChange={event => setConfirm(event.target.checked)} />{t("Prepare a separate coding workspace from this commit.")}</label>
+      <button disabled={busy || disabled || !confirm} onClick={() => void act('prepare')}>{t("Prepare workspace")}</button>
     </div>}
-    {state?.workspace && <div><p>{state.workspace.message}</p><p>Branch: <code>{state.workspace.branch}</code></p><p>Workspace: <code>{state.workspace.workspacePath}</code></p></div>}
+    {state?.workspace && <div><p>{state.workspace.message}</p><p>{t("Branch:")} <code>{state.workspace.branch}</code></p><p>{t("Workspace:")} <code>{state.workspace.workspacePath}</code></p></div>}
   </section>;
 }

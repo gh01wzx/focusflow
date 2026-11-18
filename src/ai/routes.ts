@@ -1,3 +1,5 @@
+import { apiEndpoints } from '../shared/ai.ts';
+import type { NamedApi } from '../shared/ai.ts';
 import type { CompatibleService } from './compatible.ts';
 import type { AiService } from './service.ts';
 import { DshFailure } from './dsh.ts';
@@ -7,6 +9,12 @@ import type { AiProviders } from './providers.ts';
 import { HttpError } from '../http/request.ts';
 
 export function matchAiRoute(method: string | undefined, path: string) {
+  for (const provider of Object.keys(apiEndpoints) as NamedApi[]) {
+    if (path === '/api/ai/' + provider && (method === 'GET' || method === 'POST')) {
+      return { provider, kind: method === 'GET' ? 'status' : 'connect' } as const;
+    }
+    if (path === '/api/ai/providers/' + provider + '/models' && method === 'GET') return { provider, kind: 'models' } as const;
+  }
   if (method === 'GET') {
     if (path === '/api/ai/status') return 'status';
     if (path === '/api/ai/dsh-status') return 'dsh-status';
@@ -25,7 +33,15 @@ export function matchAiRoute(method: string | undefined, path: string) {
 }
 
 export async function dispatchAiRoute(action: NonNullable<ReturnType<typeof matchAiRoute>>, input: unknown, service: AiService,
-  providers: AiProviders, dsh?: DshService, compatible?: CompatibleService) {
+  providers: AiProviders, dsh?: DshService, compatible?: CompatibleService, named: Partial<Record<NamedApi, CompatibleService>> = {}) {
+  if (typeof action === 'object') {
+    const api = named[action.provider];
+    if (action.kind === 'status') return api?.status() ?? { connected: false, endpoint: apiEndpoints[action.provider] };
+    if (!api) throw new HttpError(400, 'Open the desktop app to connect an API.');
+    try {
+      return action.kind === 'models' ? await providers.models(action.provider, AbortSignal.timeout(30000)) : await api.connect(input);
+    } catch { throw new HttpError(400, 'Check the API key, network and model access.'); }
+  }
   const confirmed = typeof input === 'object' && input !== null && 'confirmAllowance' in input ? input.confirmAllowance : false;
   if (action === 'dsh-status' || action === 'dsh-check' || action === 'dsh-verify') {
     if (!dsh) return { ready: false, verified: false, message: 'DeepSeek Harness requires the desktop app.' };

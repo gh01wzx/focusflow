@@ -1,3 +1,4 @@
+import { t } from '../workspace/locale.ts';
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { usePersonal } from './usePersonal.ts';
@@ -92,7 +93,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
     const rule = ruleFor(task);
     if (!rule?.identity || !counted) return '';
     const count = votesFor(rule) + 1;
-    return count === 1 ? ` Your first vote for “${rule.identity}”.` : ` That makes ${count} votes for “${rule.identity}”.`;
+    return count === 1 ? t(" Your first vote for “{0}”.", rule.identity) : t(" That makes {0} votes for “{1}”.", count, rule.identity);
   };
   async function complete(task: Task) {
     const saved = await personal.resolve(task, 'completed', state.resolve);
@@ -107,7 +108,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
     return saved;
   }
   function logged(task: Task, minutes: number, first: boolean) {
-    state.announce(`Logged ${minutes} min for ${task.title}.` + vote(task, first));
+    state.announce(t("Logged {0} min for {1}.", minutes, task.title) + vote(task, first));
   }
   function rest(task: Task) { void personal.resolve(task, 'cancelled', state.resolve); }
   function skip(task: Task) {
@@ -185,7 +186,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   return (
     <MotionConfig reducedMotion={data?.preferences.reducedMotion ? 'always' : 'user'}>
     <WorkspaceShell workspace="personal" busy={saving} onWorkspaceChange={onWorkspaceChange} navigation={
-        <nav aria-label="Personal views">
+        <nav aria-label={t("Personal views")}>
           {(['due', 'upcoming', 'history'] as const).map(key => (
             <button
               key={key}
@@ -195,13 +196,13 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               onClick={() => { setRewards(false); setTab(key); }}
             >
               <span className="nav-symbol" aria-hidden="true">{key === 'due' ? '●' : key === 'history' ? '↺' : '○'}</span>
-              {labels[key]}
+              {t(labels[key])}
               <span className="count">{view?.[key].length ?? '-'}</span>
             </button>
           ))}
           <button className={`nav-item ${rewards ? 'active' : ''}`} aria-current={rewards ? 'page' : undefined}
             disabled={saving} onClick={() => setRewards(true)}>
-            <span className="nav-symbol" aria-hidden="true">{'★'}</span>Rewards
+            <span className="nav-symbol" aria-hidden="true">{'★'}</span>{t("Rewards")}
           </button>
         </nav>
     }>
@@ -209,28 +210,28 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
         <header className="page-header">
           <div>
             <p className="eyebrow">
-              {view ? new Intl.DateTimeFormat('en', {
+              {view ? new Intl.DateTimeFormat(document.documentElement.lang, {
                 weekday: 'long', month: 'long', day: 'numeric',
-              }).format(new Date(view.today + 'T12:00:00')) : 'Personal tasks'}
+              }).format(new Date(view.today + 'T12:00:00')) : t('Personal tasks')}
             </p>
-            <h1>{rewards ? 'Rewards' : labels[tab]}</h1>
+            <h1>{rewards ? t('Rewards') : t(labels[tab])}</h1>
           </div>
           {!rewards && <div className="header-actions">
             <button className="secondary-button new-button" disabled={!view || saving}
-              onClick={() => setSheet({ mode: 'create', id: crypto.randomUUID() })}><PlusIcon />New task</button>
+              onClick={() => setSheet({ mode: 'create', id: crypto.randomUUID() })}><PlusIcon />{t("New task")}</button>
             <button className="primary" disabled={!view || saving}
-              onClick={() => setSheet({ mode: 'create', id: crypto.randomUUID(), guided: true })}><SparkIcon />New habit</button>
+              onClick={() => setSheet({ mode: 'create', id: crypto.randomUUID(), guided: true })}><SparkIcon />{t("New habit")}</button>
           </div>}
         </header>
-        {personal.error && <div className="error" role="alert">{personal.error}
-          <button disabled={saving} onClick={() => void personal.refresh()}>Refresh points</button>
+        {personal.error && <div className="error" role="alert">{t(personal.error)}
+          <button disabled={saving} onClick={() => void personal.refresh()}>{t("Refresh points")}</button>
         </div>}
         {rewards ? <RewardShop state={personal} /> : <div className={tab === 'due' ? 'personal-grid' : 'personal-single'}>
           <div className="today-lists">
             {error && (
               <div className="error" role="alert">
-                {error}
-                <button onClick={() => void refresh()} disabled={busy}>Retry</button>
+                {t(error)}
+                <button onClick={() => void refresh()} disabled={busy}>{t("Retry")}</button>
               </div>
             )}
             {tab === 'due' && view && <QuickAdd disabled={saving}
@@ -246,10 +247,10 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               onComplete={complete} onLog={log} onSkip={skip} onShowSkipped={() => { setSkipped([]); writeSkipped(today, []); }} />}
             <div className="feedback-row">
               <p className="feedback" role="status" aria-live="polite">
-                {message || (!view && !error ? 'Loading your tasks.' : '')}
+                {t(message) || (!view && !error ? t('Loading your tasks.') : '')}
               </p>
               {undo && <button className="text-button" disabled={saving} onClick={() => void state.reopen(undo.id)}
-                aria-label={`Undo ${undo.status === 'completed' ? 'completing' : 'resting or cancelling'} ${undo.title}`}>Undo</button>}
+                aria-label={t("Undo {0} {1}", undo.status === 'completed' ? 'completing' : 'resting or cancelling', undo.title)}>{t("Undo")}</button>}
             </div>
             {/* Groups move as one when the content above them changes, so their rows never slide on their own. */}
             {view && groups.map(group => {
@@ -258,39 +259,39 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               const late = group.items.filter(task => !task.frequency && task.plannedDate < view.today).length;
               const folded = others && !othersShown;
               return <motion.section key={group.key} layout="position" transition={spring}
-                className={`list-group glass ${focus ? 'focus-group' : ''}`} aria-label={group.title + (tab === 'due' ? '' : ' tasks')} aria-busy={saving}>
+                className={`list-group glass ${focus ? 'focus-group' : ''}`} aria-label={t(group.title) + (tab === 'due' ? '' : t(' tasks'))} aria-busy={saving}>
                 <div className="group-heading">
-                  <h2>{group.title}{!focus && <span className="count">{group.items.length}</span>}</h2>
-                  {focus && <span className="focus-progress">{focusDone} of {liveFocus.length} done</span>}
-                  {late > 0 && <span className="overdue-count">{late} overdue</span>}
+                  <h2>{t(group.title)}{!focus && <span className="count">{group.items.length}</span>}</h2>
+                  {focus && <span className="focus-progress">{focusDone} {t("of")} {liveFocus.length} {t("done")}</span>}
+                  {late > 0 && <span className="overdue-count">{late} {t("overdue")}</span>}
                   {others && focusOpen.length > 0 && <button className="text-button fold-button" aria-expanded={!folded}
-                    onClick={() => setOthersOpen(folded)}>{folded ? 'Show' : 'Hide'}</button>}
+                    onClick={() => setOthersOpen(folded)}>{folded ? t('Show') : t('Hide')}</button>}
                 </div>
-                {focus && focusOpen.length === 0 && <p className="group-note focus-done"><CheckIcon />Focus done. Anything else today is a bonus.</p>}
+                {focus && focusOpen.length === 0 && <p className="group-note focus-done"><CheckIcon />{t("Focus done. Anything else today is a bonus.")}</p>}
                 {others && liveFocus.length === 0 && group.items.length > 1 && <p className="group-note">
-                  Star up to {FOCUS_LIMIT} that matter most today. They move to the top and Next starts with them.</p>}
+                  {t("Star up to")} {FOCUS_LIMIT} {t("that matter most today. They move to the top and Next starts with them.")}</p>}
                 {!folded && group.items.length > 0 && <ul className="task-list">
                   <AnimatePresence initial={false} mode="popLayout">{group.items.map(row)}</AnimatePresence>
                 </ul>}
               </motion.section>;
             })}
             {tab === 'history' && rows.length >= HISTORY_LIMIT && <p className="list-note">
-              Showing the latest {HISTORY_LIMIT} entries. Older history stays saved on this computer.</p>}
+              {t("Showing the latest")} {HISTORY_LIMIT} {t("entries. Older history stays saved on this computer.")}</p>}
             {view && rows.length === 0 && (
               <div className="empty glass">
                 <span className="empty-icon"><CheckIcon /></span>
-                <h3>{text.emptyTitle}</h3>
-                <p>{text.emptyDescription}</p>
+                <h3>{t(text.emptyTitle)}</h3>
+                <p>{t(text.emptyDescription)}</p>
                 {tab === 'due' && view.upcoming.length > 0 && (
                   <button className="text-button" onClick={() => setTab('upcoming')}>
-                    View upcoming tasks
+                    {t("View upcoming tasks")}
                   </button>
                 )}
               </div>
             )}
             {tab === 'due' && <>
               {completedToday.length > 0 && <details className="completions glass">
-                <summary>Completed today ({completedToday.length})</summary>
+                <summary>{t("Completed today (")}{completedToday.length})</summary>
                 <ul className="task-list">{completedToday.map(task => <li key={task.id} className="row-item">
                   <TaskRow task={task} today={view!.today} busy={saving} onResolve={async () => false}
                     {...(canReopen(task, view!) ? { onReopen: (id: string) => void state.reopen(id) } : {})} />

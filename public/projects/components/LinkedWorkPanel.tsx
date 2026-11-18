@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useEffect, useRef, useState } from 'react';
 import { createLinkedWorkClient } from '../../../src/client/linked-work.ts';
 import type { LinkedWorkState, LinkedFields } from '../../../src/shared/linked-work.ts';
@@ -26,46 +27,46 @@ export function LinkedWorkPanel({ ticketId, disabled, onLock, onChanged }: {
   return <section className="linked-work">
     <button type="button" className="secondary-button" disabled={disabled || busy || editing} onClick={() => {
       setOpen(current => !current); if (!open) void run();
-    }}>{open ? 'Hide linked work' : 'Compare linked work'}</button>
-    {open && <div aria-label="Linked work comparison" role="region">
-      <p>Local intent stays local. GitHub owns Issue/PR identity and merge evidence. Text changes require an explicit decision.</p>
-      {error && <p className="error" role="alert">{error}</p>}
+    }}>{open ? t('Hide linked work') : t('Compare linked work')}</button>
+    {open && <div aria-label={t("Linked work comparison")} role="region">
+      <p>{t("Local intent stays local. GitHub owns Issue/PR identity and merge evidence. Text changes require an explicit decision.")}</p>
+      {error && <p className="error" role="alert">{t(error)}</p>}
       {state && <>
-        <p>Last successful refresh: {state.lastSuccess ?? 'Never'}</p>
+        <p>{t("Last successful refresh:")} {state.lastSuccess ?? t('Never')}</p>
         {state.error && <p className="error" role="alert">{state.error}</p>}
-        <p>Local changed: {state.localChanged === null ? 'Unknown baseline' : state.localChanged ? 'Yes' : 'No'}. GitHub changed: {state.remoteChanged === null ? 'Unknown baseline' : state.remoteChanged ? 'Yes' : 'No'}.</p>
-        <p role="status">{state.matches ? 'Local and GitHub fields match.' : 'Fields differ or remote evidence is unavailable. Nothing is overwritten automatically.'}</p>
-        <button type="button" className="secondary-button" disabled={busy || editing || disabled} onClick={() => void run('refresh')}>Refresh linked work</button>
-        <h4>Local ticket</h4><p>{state.local.title}</p><p className="project-description">{state.local.description}</p><p className="project-description">{state.local.acceptanceCriteria}</p>
-        <h4>GitHub Issue</h4>
-        {state.remote ? <><p>{state.remote.title}</p><p>Issue state: {state.remote.state}. Closing an Issue does not prove a PR merge or complete the ticket.</p>
-          <pre className="publication-content">{state.remote.body}</pre></> : <p>No successful remote evidence yet.</p>}
-        <a target="_blank" rel="noreferrer" href={'https://github.com/' + state.repository.fullName + '/issues/' + state.issueNumber}>Open Issue on GitHub</a>
+        <p>{t("Local changed:")} {state.localChanged === null ? t('Unknown baseline') : state.localChanged ? t('Yes') : t('No')}{t(". GitHub changed:")} {state.remoteChanged === null ? t('Unknown baseline') : state.remoteChanged ? t('Yes') : t('No')}.</p>
+        <p role="status">{state.matches ? t('Local and GitHub fields match.') : t('Fields differ or remote evidence is unavailable. Nothing is overwritten automatically.')}</p>
+        <button type="button" className="secondary-button" disabled={busy || editing || disabled} onClick={() => void run('refresh')}>{t("Refresh linked work")}</button>
+        <h4>{t("Local ticket")}</h4><p>{state.local.title}</p><p className="project-description">{state.local.description}</p><p className="project-description">{state.local.acceptanceCriteria}</p>
+        <h4>{t("GitHub Issue")}</h4>
+        {state.remote ? <><p>{state.remote.title}</p><p>{t("Issue state:")} {state.remote.state}{t(". Closing an Issue does not prove a PR merge or complete the ticket.")}</p>
+          <pre className="publication-content">{state.remote.body}</pre></> : <p>{t("No successful remote evidence yet.")}</p>}
+        <a target="_blank" rel="noreferrer" href={'https://github.com/' + state.repository.fullName + '/issues/' + state.issueNumber}>{t("Open Issue on GitHub")}</a>
         {!editing ? <button type="button" className="secondary-button" disabled={busy || disabled} onClick={() => {
           setFields(state.local); setEditing(true); setConfirmed(false); onLock(true);
-        }}>Edit local requirements</button> : <form className="project-form" onSubmit={event => {
+        }}>{t("Edit local requirements")}</button> : <form className="project-form" onSubmit={event => {
           event.preventDefault(); void run('edit', { ...decision, fields }).then(saved => { if (saved) { setEditing(false); onLock(false); } });
         }}>
-          <label>Local title<input required maxLength={300} disabled={busy} value={fields.title} onChange={event => setFields(current => ({ ...current, title: event.target.value }))} /></label>
-          <label>Local description<textarea maxLength={2000} disabled={busy} value={fields.description} onChange={event => setFields(current => ({ ...current, description: event.target.value }))} /></label>
-          <label>Local acceptance criteria<textarea maxLength={2000} disabled={busy} value={fields.acceptanceCriteria} onChange={event => setFields(current => ({ ...current, acceptanceCriteria: event.target.value }))} /></label>
-          <p>Saving updates only local fields. Edit the Issue explicitly on GitHub if you want the same public text; remote content is preserved here.</p>
-          <label className="plan-consent"><input type="checkbox" checked={confirmed} disabled={busy} onChange={event => setConfirmed(event.target.checked)} />I confirm these local requirement changes.</label>
-          <button className="primary" disabled={busy || !confirmed}>Save local requirements</button>
-          <button type="button" className="secondary-button" disabled={busy} onClick={() => { setEditing(false); setConfirmed(false); onLock(false); }}>Cancel local changes</button>
+          <label>{t("Local title")}<input required maxLength={300} disabled={busy} value={fields.title} onChange={event => setFields(current => ({ ...current, title: event.target.value }))} /></label>
+          <label>{t("Local description")}<textarea maxLength={2000} disabled={busy} value={fields.description} onChange={event => setFields(current => ({ ...current, description: event.target.value }))} /></label>
+          <label>{t("Local acceptance criteria")}<textarea maxLength={2000} disabled={busy} value={fields.acceptanceCriteria} onChange={event => setFields(current => ({ ...current, acceptanceCriteria: event.target.value }))} /></label>
+          <p>{t("Saving updates only local fields. Edit the Issue explicitly on GitHub if you want the same public text; remote content is preserved here.")}</p>
+          <label className="plan-consent"><input type="checkbox" checked={confirmed} disabled={busy} onChange={event => setConfirmed(event.target.checked)} />{t("I confirm these local requirement changes.")}</label>
+          <button className="primary" disabled={busy || !confirmed}>{t("Save local requirements")}</button>
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => { setEditing(false); setConfirmed(false); onLock(false); }}>{t("Cancel local changes")}</button>
         </form>}
         {!editing && <>
           <label className="plan-consent"><input type="checkbox" checked={confirmed} disabled={busy || disabled}
-            onChange={event => setConfirmed(event.target.checked)} />I confirm the current linked-work decision.</label>
-          <button type="button" className="secondary-button" disabled={!confirmed || busy || disabled || !state.remoteFields} onClick={() => void run('accept-remote', decision)}>Use GitHub fields locally</button>
-          <label>Pull request number<input type="number" min={1} value={pr} disabled={busy || !!state.pullNumber || disabled} onChange={event => { setPr(event.target.value); setConfirmed(false); }} /></label>
+            onChange={event => setConfirmed(event.target.checked)} />{t("I confirm the current linked-work decision.")}</label>
+          <button type="button" className="secondary-button" disabled={!confirmed || busy || disabled || !state.remoteFields} onClick={() => void run('accept-remote', decision)}>{t("Use GitHub fields locally")}</button>
+          <label>{t("Pull request number")}<input type="number" min={1} value={pr} disabled={busy || !!state.pullNumber || disabled} onChange={event => { setPr(event.target.value); setConfirmed(false); }} /></label>
           <button type="button" className="secondary-button" disabled={!confirmed || busy || disabled || !pr || !!state.pullNumber}
-            onClick={() => void run('link-pr', { ...decision, number: Number(pr) })}>Inspect and link this PR</button>
+            onClick={() => void run('link-pr', { ...decision, number: Number(pr) })}>{t("Inspect and link this PR")}</button>
         </>}
-        {state.pull && <><h4>Linked pull request #{state.pull.number}</h4><p>{state.pull.title}</p><p>Head: {state.pull.headSha}</p>
-          <p>{state.pull.merged ? 'Merge observed: ' + state.pull.mergeCommitSha : state.pull.state === 'closed' ? 'Closed without merge' : 'Open - not merged'}.</p>
-          <p>This comparison does not change ticket status or start work.</p>
-          <a target="_blank" rel="noreferrer" href={'https://github.com/' + state.repository.fullName + '/pull/' + state.pull.number}>Open linked PR</a></>}
+        {state.pull && <><h4>{t("Linked pull request #")}{state.pull.number}</h4><p>{state.pull.title}</p><p>{t("Head:")} {state.pull.headSha}</p>
+          <p>{state.pull.merged ? t('Merge observed: ') + state.pull.mergeCommitSha : state.pull.state === 'closed' ? t('Closed without merge') : t('Open - not merged')}.</p>
+          <p>{t("This comparison does not change ticket status or start work.")}</p>
+          <a target="_blank" rel="noreferrer" href={'https://github.com/' + state.repository.fullName + '/pull/' + state.pull.number}>{t("Open linked PR")}</a></>}
       </>}
     </div>}
   </section>;

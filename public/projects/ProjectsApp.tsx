@@ -1,3 +1,4 @@
+import { t } from '../workspace/locale.ts';
 import { useEffect, useState } from 'react';
 import { ProjectSettingsPanel } from './components/ProjectSettingsPanel.tsx';
 import { GitHubConnection } from './components/GitHubConnection.tsx';
@@ -78,44 +79,44 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
       <main className="project-main">
         <header className="page-header">
           <div>
-            {project && <div className="breadcrumb">Projects</div>}
-            <h1>{project?.title ?? 'Projects'}</h1>
+            {project && <div className="breadcrumb">{t("Projects")}</div>}
+            <h1>{project?.title ?? t('Projects')}</h1>
           </div>
         </header>
-        {error && !state.editing && !openTicketId && !deletion && (!composing || !view) && <div className="error" role="alert">{error}
-          <button disabled={busy} onClick={() => void state.refresh()}>Retry</button></div>}
-        {!openTicketId && <p className="feedback" role="status" aria-live="polite">{message || (!view && !error ? 'Loading projects.' : '')}</p>}
-        {state.editing && state.editing.kind !== 'ticket' && <p className="editing-note">Save or cancel your changes before switching views.</p>}
+        {error && !state.editing && !openTicketId && !deletion && (!composing || !view) && <div className="error" role="alert">{t(error)}
+          <button disabled={busy} onClick={() => void state.refresh()}>{t("Retry")}</button></div>}
+        {!openTicketId && <p className="feedback" role="status" aria-live="polite">{message || (!view && !error ? t('Loading projects.') : '')}</p>}
+        {state.editing && state.editing.kind !== 'ticket' && <p className="editing-note">{t("Save or cancel your changes before switching views.")}</p>}
         {view && <>
-          {deletion && <ProjectDialog title="Delete project" locked={busy} onClose={() => { setDeletion(null); state.clearError(); }}>
-            <p>Delete <strong>{deletion.title}</strong> and its local milestones, tickets, drafts and history? GitHub Issues, pull requests and worktree files are kept.</p>
+          {deletion && <ProjectDialog title={t("Delete project")} locked={busy} onClose={() => { setDeletion(null); state.clearError(); }}>
+            <p>{t("Delete")} <strong>{deletion.title}</strong> {t("and its local milestones, tickets, drafts and history? GitHub Issues, pull requests and worktree files are kept.")}</p>
             <form className="project-form" onSubmit={async event => {
               event.preventDefault();
               if (deletionName === deletion.title && await state.deleteProject(deletion.id, deletionName)) setDeletion(null);
             }}>
-              <label htmlFor="delete-project-name">Type the project name to confirm</label>
+              <label htmlFor="delete-project-name">{t("Type the project name to confirm")}</label>
               <input id="delete-project-name" value={deletionName} onChange={event => setDeletionName(event.target.value)} disabled={busy} />
-              {error && <p role="alert" className="error">{error}</p>}
-              <button className="secondary-button" disabled={busy || deletionName !== deletion.title}>Delete project permanently</button>
+              {error && <p role="alert" className="error">{t(error)}</p>}
+              <button className="secondary-button" disabled={busy || deletionName !== deletion.title}>{t("Delete project permanently")}</button>
             </form>
           </ProjectDialog>}
-          {composing && <ProjectDialog title={'New ' + composing} locked={busy} onClose={closeComposer}>
+          {composing && <ProjectDialog title={t('New ') + t(composing)} locked={busy} onClose={closeComposer}>
             {composing === 'ticket' && milestone
               ? <TicketComposer milestoneId={milestone.id} busy={busy} error={error} onAdd={state.addTicket} onCancel={closeComposer} />
               : composing !== 'ticket' && <EntityComposer kind={composing} busy={busy} error={error}
                   onAdd={composing === 'project' ? state.addProject : state.addMilestone} onCancel={closeComposer} />}
           </ProjectDialog>}
           {project ? (
-            <section className="project-detail" aria-label="Selected project" aria-busy={busy}>
+            <section className="project-detail" aria-label={t("Selected project")} aria-busy={busy}>
               <div className="detail-heading">
                 <div className="project-tools">
                   <PlanDraftPanel key={project.id} projectId={project.id} disabled={locked} onOpenChange={setPlanning} onApproved={() => { void state.refresh(); }} />
                   <PublicationPanel projectId={project.id} disabled={locked} onOpenChange={setPlanning} onChanged={() => { void state.refresh(); }} />
-                  <button className="text-button" disabled={locked} onClick={() => state.beginEdit('project', project.id)}>Edit project</button>
+                  <button className="text-button" disabled={locked} onClick={() => state.beginEdit('project', project.id)}>{t("Edit project")}</button>
                   <button className="text-button" disabled={locked} onClick={() => {
                     state.clearFeedback(); setDeletionName(''); setDeletion({ id: project.id, title: project.title });
-                  }}>Delete project</button>
-                  <button className="secondary-button" disabled={locked} onClick={() => openComposer('milestone')}>New milestone</button>
+                  }}>{t("Delete project")}</button>
+                  <button className="secondary-button" disabled={locked} onClick={() => openComposer('milestone')}>{t("New milestone")}</button>
                 </div>
               </div>
               {editor('project', project.id, project)}
@@ -126,36 +127,36 @@ function ProjectHierarchy({ onWorkspaceChange, onBack, initialProjectId, initial
                 onRepository={value => setRepository(current => current?.projectId === project.id && JSON.stringify(current.value) === JSON.stringify(value)
                   ? current : { projectId: project.id, value })} />
               <div className="project-ticket-toolbar">
-                <div className="project-layout-buttons" role="group" aria-label="Project layout">
-                  <button type="button" aria-pressed={layout === 'milestones'} disabled={locked} onClick={() => setLayout('milestones')}>Milestones</button>
-                  <button type="button" aria-pressed={layout === 'board'} disabled={locked} onClick={() => setLayout('board')}>Status board</button>
+                <div className="project-layout-buttons" role="group" aria-label={t("Project layout")}>
+                  <button type="button" aria-pressed={layout === 'milestones'} disabled={locked} onClick={() => setLayout('milestones')}>{t("Milestones")}</button>
+                  <button type="button" aria-pressed={layout === 'board'} disabled={locked} onClick={() => setLayout('board')}>{t("Status board")}</button>
                 </div>
                 {milestone && <div className="milestone-picker">
-                  <label htmlFor="selected-milestone">Milestone</label>
+                  <label htmlFor="selected-milestone">{t("Milestone")}</label>
                   <select id="selected-milestone" value={milestoneId} disabled={locked}
                     onChange={event => state.selectMilestone(event.target.value)}>
                     {view.milestones.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
                   </select>
-                  <button className="primary" disabled={locked} onClick={() => openComposer('ticket')}>New ticket</button>
+                  <button className="primary" disabled={locked} onClick={() => openComposer('ticket')}>{t("New ticket")}</button>
                 </div>}
               </div>
               {layout === 'board' ? <ProjectBoard view={view} renderTicket={renderTicket} /> : milestone ? (
                 <>
-                  <button className="text-button" disabled={locked} onClick={() => state.beginEdit('milestone', milestone.id)}>Edit milestone</button>
+                  <button className="text-button" disabled={locked} onClick={() => state.beginEdit('milestone', milestone.id)}>{t("Edit milestone")}</button>
                   {editor('milestone', milestone.id, milestone)}
                   {milestone.description && <p className="project-description">{milestone.description}</p>}
                   <div className="section-heading ticket-list-heading">
-                    <h2>Tickets<span>{tickets.length}</span></h2>
+                    <h2>{t("Tickets")}<span>{tickets.length}</span></h2>
                   </div>
                   {tickets.length > 0 ? (
                     <ul className="task-list project-ticket-list">
                       {tickets.map(renderTicket)}
                     </ul>
-                  ) : <p className="project-empty">No tickets yet. Use New ticket to add the first step.</p>}
+                  ) : <p className="project-empty">{t("No tickets yet. Use New ticket to add the first step.")}</p>}
                 </>
-              ) : <p className="project-empty">Use New milestone to break this project into smaller goals.</p>}
+              ) : <p className="project-empty">{t("Use New milestone to break this project into smaller goals.")}</p>}
             </section>
-          ) : <div className="empty"><h3>Your first project starts here</h3><p>Use New project in the sidebar to organize your work.</p></div>}
+          ) : <div className="empty"><h3>{t("Your first project starts here")}</h3><p>{t("Use New project in the sidebar to organize your work.")}</p></div>}
         </>}
       </main>
     </WorkspaceShell>

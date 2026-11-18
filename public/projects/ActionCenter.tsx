@@ -1,3 +1,4 @@
+import { t } from '../workspace/locale.ts';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
 import { projectActions } from '../../src/shared/actions.ts';
@@ -27,10 +28,10 @@ export function ActionCenter({ onWorkspaceChange, onProject, onTicket, onNewProj
         <h3><button className="text-button" disabled={state.busy} onClick={open}>{ticket.title}</button></h3>
         <p>{item.project} / {item.milestone}</p>
       </div>
-      {manualStart ? <button className="primary" disabled={state.busy} onClick={() => void state.start(ticket.id)}>Start ticket</button>
+      {manualStart ? <button className="primary" disabled={state.busy} onClick={() => void state.start(ticket.id)}>{t("Start ticket")}</button>
         : <button className={next ? 'primary' : 'secondary-button'} disabled={state.busy} onClick={open}>
-            {blocked ? 'Inspect blocker' : ticket.status === 'review' ? 'Review ticket'
-              : next ? 'Open coding task' : 'Open ticket'}
+            {blocked ? t('Inspect blocker') : ticket.status === 'review' ? t('Review ticket')
+              : next ? t('Open coding task') : t('Open ticket')}
           </button>}
       {blocked && <div className="action-blockers">
         <TicketBlockerNotice ticket={ticket} view={view} busy={state.busy}
@@ -43,25 +44,25 @@ export function ActionCenter({ onWorkspaceChange, onProject, onTicket, onNewProj
     navigation={<ProjectNavigation projects={projects} overview busy={state.busy}
       onOverview={() => {}} onProject={onProject} onNewProject={onNewProject} />}>
     <main className="actions-main">
-      <header className="page-header"><h1>Action center</h1></header>
+      <header className="page-header"><h1>{t("Action center")}</h1></header>
       {state.error && <div role="alert" className="error">{state.error}
-        <button disabled={state.busy} onClick={() => void state.refresh()}>Retry</button></div>}
-      <p role="status" className="feedback">{state.message || (!state.views && !state.error ? 'Loading project actions.' : '')}</p>
-      {state.views && <div className="action-board" role="region" aria-label="Project actions" aria-busy={state.busy}>
-        {actions.review.length > 0 && <section className="action-column" aria-label="Review">
-          <header className="action-column-heading"><h2>Review</h2><span className="count">{actions.review.length}</span></header>
+        <button disabled={state.busy} onClick={() => void state.refresh()}>{t("Retry")}</button></div>}
+      <p role="status" className="feedback">{state.message || (!state.views && !state.error ? t('Loading project actions.') : '')}</p>
+      {state.views && <div className="action-board" role="region" aria-label={t("Project actions")} aria-busy={state.busy}>
+        {actions.review.length > 0 && <section className="action-column" aria-label={t("Review")}>
+          <header className="action-column-heading"><h2>{t("Review")}</h2><span className="count">{actions.review.length}</span></header>
           <ul className="action-list">{actions.review.map(item => row(item))}</ul>
         </section>}
-        {actions.active.length > 0 && <section className="action-column" aria-label="In progress">
-          <header className="action-column-heading"><h2>In progress</h2><span className="count">{actions.active.length}</span></header>
+        {actions.active.length > 0 && <section className="action-column" aria-label={t("In progress")}>
+          <header className="action-column-heading"><h2>{t("In progress")}</h2><span className="count">{actions.active.length}</span></header>
           <ul className="action-list">{actions.active.map(item => row(item))}</ul>
         </section>}
-        <section className="action-column" aria-label="Next task">
-          <header className="action-column-heading"><h2>Next task</h2></header>
+        <section className="action-column" aria-label={t("Next task")}>
+          <header className="action-column-heading"><h2>{t("Next task")}</h2></header>
           {actions.next ? <ul className="action-list">{row(actions.next, true)}</ul>
             : <p className="action-empty">{projects.length
-              ? 'No eligible Backlog task. Open a project to add work or check blockers.'
-              : 'Create a project to plan your first ticket.'}</p>}
+              ? t('No eligible Backlog task. Open a project to add work or check blockers.')
+              : t('Create a project to plan your first ticket.')}</p>}
         </section>
       </div>}
     </main>

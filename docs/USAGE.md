@@ -43,7 +43,9 @@ To remove a project, choose **Delete project** and type its name. This permanent
 
 ## Optional connections
 
-Open **Settings > AI connection**. For Codex, run `npm run ai:install` from the source checkout and follow **Sign in with ChatGPT**. Uses are charged to the selected ChatGPT Codex allowance. For DeepSeek, install the CLI shown in the dialog and save a key there, or supply the existing `DEEPSEEK_API_KEY` environment setting. Compatible API connections can use a configured endpoint and key. These requests use the selected API balance. The desktop protects saved API keys with Windows encryption or the macOS Keychain.
+Open **AI connection** above **Settings**. Choose OpenAI, Claude or DeepSeek to enter an API key. Connecting reads the provider's model list. Pick the connection and model in a project before sending a request. For Codex, run `npm run ai:install` from the source checkout and follow **Sign in with ChatGPT**. Uses are charged to the selected ChatGPT Codex allowance. For the optional DeepSeek Harness, install the CLI shown in the dialog and save a key there, or supply the existing `DEEPSEEK_API_KEY` environment setting. Compatible API connections can use a configured endpoint and key. These requests use the selected API balance. Open **Settings** to change the interface language, startup workspace or size. Save to apply the language and size immediately. Each local profile keeps its own preferences.
+
+The desktop protects saved API keys with Windows encryption or the macOS Keychain.
 
 Open **GitHub connection** in the project to authorize an account and link a repository. The app prompts for explicit approval before publishing. [GitHub setup and permissions](GITHUB_CONNECTION.md)
 

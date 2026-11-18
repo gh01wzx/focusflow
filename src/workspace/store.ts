@@ -1,3 +1,5 @@
+import { defaultInterface, isInterface } from '../shared/interface.ts';
+import type { InterfaceSettings } from '../shared/interface.ts';
 import { createProjectSettings } from '../projects/settings.ts';
 import { createPersonalRepository } from '../tasks/personal-repository.ts';
 import { createPersonalService } from '../tasks/personal-service.ts';
@@ -34,6 +36,15 @@ export async function openWorkspaceStore(path: string, clock: () => Date = () =>
     return {
       tasks: createTaskService(repository, taskTransaction, randomUUID, personal.complete, personal.createRule, personal.reopen),
       personal,
+      interfaceSettings() {
+        const row = db.prepare("SELECT value FROM personal_preferences WHERE key='interface'").get();
+        const value: unknown = row ? JSON.parse(String(row.value)) : defaultInterface;
+        return isInterface(value) ? value : defaultInterface;
+      },
+      saveInterface(settings: InterfaceSettings) {
+        db.prepare("INSERT INTO personal_preferences(key,value) VALUES('interface',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value")
+          .run(JSON.stringify({ language: settings.language, start: settings.start, size: settings.size }));
+      },
       projects: createProjectService(projectRepository, projectTransaction, randomUUID),
       planDrafts,
       publications: createPublicationRepository(db),

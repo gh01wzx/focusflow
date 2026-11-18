@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { PlusIcon } from './Icons.tsx';
@@ -20,12 +21,12 @@ export function QuickAdd({ disabled, onAdd, onMore }: {
     if (failure) setError(failure);
     else { setTitle(''); input.current?.focus(); }
   }
-  return <form className="quick-add glass" aria-label="Quick add" onSubmit={event => void submit(event)}>
+  return <form className="quick-add glass" aria-label={t("Quick add")} onSubmit={event => void submit(event)}>
     <span className="quick-plus" aria-hidden="true"><PlusIcon /></span>
-    <input ref={input} aria-label="Add a task for today" placeholder="Add a task for today, then press Enter" value={title}
+    <input ref={input} aria-label={t("Add a task for today")} placeholder={t("Add a task for today, then press Enter")} value={title}
       maxLength={300} autoComplete="off" readOnly={saving} onChange={event => setTitle(event.target.value)} />
-    {title.trim() && <button type="submit" className="quiet-button" disabled={disabled || saving}>Add</button>}
-    <button type="button" className="text-button" disabled={disabled || saving} onClick={() => onMore(title.trim())}>More options</button>
-    {error && <p role="alert" className="error">{error}</p>}
+    {title.trim() && <button type="submit" className="quiet-button" disabled={disabled || saving}>{t("Add")}</button>}
+    <button type="button" className="text-button" disabled={disabled || saving} onClick={() => onMore(title.trim())}>{t("More options")}</button>
+    {error && <p role="alert" className="error">{t(error)}</p>}
   </form>;
 }

@@ -1,6 +1,6 @@
 import { isHabit } from '../../../src/shared/tasks.ts';
 import { t } from '../../workspace/locale.ts';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import type { ScoringRule } from '../../../src/shared/personal.ts';
 import type { Task } from '../../../src/shared/tasks.ts';
@@ -12,17 +12,16 @@ import type { Timer } from '../local-state.ts';
 const START_SECONDS = 120;
 const clock = (seconds: number) => Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
 
-// One next action at a time. Starting is the two-minute rule: begin small, then keep going if you like.
-export function NowCard({ candidates, due, rules, busy, sound, skipped, timer, focus, onTimer, onComplete, onLog, onSkip, onShowSkipped }: {
-  candidates: Task[]; due: Task[]; rules: Map<string, ScoringRule>; busy: boolean; sound: { on: boolean; volume: number } | null;
+// One next action at a time. The timer is an optional, low-cost way in: start with two minutes,
+// keep going as long as you like without interruption, and Stop records the time on its own.
+export function NowCard({ candidates, due, rules, busy, skipped, timer, focus, onTimer, onComplete, onLog, onSkip, onShowSkipped }: {
+  candidates: Task[]; due: Task[]; rules: Map<string, ScoringRule>; busy: boolean;
   skipped: number; timer: Timer | null; focus: string[]; onTimer(timer: Timer | null): void;
   // Each returns whether the save succeeded.
   onComplete(task: Task): Promise<boolean>; onLog(task: Task, minutes: number): Promise<boolean>;
   onSkip(task: Task): void; onShowSkipped(): void;
 }) {
   const [now, setNow] = useState(Date.now());
-  const audio = useRef<AudioContext | null>(null);
-  const chimed = useRef(false);
   // A running timer keeps its task on the card even if the order changes.
   const timed = timer && due.find(task => task.id === timer.taskId);
   const task = timed || candidates[0];
@@ -31,46 +30,20 @@ export function NowCard({ candidates, due, rules, busy, sound, skipped, timer, f
   const elapsed = running ? Math.max(0, Math.floor((now - timer!.startedAt) / 1000)) : 0;
   const counted = rule?.mode === 'minutes' && rule.unit === 'count';
   const minutesHabit = rule?.mode === 'minutes' && !counted;
+  // The ring fills over two minutes, or over the daily target for a timed habit. Time keeps counting after that.
   const goal = minutesHabit ? Math.max(START_SECONDS, rule.target * 60) : START_SECONDS;
+  const loggedMinutes = Math.min(1440, Math.max(1, Math.round(elapsed / 60)));
 
   useEffect(() => {
     if (timer && !timed) onTimer(null);
   }, [timer, timed]);
-  // A timer can start here or from the Close the day window. Either way the chime is prepared
-  // right after the click, while the browser still allows sound.
-  useEffect(() => {
-    // A timer that passed two minutes while this card was hidden does not chime late.
-    chimed.current = !!timer && Date.now() - timer.startedAt >= START_SECONDS * 1000;
-    setNow(Date.now());
-    if (!timer || !sound?.on) return;
-    try {
-      audio.current ??= new AudioContext();
-      if (audio.current.state === 'suspended') void audio.current.resume().catch(() => {});
-    } catch { /* Sound is optional. */ }
-  }, [timer?.startedAt]);
+  // A timer can start here or from the Close the day window.
+  useEffect(() => { setNow(Date.now()); }, [timer?.startedAt]);
   useEffect(() => {
     if (!running) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [running]);
-  useEffect(() => () => { void audio.current?.close().catch(() => {}); }, []);
-  // A soft two-note chime when the first two minutes are done.
-  useEffect(() => {
-    if (!running || elapsed < START_SECONDS || chimed.current) return;
-    chimed.current = true;
-    const channel = audio.current;
-    if (!channel || !sound?.on || channel.state !== 'running') return;
-    for (const [index, hz] of [660, 990].entries()) {
-      const oscillator = channel.createOscillator(), gain = channel.createGain();
-      const start = channel.currentTime + index * 0.12;
-      oscillator.frequency.value = hz;
-      gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(0.1 * sound.volume, start + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.4);
-      oscillator.connect(gain); gain.connect(channel.destination);
-      oscillator.start(start); oscillator.stop(start + 0.42);
-    }
-  }, [running, elapsed, sound]);
 
   if (!task) {
     return skipped > 0 ? <section className="now-card glass quiet" aria-label={t("Next")}>
@@ -82,11 +55,11 @@ export function NowCard({ candidates, due, rules, busy, sound, skipped, timer, f
   const cue = cueLine(rule);
   const later = !running && rule?.time && rule.time > new Date(now).toTimeString().slice(0, 5);
   function start() { onTimer({ taskId: task!.id, startedAt: Date.now() }); }
-  function stop() { onTimer(null); }
-  async function finish() {
-    const saved = counted ? await onLog(task!, 1) : minutesHabit ? await onLog(task!, Math.min(1440, Math.max(1, Math.round(elapsed / 60))))
-      : await onComplete(task!);
-    if (saved) stop();
+  function cancel() { onTimer(null); }
+  // Stop records the session: minutes for a timed habit, one count for a counted one, or done.
+  async function stop() {
+    const saved = counted ? await onLog(task!, 1) : minutesHabit ? await onLog(task!, loggedMinutes) : await onComplete(task!);
+    if (saved) cancel();
   }
 
   return <section className={`now-card glass ${running ? 'running' : ''}`} aria-label={t("Next")}>
@@ -99,14 +72,17 @@ export function NowCard({ candidates, due, rules, busy, sound, skipped, timer, f
       {rule?.starter && <p className="starter">{t("Start with:")} {rule.starter}</p>}
       <div className="now-actions">
         {running ? <>
-          <button className="primary" disabled={busy} aria-label={t("Finish {0}", task.title)} onClick={() => void finish()}>
-            {counted ? t('Log 1 count') : minutesHabit ? t("Done · log {0} min", Math.max(1, Math.round(elapsed / 60))) : doneLabel}</button>
-          <button className="secondary-button" disabled={busy} onClick={stop}>{t("Stop timer")}</button>
+          <button className="primary" disabled={busy} aria-label={t("Stop and record {0}", task.title)} onClick={() => void stop()}>
+            {counted ? t('Stop · log 1 count') : minutesHabit ? t("Stop · log {0} min", loggedMinutes) : t('Stop · done')}</button>
+          <button className="text-button" disabled={busy} onClick={cancel}>{t("Cancel timer")}</button>
         </> : <>
-          {!counted && <button className="primary now-start" disabled={busy} aria-label={t("Start two minutes on {0}", task.title)} onClick={start}>
-            <PlayIcon />{t("Start 2 minutes")}</button>}
-          {!minutesHabit && <button className="secondary-button" disabled={busy} aria-label={t(isHabit(task) ? 'Check in {0}' : 'Mark {0} done', task.title)}
-            onClick={() => void (counted ? onLog(task, 1) : onComplete(task))}>{doneLabel}</button>}
+          <button className="primary now-start" disabled={busy} aria-label={t("Start two minutes on {0}", task.title)} onClick={start}>
+            <PlayIcon />{t("Start 2 minutes")}</button>
+          {/* The timer is optional: record straight away without it. */}
+          <button className="secondary-button" disabled={busy}
+            aria-label={minutesHabit ? t('Log {0} min for {1}', rule.target, task.title) : t(isHabit(task) ? 'Check in {0}' : 'Mark {0} done', task.title)}
+            onClick={() => void (counted ? onLog(task, 1) : minutesHabit ? onLog(task, rule.target) : onComplete(task))}>
+            {minutesHabit ? t('Log {0} min', rule.target) : doneLabel}</button>
           <button className="text-button" disabled={busy} aria-label={t("Skip {0} for now", task.title)} onClick={() => onSkip(task)}>
             <SkipIcon />{t("Later")}</button>
         </>}
@@ -119,7 +95,7 @@ export function NowCard({ candidates, due, rules, busy, sound, skipped, timer, f
           animate={{ pathLength: Math.min(1, elapsed / goal) }} transition={spring} />
       </svg>
       <strong>{clock(elapsed)}</strong>
-      <span>{elapsed < START_SECONDS ? t('Just two minutes') : minutesHabit && elapsed < goal ? t('You showed up. Keep going?') : t('You showed up.')}</span>
+      <span>{elapsed < START_SECONDS ? t('Just two minutes') : t('You showed up. Keep going as long as you like.')}</span>
     </div>}
   </section>;
 }

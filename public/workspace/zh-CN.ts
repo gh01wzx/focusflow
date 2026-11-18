@@ -1057,4 +1057,12 @@ export const chinese: Record<string, string> = {
   "Checked off once each time it comes up. This plan keeps that way of recording.": "每次安排时打卡一次。这个计划会保持这种记录方式。",
   "{0} points": "{0} 积分",
   "Show {0} more": "再显示 {0} 条",
+  "Stop and record {0}": "停止并记录 {0}",
+  "Stop · log 1 count": "停止 · 记录 1 次",
+  "Stop · log {0} min": "停止 · 记录 {0} 分钟",
+  "Stop · done": "停止 · 完成",
+  "Cancel timer": "取消计时",
+  "Log {0} min for {1}": "为 {1} 记录 {0} 分钟",
+  "Log {0} min": "记录 {0} 分钟",
+  "You showed up. Keep going as long as you like.": "你已经开始了，想做多久都可以。",
 };

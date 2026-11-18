@@ -256,7 +256,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
             {tab === 'due' && view && minute >= EVENING && closedDay !== today && <EveningPrompt busy={saving}
               onOpen={() => setClosing(true)} onDismiss={() => closeDay(false)} />}
             {tab === 'due' && view && data && <NowCard candidates={candidates} due={view.due} rules={rules} busy={saving}
-              sound={{ on: settings.sound, volume: settings.volume }} skipped={upNext.length - candidates.length}
+              skipped={upNext.length - candidates.length}
               timer={timer} focus={focusIds} onTimer={setTimer}
               onComplete={complete} onLog={log} onSkip={skip} onShowSkipped={() => { setSkipped([]); writeSkipped(today, []); }} />}
             <div className="feedback-row">

@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useEffect, useRef, useState } from 'react';
 
 const stageLabels = {
@@ -56,20 +57,20 @@ export function PreviewPanel({ ticketId }: { ticketId: string }) {
   }
 
   const running = preview?.stage === 'ready' || preview?.stage === 'starting';
-  return <section aria-label="Preview" aria-busy={busy}>
+  return <section aria-label={t("Preview")} aria-busy={busy}>
     <button className="primary" disabled={!checked || !!readError || busy || preview?.stage === 'stopping' || preview?.stage === 'uncertain'}
       onClick={() => void act(running ? 'stop' : 'start')}>
-      {running ? 'Stop preview' : 'Preview'}
+      {running ? t('Stop preview') : t('Preview')}
     </button>
-    {!checked && !readError && <p role="status">Checking preview.</p>}
+    {!checked && !readError && <p role="status">{t("Checking preview.")}</p>}
     {preview && <div className="preview-details">
-      <p role="status">{stageLabels[preview.stage]}{preview.stage === 'ready' && preview.url
-        && <> - <a href={preview.url} target="_blank" rel="noreferrer">Open preview</a></>}</p>
-      <p><code>{preview.revision}</code> - {preview.command}{preview.profile && <> - Review workspace {preview.profile}</>}</p>
+      <p role="status">{t(stageLabels[preview.stage])}{preview.stage === 'ready' && preview.url
+        && <> - <a href={preview.url} target="_blank" rel="noreferrer">{t("Open preview")}</a></>}</p>
+      <p><code>{preview.revision}</code> - {preview.command}{preview.profile && <> {t("- Review workspace")} {preview.profile}</>}</p>
     </div>}
-    {preview?.stage === 'failed' && <p>Check the saved preview command and the ticket worktree, then try again.</p>}
-    {preview?.stage === 'uncertain' && <p role="alert">Could not identify the saved preview process. Close the old preview if it is still open.</p>}
+    {preview?.stage === 'failed' && <p>{t("Check the saved preview command and the ticket worktree, then try again.")}</p>}
+    {preview?.stage === 'uncertain' && <p role="alert">{t("Could not identify the saved preview process. Close the old preview if it is still open.")}</p>}
     {readError && <p role="status">{readError}</p>}
-    {error && <p role="alert">{error}</p>}
+    {error && <p role="alert">{t(error)}</p>}
   </section>;
 }

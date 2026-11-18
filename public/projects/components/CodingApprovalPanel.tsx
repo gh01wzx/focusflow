@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useEffect,useState } from 'react';
 import type { CodingApproval } from '../../../src/shared/approvals.ts';
 import { createApprovalClient } from '../../../src/client/approvals.ts';
@@ -16,14 +17,14 @@ export function CodingApprovalPanel({ticketId,disabled}:{ticketId: string;disabl
     try{setApproval(await api.decide(ticketId,{id:approval.id,runId:approval.runId,decision,confirm:decision==='accept'}));}
     catch(cause){setError(cause instanceof Error?cause.message:'Could not send the decision.');}finally{setBusy(false);}
   }
-  if(!approval)return error?<p role="alert" className="error">{error}</p>:readError?<p role="status" className="feedback">{readError}</p>:null;
-  return <section className="coding-run" aria-label="Coding permission request"><h3>Permission needed</h3>
-    <p>{approval.reason||'Codex requested permission for the following action.'}</p>
-    <p>{approval.kind==='command'?'Command':'File change'} in <code>{approval.workingDirectory}</code></p>
+  if(!approval)return error?<p role="alert" className="error">{t(error)}</p>:readError?<p role="status" className="feedback">{readError}</p>:null;
+  return <section className="coding-run" aria-label={t("Coding permission request")}><h3>{t("Permission needed")}</h3>
+    <p>{approval.reason||t('Codex requested permission for the following action.')}</p>
+    <p>{approval.kind==='command'?t('Command'):t('File change')} {t("in")} <code>{approval.workingDirectory}</code></p>
     {approval.command&&<pre>{approval.command}</pre>}{approval.paths.map(path=><p key={path}><code>{path}</code></p>)}
-    <p>Allow applies once to this request. Denying does not undo earlier changes. This preview does not establish private-file read isolation or verified operating system sandbox enforcement.</p>
-    <button disabled={busy||disabled} onClick={()=>void decide('accept')}>Allow once</button>{' '}
-    <button disabled={busy} onClick={()=>void decide('decline')}>Deny</button>
-    {readError&&<p role="status" className="feedback">{readError}</p>}{error&&<p role="alert" className="error">{error}</p>}
+    <p>{t("Allow applies once to this request. Denying does not undo earlier changes. This preview does not establish private-file read isolation or verified operating system sandbox enforcement.")}</p>
+    <button disabled={busy||disabled} onClick={()=>void decide('accept')}>{t("Allow once")}</button>{' '}
+    <button disabled={busy} onClick={()=>void decide('decline')}>{t("Deny")}</button>
+    {readError&&<p role="status" className="feedback">{readError}</p>}{error&&<p role="alert" className="error">{t(error)}</p>}
   </section>;
 }

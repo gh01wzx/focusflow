@@ -1,5 +1,5 @@
 import { parseAiConnections, parseAiModels, parseAiStatus, parseDshStatus } from '../shared/ai.ts';
-import type { AiProvider } from '../shared/ai.ts';
+import type { ApiProvider, AiProvider } from '../shared/ai.ts';
 
 export function createAiClient(transport: typeof fetch = fetch) {
   async function request(action: string, value?: unknown, signal?: AbortSignal) {
@@ -18,8 +18,8 @@ export function createAiClient(transport: typeof fetch = fetch) {
     models: async (provider: AiProvider, signal?: AbortSignal) =>
       parseAiModels(await request('providers/' + provider + '/models', undefined, signal)),
     dshStatus: async () => parseDshStatus(await request('dsh-status')),
-    compatibleStatus: async () => await request('compatible') as { connected: boolean; endpoint: string },
-    saveCompatible: async (endpoint: string, key: string) => await request('compatible', { endpoint, key }) as { connected: boolean; endpoint: string },
+    compatibleStatus: async (provider: ApiProvider = 'compatible') => await request(provider) as { connected: boolean; endpoint: string },
+    saveCompatible: async (endpoint: string, key: string, provider: ApiProvider = 'compatible') => await request(provider, { endpoint, key }) as { connected: boolean; endpoint: string },
     saveDshKey: async (key: string) => parseDshStatus(await request('dsh-key', { key })),
     dshCheck: async () => parseDshStatus(await request('dsh-check', {})),
     dshVerify: async (confirmAllowance: boolean) => parseDshStatus(await request('dsh-verify', { confirmAllowance })),

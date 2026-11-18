@@ -28,6 +28,13 @@
 .ai-dialog label.ai-consent { display: flex; align-items: baseline; gap: 10px; margin: 16px 0; }
 .ai-dialog form[method="dialog"] { margin-top: 16px; text-align: right; }
 
+.settings-dialog { width: min(420px, calc(100% - 32px)); margin: auto; }
+.settings-dialog .dialog-heading { position: static; align-items: center; margin: 0 0 16px; padding: 0; border: 0; background: transparent; }
+.settings-dialog h2 { margin: 0; }
+.settings-dialog .project-form { gap: 12px; }
+.settings-dialog label { display: grid; gap: 4px; }
+.settings-dialog .primary { justify-self: end; }
+
 /* Common project text and forms */
 .project-description { color: var(--text-secondary); font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .project-empty { padding: 20px 0; color: var(--muted); font-size: 13px; }

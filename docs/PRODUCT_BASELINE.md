@@ -9,7 +9,7 @@ Source: the owner's Personal & Projects Tracker brief v0.1 and later approvals. 
 - Low effort daily use: open easily, show the next action, reveal detail when needed.
 - Personal opens Today. Projects opens an action center with Review, running work and the next eligible Ticket.
 - Source and published development records are public; personal data and credentials remain private.
-- Application/source/docs are English. User-entered data keeps its language.
+- The interface supports English and Simplified Chinese. Source and docs use English. User-entered data keeps its language.
 
 ## Personal
 

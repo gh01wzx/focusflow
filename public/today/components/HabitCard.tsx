@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { motion } from 'motion/react';
@@ -16,12 +17,12 @@ const markText: Record<Mark, string> = { done: 'done', started: 'showed up', mis
 export function HabitTrack({ insight }: { insight: HabitInsight }) {
   const { shown, total } = insight.consistency;
   return <div className="habit-track">
-    <span className="dots" role="img" aria-label={'Recent: ' + insight.marks.map(mark => markText[mark]).join(', ')}>
+    <span className="dots" role="img" aria-label={t('Recent: ') + insight.marks.map(mark => markText[mark]).join(', ')}>
       {insight.marks.map((mark, index) => <i key={index} data-mark={mark} />)}
     </span>
-    {total > 0 && <span className="consistency" title="Shown up among the latest scheduled days, not counting rest days">{shown}/{total}</span>}
-    {insight.chain > 1 && <span className="streak" title="One miss is forgiven. Two misses in a row end the chain.">Chain {insight.chain}</span>}
-    {insight.missedLast && <span className="nudge">Missed last time. Never miss twice; two minutes counts.</span>}
+    {total > 0 && <span className="consistency" title={t("Shown up among the latest scheduled days, not counting rest days")}>{shown}/{total}</span>}
+    {insight.chain > 1 && <span className="streak" title={t("One miss is forgiven. Two misses in a row end the chain.")}>{t("Chain")} {insight.chain}</span>}
+    {insight.missedLast && <span className="nudge">{t("Missed last time. Never miss twice; two minutes counts.")}</span>}
   </div>;
 }
 
@@ -57,39 +58,39 @@ export function HabitCard({ task, rule, insight, state, onEdit, onRest, onLogged
     <div className="habit-top">
       <div className="habit-heading">
         <strong className="task-title">{task.title}</strong>
-        {rule.identity && <p className="identity"><span>Vote for </span>{rule.identity}<VoteCount votes={votes} /></p>}
+        {rule.identity && <p className="identity"><span>{t("Vote for")} </span>{rule.identity}<VoteCount votes={votes} /></p>}
         {cue && <p className="cue">{cue}</p>}
       </div>
-      <button className="icon-button" disabled={state.busy} aria-label={`Edit plan for ${task.title}`} title="Edit plan"
+      <button className="icon-button" disabled={state.busy} aria-label={t("Edit plan for {0}", task.title)} title={t("Edit plan")}
         onClick={() => onEdit(task)}><PencilIcon /></button>
-      {!total && <button className="icon-button" disabled={state.busy} aria-label={`Rest today ${task.title}`} title="Rest today"
+      {!total && <button className="icon-button" disabled={state.busy} aria-label={t("Rest today {0}", task.title)} title={t("Rest today")}
         onClick={() => onRest(task)}><MoonIcon /></button>}
       <button className="primary" disabled={state.busy || !state.data || !!draft} onClick={() => open()}>
-        {total ? 'Log again' : 'Log minutes'}</button>
+        {total ? t('Log again') : t('Log minutes')}</button>
     </div>
     <div className="habit-progress">
       <span className="meter" role="progressbar" aria-label={task.title + ' minutes today'}
         aria-valuemin={0} aria-valuemax={rule.target} aria-valuenow={Math.min(total, rule.target)}>
         <motion.span initial={false} animate={{ scaleX: Math.min(1, total / rule.target) }} transition={spring} />
       </span>
-      <span className="habit-numbers">{[`${total} / ${rule.target} min`, met ? 'Target met' : total ? 'Showed up' : '',
+      <span className="habit-numbers">{[t("{0} / {1} min", total, rule.target), met ? 'Target met' : total ? 'Showed up' : '',
         points(rule.rate) + ' pt/min'].filter(Boolean).join(' · ')}</span>
     </div>
-    {!met && rule.starter && <p className="starter">Two-minute start: {rule.starter}
-      <button type="button" className="chip" disabled={state.busy || !state.data || !!draft} onClick={() => open(2)}>Log 2 min</button></p>}
-    {rule.bundle && <p className="bundle">Only while doing this: {rule.bundle}</p>}
+    {!met && rule.starter && <p className="starter">{t("Two-minute start:")} {rule.starter}
+      <button type="button" className="chip" disabled={state.busy || !state.data || !!draft} onClick={() => open(2)}>{t("Log 2 min")}</button></p>}
+    {rule.bundle && <p className="bundle">{t("Only while doing this:")} {rule.bundle}</p>}
     <HabitTrack insight={insight} />
     {draft && <form className="inline-settings log-form" onSubmit={event => void save(event)}>
-      <label>Minutes <input type="number" min="1" max="1440" step="1" value={draft.minutes} required autoFocus
+      <label>{t("Minutes")} <input type="number" min="1" max="1440" step="1" value={draft.minutes} required autoFocus
         onChange={event => setDraft({ ...draft, minutes: event.target.value })} /></label>
       <div className="chip-row">
         {[1, 2, 5, 10].filter(value => value !== rule.target).concat(rule.target).sort((a, b) => a - b).map(value =>
           <button key={value} type="button" className={`chip ${draft.minutes === String(value) ? 'selected' : ''}`}
-            onClick={() => setDraft({ ...draft, minutes: String(value) })}>{value} min</button>)}
+            onClick={() => setDraft({ ...draft, minutes: String(value) })}>{value} {t("min")}</button>)}
       </div>
-      {draft.day !== state.data?.day && <p role="alert">The date changed. Reopen this activity before saving.</p>}
-      <button className="primary" disabled={state.busy || draft.day !== state.data?.day}>Save</button>
-      <button type="button" className="secondary-button" onClick={() => setDraft(undefined)}>Cancel</button>
+      {draft.day !== state.data?.day && <p role="alert">{t("The date changed. Reopen this activity before saving.")}</p>}
+      <button className="primary" disabled={state.busy || draft.day !== state.data?.day}>{t("Save")}</button>
+      <button type="button" className="secondary-button" onClick={() => setDraft(undefined)}>{t("Cancel")}</button>
     </form>}
   </article>;
 }

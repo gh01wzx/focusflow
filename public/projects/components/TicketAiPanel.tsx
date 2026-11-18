@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useEffect, useState } from 'react';
 import { defaultAiModelSelection } from '../../../src/shared/ai.ts';
 import type { AiModelSelection } from '../../../src/shared/ai.ts';
@@ -59,38 +60,38 @@ export function TicketAiPanel({ ticket, onChanged, onBusy, onVisit }: {
   const requirements = draft?.requirements ?? ticket.acceptanceCriteria.split(/\r?\n/).map(text => text.trim()).filter(Boolean)
     .map((text, index) => ({ id: 'A' + (index + 1), text }));
   return <details className="ticket-ai" onToggle={event => setOpen(event.currentTarget.open)}>
-    <summary>{draft?.children.length ? 'Breakdown' : 'Run AI'}</summary>
-    {error && <p role="alert">{error}</p>}
+    <summary>{draft?.children.length ? t('Breakdown') : t('Run AI')}</summary>
+    {error && <p role="alert">{t(error)}</p>}
     {ticket.status === 'backlog' && !draft?.children.length && open && <>
-      <label>Action<select value={action} disabled={busy} onChange={event => {
+      <label>{t("Action")}<select value={action} disabled={busy} onChange={event => {
         const next = event.target.value === 'text' ? 'text' : 'breakdown';
         setAction(next); setSelection((next === 'text' ? defaults.execution : defaults.planning) ?? defaultAiModelSelection);
       }}>
-        <option value="breakdown">Break down</option>
-        {ticket.executionMode === 'manual' && <option value="text">Execute as a written result</option>}
+        <option value="breakdown">{t("Break down")}</option>
+        {ticket.executionMode === 'manual' && <option value="text">{t("Execute as a written result")}</option>}
       </select></label>
       <ModelPicker value={selection} onChange={setSelection} onReadyChange={setModelReady} disabled={busy} />
-      <p>Uses {selection.provider === 'codex' ? 'ChatGPT Codex allowance' : aiProviderNames[selection.provider] + ' API balance'} and sends the ticket and project context.</p>
+      <p>{t("Uses")} {selection.provider === 'codex' ? t('ChatGPT Codex allowance') : aiProviderNames[selection.provider] + t(' API balance')} {t("and sends the ticket and project context.")}</p>
       <button className="primary" disabled={busy || !modelReady} onClick={() => void act('run', { action, selection, confirm: true })}>
-        {action === 'breakdown' ? 'Generate breakdown' : 'Generate result'}
+        {action === 'breakdown' ? t('Generate breakdown') : t('Generate result')}
       </button>
     </>}
-    {busy && <button onClick={() => void request(ticket.id, 'stop').catch(error => setError(error.message))}>Stop AI</button>}
+    {busy && <button onClick={() => void request(ticket.id, 'stop').catch(error => setError(error.message))}>{t("Stop AI")}</button>}
     {draft?.result && <pre className="ticket-result">{draft.result}</pre>}
     {!!draft?.children.length && <ul>{draft.children.map((child, index) => <li key={child}>
-      <button className="text-button" onClick={() => onVisit(child)}>{draft.suggestions[index]?.title ?? 'Open child ticket'}</button>
-      {!!draft.suggestions[index]?.requirementIds?.length && <span> Covers {draft.suggestions[index]!.requirementIds!.join(', ')}</span>}
+      <button className="text-button" onClick={() => onVisit(child)}>{draft.suggestions[index]?.title ?? t('Open child ticket')}</button>
+      {!!draft.suggestions[index]?.requirementIds?.length && <span> {t("Covers")} {draft.suggestions[index]!.requirementIds!.join(', ')}</span>}
     </li>)}</ul>}
     {!!suggestions.length && !draft?.children.length && <div>
       {suggestions.map((item, index) => <details key={item.key}><summary>{item.title}</summary>
         <label><input type="checkbox" checked={!excluded.includes(item.key)} onChange={event => setExcluded(current =>
-          event.target.checked ? current.filter(key => key !== item.key) : [...current, item.key])} /> Include</label>
+          event.target.checked ? current.filter(key => key !== item.key) : [...current, item.key])} /> {t("Include")}</label>
         {(['title', 'description', 'acceptanceCriteria'] as const).map(key => <label key={key}>
-          {key === 'acceptanceCriteria' ? 'Acceptance criteria' : key === 'title' ? 'Title' : 'Description'}
+          {key === 'acceptanceCriteria' ? t('Acceptance criteria') : key === 'title' ? t('Title') : t('Description')}
           <textarea value={item[key]} onChange={event => setSuggestions(current => current.map((value, position) =>
             position === index ? { ...value, [key]: event.target.value } : value))} />
         </label>)}
-        {!!requirements.length && <fieldset><legend>Parent acceptance items covered</legend>
+        {!!requirements.length && <fieldset><legend>{t("Parent acceptance items covered")}</legend>
           {requirements.map(requirement => <label key={requirement.id}><input type="checkbox"
             checked={item.requirementIds?.includes(requirement.id) ?? false}
             onChange={event => {
@@ -101,11 +102,11 @@ export function TicketAiPanel({ ticket, onChanged, onBusy, onVisit }: {
               }));
             }} /> {requirement.id} {requirement.text}</label>)}
         </fieldset>}
-        <p>{item.prerequisiteKeys.length ? 'Requires ' + item.prerequisiteKeys.join(', ') : 'No proposed prerequisites'}</p>
+        <p>{item.prerequisiteKeys.length ? t('Requires ') + item.prerequisiteKeys.join(', ') : t('No proposed prerequisites')}</p>
       </details>)}
       <button className="primary" disabled={busy || suggestions.length - excluded.length < 2} onClick={() => void act('apply', {
         id: draft?.id, suggestions: suggestions.filter(item => !excluded.includes(item.key)),
-      })}>Create tickets</button>
+      })}>{t("Create tickets")}</button>
     </div>}
   </details>;
 }

@@ -28,7 +28,7 @@ To try a change with separate data, run `./Start-FocusFlow.command --review my-r
 
 ## Optional connections
 
-Install the pinned Codex runtime with `npm run ai:install`, then connect it from **Settings > AI connection**. DeepSeek and compatible API connections are available in the same dialog. Link a repository through **GitHub connection** in the relevant project.
+Open **AI connection** above **Settings** to connect an OpenAI, Claude, DeepSeek or compatible API. Codex also supports ChatGPT sign-in after `npm run ai:install`. In **Settings**, choose English or Simplified Chinese, the startup workspace and the interface size. Link a repository through **GitHub connection** in the relevant project.
 
 FocusFlow keeps its task database on this computer. A model call or a GitHub publication sends the material shown in its approval flow. Store connections in the app and keep credentials and personal data outside the checkout.
 

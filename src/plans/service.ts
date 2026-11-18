@@ -58,7 +58,7 @@ export function createPlanService(repository: PlanRepository, generator: PlanGen
       try { selection = parseAiModelSelection(value.selection); }
       catch { throw new PlanInputError('Choose a valid AI provider, model and reasoning effort.'); }
       if (value.confirmAllowance !== true) throw new PlanInputError(selection.provider === 'codex'
-        ? 'Confirm that generating a plan uses Codex allowance.' : 'Confirm that generating a plan uses your DeepSeek API balance.');
+        ? 'Confirm that generating a plan uses Codex allowance.' : 'Confirm that generating a plan uses your selected API balance.');
       if (typeof value.goal !== 'string' || !value.goal.trim() || value.goal.length > 3000) throw new PlanInputError('Describe a goal using 1 to 3,000 characters.');
       if (closed) throw new PlanInputError('Planning is closing. Reopen FocusFlow before another request.');
       if (active) throw new PlanInputError('Another plan request is active. Wait or cancel it first.');

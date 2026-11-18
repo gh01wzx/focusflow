@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useEffect, useState } from 'react';
 import { createAiClient } from '../../../src/client/ai.ts';
 import { aiProviderNames } from '../../../src/shared/ai.ts';
@@ -31,24 +32,24 @@ export function ModelPicker({ value, onChange, onReadyChange, disabled = false }
   const ready = !loading && !!chosen && effortAvailable;
   useEffect(() => { onReadyChange?.(ready); }, [ready, onReadyChange]);
   return <div className="inline-settings">
-    <label>Provider<select value={connections.some(item => item.provider === value.provider) ? value.provider : ''} disabled={disabled}
+    <label>{t("Provider")}<select value={connections.some(item => item.provider === value.provider) ? value.provider : ''} disabled={disabled}
       onChange={event => { const option = connections.find(item => item.provider === event.target.value);
         if (option) onChange({ provider: option.provider, model: '', effort: '' }); }}>
-      <option value="" disabled>Choose a connection</option>
+      <option value="" disabled>{t("Choose a connection")}</option>
       {connections.map(item => <option value={item.provider} key={item.provider}>{aiProviderNames[item.provider]}</option>)}
     </select></label>
-    <label>Model<select value={chosen?.id ?? ''} disabled={disabled || loading} onChange={event => onChange({ ...value, model: event.target.value, effort: '' })}>
-      <option value="">Choose a model</option>{models.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+    <label>{t("Model")}<select value={chosen?.id ?? ''} disabled={disabled || loading} onChange={event => onChange({ ...value, model: event.target.value, effort: '' })}>
+      <option value="">{t("Choose a model")}</option>{models.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
     </select></label>
-    <label>Effort<select value={!chosen ? '' : effortAvailable ? value.effort : 'unavailable'} disabled={disabled || loading || !chosen}
+    <label>{t("Effort")}<select value={!chosen ? '' : effortAvailable ? value.effort : 'unavailable'} disabled={disabled || loading || !chosen}
       onChange={event => onChange({ ...value, effort: event.target.value })}>
-      {chosen && !effortAvailable && <option value="unavailable" disabled>Saved effort unavailable</option>}
-      <option value="">Provider default</option>{chosen?.efforts.map(item => <option key={item} value={item}>{item}</option>)}
+      {chosen && !effortAvailable && <option value="unavailable" disabled>{t("Saved effort unavailable")}</option>}
+      <option value="">{t("Provider default")}</option>{chosen?.efforts.map(item => <option key={item} value={item}>{item}</option>)}
     </select></label>
-    <button className="quiet-button" type="button" disabled={disabled || loading} onClick={() => refresh(value => value + 1)}>Refresh models</button>
-    {loading && <p role="status">Loading models</p>}
-    {error && <p role="alert">{error}</p>}
-    {!loading && !error && value.model && !chosen && <p role="alert">The saved model is unavailable. Choose a current model.</p>}
-    {!loading && chosen && !effortAvailable && <p role="alert">The saved effort is unavailable. Choose an effort or Provider default.</p>}
+    <button className="quiet-button" type="button" disabled={disabled || loading} onClick={() => refresh(value => value + 1)}>{t("Refresh models")}</button>
+    {loading && <p role="status">{t("Loading models")}</p>}
+    {error && <p role="alert">{t(error)}</p>}
+    {!loading && !error && value.model && !chosen && <p role="alert">{t("The saved model is unavailable. Choose a current model.")}</p>}
+    {!loading && chosen && !effortAvailable && <p role="alert">{t("The saved effort is unavailable. Choose an effort or Provider default.")}</p>}
   </div>;
 }

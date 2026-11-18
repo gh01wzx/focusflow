@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useEffect, useRef, useState } from 'react';
 import type { GitHubStatus, GitHubRepository } from '../../../src/shared/github.ts';
 import { createGitHubClient } from '../../../src/client/github.ts';
@@ -55,30 +56,30 @@ export function GitHubConnection({ projectId, onRepository }: { projectId: strin
     return () => clearTimeout(timer);
   }, [status, busy, projectId]);
   return <details className="github-connection">
-    <summary>GitHub connection{status?.repository ? ': ' + status.repository.fullName : ''}</summary>
+    <summary>{t("GitHub connection")}{status?.repository ? ': ' + status.repository.fullName : ''}</summary>
     <div className="github-body">
-      <p className="github-hint">Link this project to its code repository. Connecting creates no Issues, branches or pull requests.</p>
-      {error && <div className="error" role="alert">{error}
-        <button type="button" className="secondary-button" disabled={busy} onClick={() => setRefresh(value => value + 1)}>Retry connection</button>
+      <p className="github-hint">{t("Link this project to its code repository. Connecting creates no Issues, branches or pull requests.")}</p>
+      {error && <div className="error" role="alert">{t(error)}
+        <button type="button" className="secondary-button" disabled={busy} onClick={() => setRefresh(value => value + 1)}>{t("Retry connection")}</button>
       </div>}
-      <p className="feedback" role="status" aria-live="polite">{status?.message ?? 'Loading GitHub connection.'}</p>
+      <p className="feedback" role="status" aria-live="polite">{status?.message ?? t('Loading GitHub connection.')}</p>
       {status?.available && <fieldset disabled={busy} aria-busy={busy}>
-        <legend className="sr-only">Project repository</legend>
+        <legend className="sr-only">{t("Project repository")}</legend>
         <div className="github-account-row">
-          <p>Account: <strong>{status.account ?? 'Not connected'}</strong></p>
-          <span className="github-badge" data-connected={status.connected}>{status.connected ? 'Connected' : 'Not connected'}</span>
+          <p>{t("Account:")} <strong>{status.account ?? t('Not connected')}</strong></p>
+          <span className="github-badge" data-connected={status.connected}>{status.connected ? t('Connected') : t('Not connected')}</span>
         </div>
         {status.repository && <div className="github-linked">
-          <span className="github-field-title">Linked repository</span>
+          <span className="github-field-title">{t("Linked repository")}</span>
           <strong>{status.repository.fullName}</strong>
-          <span className="github-visibility">{status.repository.private ? 'Private' : 'Public'}</span>
+          <span className="github-visibility">{status.repository.private ? t('Private') : t('Public')}</span>
         </div>}
-        {status.connected && <section className="github-repository" aria-label="Choose a repository">
+        {status.connected && <section className="github-repository" aria-label={t("Choose a repository")}>
           <div className="github-section-heading">
-            <h3>Project repository</h3>
-            <button type="button" className="secondary-button" onClick={() => void act('check')}>Check account and repositories</button>
+            <h3>{t("Project repository")}</h3>
+            <button type="button" className="secondary-button" onClick={() => void act('check')}>{t("Check account and repositories")}</button>
           </div>
-          <label htmlFor={'github-repository-' + projectId}>GitHub URL or owner/name</label>
+          <label htmlFor={'github-repository-' + projectId}>{t("GitHub URL or owner/name")}</label>
           {!status.repository && <button type="button" className="secondary-button" disabled={busy} onClick={async () => {
             try {
               const response = await fetch('/api/projects/' + projectId + '/repository-suggestion');
@@ -86,66 +87,66 @@ export function GitHubConnection({ projectId, onRepository }: { projectId: strin
               if (response.ok && item.name) setName(item.name);
               else setError('Save a local GitHub repository folder in project settings or enter its URL.');
             } catch { setError('Could not read the local Git remote.'); }
-          }}>Use local Git remote</button>}
+          }}>{t("Use local Git remote")}</button>}
           <div className="github-input-row">
-            <input id={'github-repository-' + projectId} value={name} maxLength={140} placeholder="owner/repository"
+            <input id={'github-repository-' + projectId} value={name} maxLength={140} placeholder={t("owner/repository")}
               autoCapitalize="none" spellCheck={false} onChange={event => {
                 setName(event.target.value); setConfirmed(false);
                 setStatus(current => current ? { ...current, preview: null } : current);
               }} list={'github-repositories-' + projectId} />
-            <button type="button" className="secondary-button" disabled={!name.trim()} onClick={() => void act('inspect', { name })}>Inspect repository</button>
+            <button type="button" className="secondary-button" disabled={!name.trim()} onClick={() => void act('inspect', { name })}>{t("Inspect repository")}</button>
           </div>
-          <datalist id={'github-repositories-' + projectId}>{status.repositories.map(repo => <option key={repo.id} value={repo.fullName}>{repo.private ? 'Private' : 'Public'}</option>)}</datalist>
+          <datalist id={'github-repositories-' + projectId}>{status.repositories.map(repo => <option key={repo.id} value={repo.fullName}>{repo.private ? t('Private') : t('Public')}</option>)}</datalist>
           {status.preview && <div className="github-preview">
             <div className="github-section-heading">
               <strong>{status.preview.fullName}</strong>
-              <span className="github-visibility">{status.preview.private ? 'Private repository' : 'Public repository'}</span>
+              <span className="github-visibility">{status.preview.private ? t('Private repository') : t('Public repository')}</span>
             </div>
-            <p className="github-hint">Check the full name and visibility before linking this repository.</p>
+            <p className="github-hint">{t("Check the full name and visibility before linking this repository.")}</p>
             <button type="button" className="github-confirm" aria-pressed={confirmed}
-              aria-label="I confirm this repository for this project." onClick={() => setConfirmed(value => !value)}>
-              <span>{confirmed ? 'Repository confirmed' : 'Confirm this repository for this project'}</span>
-              <span className="github-choice-state" aria-hidden="true">{confirmed ? 'Confirmed' : 'Confirm'}</span>
+              aria-label={t("I confirm this repository for this project.")} onClick={() => setConfirmed(value => !value)}>
+              <span>{confirmed ? t('Repository confirmed') : t('Confirm this repository for this project')}</span>
+              <span className="github-choice-state" aria-hidden="true">{confirmed ? t('Confirmed') : t('Confirm')}</span>
             </button>
             <div className="github-actions">
               <button type="button" className="primary" disabled={!confirmed}
-                onClick={() => void act('connect', { confirmed, repositoryId: status.preview!.id })}>Connect repository</button>
+                onClick={() => void act('connect', { confirmed, repositoryId: status.preview!.id })}>{t("Connect repository")}</button>
             </div>
           </div>}
         </section>}
         <details className="github-settings" open={!status.connected || !!status.userCode}>
-          <summary>Connection settings</summary>
+          <summary>{t("Connection settings")}</summary>
           <div className="github-settings-body">
-            <label htmlFor={'github-client-' + projectId}>GitHub App client ID</label>
+            <label htmlFor={'github-client-' + projectId}>{t("GitHub App client ID")}</label>
             <input id={'github-client-' + projectId} value={clientId} maxLength={100} autoCapitalize="none" spellCheck={false}
               onChange={event => setClientId(event.target.value)} />
-            <p className="github-hint">Use your GitHub App with device flow enabled. Reading needs repository metadata; publishing coding work also needs Issues, Contents and Pull requests write access. This app cannot grant those permissions. No client secret is needed.</p>
+            <p className="github-hint">{t("Use your GitHub App with device flow enabled. Reading needs repository metadata; publishing coding work also needs Issues, Contents and Pull requests write access. This app cannot grant those permissions. No client secret is needed.")}</p>
             <div className="github-actions">
               {!status.userCode && <button type="button" className="secondary-button" disabled={!clientId.trim()}
-                onClick={() => void act('start', { clientId })}>Authorize GitHub</button>}
-              <a href="https://github.com/settings/apps" target="_blank" rel="noreferrer">GitHub App settings</a>
+                onClick={() => void act('start', { clientId })}>{t("Authorize GitHub")}</button>}
+              <a href="https://github.com/settings/apps" target="_blank" rel="noreferrer">{t("GitHub App settings")}</a>
             </div>
             {status.userCode && <div className="github-device">
-              <p>Device code: <strong>{status.userCode}</strong></p>
-              <p className="github-hint">Enter the code at GitHub and review the App name, permissions and repository access.</p>
+              <p>{t("Device code:")} <strong>{status.userCode}</strong></p>
+              <p className="github-hint">{t("Enter the code at GitHub and review the App name, permissions and repository access.")}</p>
               <div className="github-actions">
-                <a className="secondary-button" href="https://github.com/login/device" target="_blank" rel="noreferrer">Enter code at GitHub</a>
-                <button type="button" className="secondary-button" onClick={() => void act('cancel')}>Cancel authorization</button>
+                <a className="secondary-button" href="https://github.com/login/device" target="_blank" rel="noreferrer">{t("Enter code at GitHub")}</a>
+                <button type="button" className="secondary-button" onClick={() => void act('cancel')}>{t("Cancel authorization")}</button>
               </div>
             </div>}
-            <details><summary>Use a fine-grained GitHub token instead</summary>
-              <p>Create a token for only the selected repository. Reading needs Metadata; coding publication needs Issues, Contents and Pull requests write access. This app never grants permissions.</p>
-              <p><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Create a fine-grained token at GitHub</a></p>
-              <p>Choose only the intended repositories in GitHub. Reading needs metadata; code publication needs Contents, Issues and Pull requests access. No permission is added automatically.</p>
-              <label>Fine-grained token<input type="password" value={personalToken} autoComplete="off" maxLength={1100} spellCheck={false} onChange={event=>setPersonalToken(event.target.value)} /></label>
-              <label><input type="checkbox" checked={tokenConsent} onChange={event=>setTokenConsent(event.target.checked)} />Protect this token with my operating system and save it on this computer.</label>
-              <button disabled={!personalToken||!tokenConsent} onClick={()=>{const token=personalToken;setPersonalToken('');setTokenConsent(false);void act('token',{token,confirmed:true});}}>Connect with token</button>
+            <details><summary>{t("Use a fine-grained GitHub token instead")}</summary>
+              <p>{t("Create a token for only the selected repository. Reading needs Metadata; coding publication needs Issues, Contents and Pull requests write access. This app never grants permissions.")}</p>
+              <p><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">{t("Create a fine-grained token at GitHub")}</a></p>
+              <p>{t("Choose only the intended repositories in GitHub. Reading needs metadata; code publication needs Contents, Issues and Pull requests access. No permission is added automatically.")}</p>
+              <label>{t("Fine-grained token")}<input type="password" value={personalToken} autoComplete="off" maxLength={1100} spellCheck={false} onChange={event=>setPersonalToken(event.target.value)} /></label>
+              <label><input type="checkbox" checked={tokenConsent} onChange={event=>setTokenConsent(event.target.checked)} />{t("Protect this token with my operating system and save it on this computer.")}</label>
+              <button disabled={!personalToken||!tokenConsent} onClick={()=>{const token=personalToken;setPersonalToken('');setTokenConsent(false);void act('token',{token,confirmed:true});}}>{t("Connect with token")}</button>
             </details>
           </div>
         </details>
         <div className="github-disconnect">
-          <button type="button" className="secondary-button github-disconnect-button" onClick={() => void act('disconnect')}>Disconnect this profile</button>
-          <p className="github-hint">Removes saved GitHub access and repository links in this profile. Project tasks stay. Revoke remote authorization separately in GitHub App settings.</p>
+          <button type="button" className="secondary-button github-disconnect-button" onClick={() => void act('disconnect')}>{t("Disconnect this profile")}</button>
+          <p className="github-hint">{t("Removes saved GitHub access and repository links in this profile. Project tasks stay. Revoke remote authorization separately in GitHub App settings.")}</p>
         </div>
       </fieldset>}
     </div>

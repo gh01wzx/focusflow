@@ -29,4 +29,4 @@ export const tabText: Record<Tab, { subtitle: string; emptyTitle: string; emptyD
     emptyDescription: 'Completed, cancelled and missed tasks will appear here.',
   },
 };
-export const dateText = (date: string) => new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date + 'T12:00:00'));
+export const dateText = (date: string) => new Intl.DateTimeFormat(document.documentElement.lang, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date + 'T12:00:00'));

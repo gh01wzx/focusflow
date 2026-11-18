@@ -1,4 +1,6 @@
+import { isInterface } from '../shared/interface.ts';
 import { createHash } from 'node:crypto';
+import type { NamedApi } from '../shared/ai.ts';
 import { parseAiModelSelection, supportsSelection } from '../shared/ai.ts';
 import { unfinishedPrerequisites } from '../shared/dependencies.ts';
 import { git } from '../execution/git.ts';
@@ -58,6 +60,7 @@ export async function startWorkspaceServer(options: {
   dataDirectory: string; clock?: () => Date; workspaceLabel?: string | null; github?: GitHubService; ai?: AiService; planGenerator?: PlanGenerator;
   dsh?: DshService;
   compatible?: CompatibleService;
+  namedApis?: Partial<Record<NamedApi, CompatibleService>>;
   onShutdown?: (stage: ShutdownStage) => void;
   onInterfaceReady?: () => void;
   appVersion?: string;
@@ -77,7 +80,7 @@ export async function startWorkspaceServer(options: {
     return ['Project context revision ' + settings.revision, goal && 'Project goal: ' + goal, projectInstructions(settings),
       changes.length && 'Recent merged work (model summaries when available):\n' + changes.join('\n')].filter(Boolean).join('\n\n');
   };
-  const providers = createAiProviders(ai, options.dsh, undefined, options.compatible);
+  const providers = createAiProviders(ai, options.dsh, undefined, options.compatible, options.namedApis);
   const coding = createCodingService(store.execution,store.projectRepository,store.projectTransaction,ai,approvals,options.github?.issues,store.linkedWork,projectContext,providers,id => store.projectSettings.read(id).tokenBudget ?? 0, id => store.projectSettings.read(id).revision);
   const ticketAi = createTicketAi(store.projectRepository, store.projectTransaction, store.projectSettings, providers, projectContext);
   const plans = createPlanService(store.planDrafts, options.planGenerator ?? createPlanGenerator(providers), store.planApproval, projectContext);
@@ -218,6 +221,14 @@ export async function startWorkspaceServer(options: {
         if (!ready) { ready = true; options.onInterfaceReady?.(); }
         sendJson(response, 200, { ready: true }); return;
       }
+      if (resource === '/api/interface' && (request.method === 'GET' || request.method === 'POST')) {
+        if (request.method === 'POST') {
+          const settings = await readJson(request, origin, 512);
+          if (!isInterface(settings)) throw new HttpError(400, 'Invalid interface settings.');
+          store.saveInterface(settings);
+        }
+        sendJson(response, 200, store.interfaceSettings()); return;
+      }
       const asset = assets.get(resource);
       if (request.method === 'GET' && asset) {
         const [name, type] = asset;
@@ -306,7 +317,7 @@ export async function startWorkspaceServer(options: {
       const aiRoute = matchAiRoute(request.method, resource);
       if (aiRoute) {
         const input = request.method === 'GET' ? undefined : await readJson(request, origin, 4096);
-        sendJson(response, 200, await dispatchAiRoute(aiRoute, input, ai, providers, options.dsh, options.compatible));
+        sendJson(response, 200, await dispatchAiRoute(aiRoute, input, ai, providers, options.dsh, options.compatible, options.namedApis));
         return;
       }
       const githubRoute = matchGitHubRoute(request.method, resource);
@@ -363,6 +374,7 @@ export async function startWorkspaceServer(options: {
     workspaces.close();
     ticketAi.close();
     options.compatible?.close();
+    Object.values(options.namedApis ?? {}).forEach(api => api.close());
     approvals.close();
     const results = await Promise.allSettled([
       coding.close(),

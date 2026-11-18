@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { QuickRunPanel } from './QuickRunPanel.tsx';
 import { TicketAiPanel } from './TicketAiPanel.tsx';
 import { useState } from 'react';
@@ -33,24 +34,24 @@ export function ProjectTicketCard({ ticket, repository, context, view, editingPr
   const [codingLocked, setCodingLocked] = useState(false);
   return <li className="manual-ticket">
     <button type="button" id={'ticket-' + ticket.id} className="ticket-card" disabled={busy} aria-haspopup="dialog"
-      aria-label={'Open ticket ' + ticket.title} onClick={onOpen}>
+      aria-label={t('Open ticket ') + ticket.title} onClick={onOpen}>
       <span className="ticket-card-heading">
         <span className="ticket-title">{ticketLabel(ticket)}</span>
-        <span className="status-pill" data-status={ticket.status}>{TICKET_STATUS_LABELS[ticket.status]}</span>
+        <span className="status-pill" data-status={ticket.status}>{t(TICKET_STATUS_LABELS[ticket.status])}</span>
       </span>
       {context && <span className="ticket-milestone">{context}</span>}
       {ticket.description && <span className="ticket-excerpt">{ticket.description}</span>}
       {ticket.executionMode === 'codex' && <span className="ticket-card-hint">{ticket.coding?.issueNumber ? 'Coding / Published' : 'Coding / Unpublished'}</span>}
-      <span className="ticket-card-hint">Open details <span aria-hidden="true">&rarr;</span></span>
+      <span className="ticket-card-hint">{t("Open details")} <span aria-hidden="true">&rarr;</span></span>
     </button>
     <TicketBlockerNotice ticket={ticket} view={view} busy={busy} onVisit={onVisit} />
     {open && <ProjectDialog title={ticket.title} returnFocusId={'ticket-' + ticket.id} locked={busy || !!editor || editingPrerequisites || syncLocked || codingLocked || aiBusy} onClose={onClose}>
       <p className="feedback" role="status" aria-live="polite">{message}</p>
       {editor || <>
         <div className="ticket-detail-heading">
-          <span className="status-pill" data-status={ticket.status}>{TICKET_STATUS_LABELS[ticket.status]}</span>
+          <span className="status-pill" data-status={ticket.status}>{t(TICKET_STATUS_LABELS[ticket.status])}</span>
           <button className="secondary-button" disabled={busy || editingPrerequisites || syncLocked || !!ticket.coding?.issueNumber} onClick={onEdit}
-            aria-label={'Edit ticket ' + ticket.title}>Edit ticket</button>
+            aria-label={t('Edit ticket ') + ticket.title}>{t("Edit ticket")}</button>
         </div>
         <TicketAiPanel ticket={ticket} onChanged={onChanged} onBusy={setAiBusy} onVisit={id => {
           const child = view.tickets.find(item => item.id === id);
@@ -66,21 +67,21 @@ export function ProjectTicketCard({ ticket, repository, context, view, editingPr
           <LinkedWorkPanel ticketId={ticket.id} disabled={busy || editingPrerequisites || codingLocked}
             onLock={setSyncLocked} onChanged={onChanged} />
         </>}
-        {ticket.executionMode === 'manual' && <><h3>Change status</h3>
-        <div className="ticket-status-buttons" role="group" aria-label={'Change status for ' + ticket.title}>
+        {ticket.executionMode === 'manual' && <><h3>{t("Change status")}</h3>
+        <div className="ticket-status-buttons" role="group" aria-label={t('Change status for ') + ticket.title}>
           {TICKET_STATUSES.map(status => <button type="button" key={status} data-status={status}
             aria-pressed={ticket.status === status} disabled={busy || editingPrerequisites || ticket.status === status || (status === 'in_progress' && (blockers.length > 0 || !!ticket.blockReason))}
-            onClick={() => void onStatus(ticket.id, status)}>{TICKET_STATUS_LABELS[status]}</button>)}
+            onClick={() => void onStatus(ticket.id, status)}>{t(TICKET_STATUS_LABELS[status])}</button>)}
         </div></>}
-        {error && <p className="error" role="alert">{error}</p>}
+        {error && <p className="error" role="alert">{t(error)}</p>}
         <TicketBlockerEditor ticket={ticket} busy={busy || syncLocked} locked={editingPrerequisites && !blockEditing} editing={blockEditing}
           onEditingChange={editing => { setBlockEditing(editing); onEditingChange(editing); }} onSave={onBlocker} />
         <Prerequisites ticket={ticket} view={view} busy={busy || blockEditing || syncLocked || !!ticket.coding?.issueNumber}
           onEditingChange={onEditingChange} onSave={onPrerequisites} onVisit={onVisit} />
-        <h3>Description</h3>
-        <p className="project-description">{ticket.description || 'No description yet.'}</p>
-        <h3>Acceptance criteria</h3>
-        <p className="project-description">{ticket.acceptanceCriteria || 'No acceptance criteria yet.'}</p>
+        <h3>{t("Description")}</h3>
+        <p className="project-description">{ticket.description || t('No description yet.')}</p>
+        <h3>{t("Acceptance criteria")}</h3>
+        <p className="project-description">{ticket.acceptanceCriteria || t('No acceptance criteria yet.')}</p>
       </>}
     </ProjectDialog>}
   </li>;

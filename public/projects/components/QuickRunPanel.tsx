@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useState } from 'react';
 import { issueBody, issueTitle } from '../../../src/shared/publication.ts';
 import type { PublicationBatch } from '../../../src/shared/publication.ts';
@@ -33,22 +34,22 @@ export function QuickRunPanel({ ticketId, onChanged, onBusy }: { ticketId: strin
   }
   const content = details?.batch?.items[0]?.content;
   return <div className="quick-run">
-    {error && <p role="alert">{error}</p>}
-    {!details ? <button className="primary" disabled={busy} onClick={() => void act('details')}>Run coding ticket</button> : <>
+    {error && <p role="alert">{t(error)}</p>}
+    {!details ? <button className="primary" disabled={busy} onClick={() => void act('details')}>{t("Run coding ticket")}</button> : <>
       <dl className="run-scope">
-        <div><dt>Repository</dt><dd>{details.destination.fullName}</dd></div>
-        <div><dt>Visibility</dt><dd>{details.destination.private ? 'Private' : 'Public'}</dd></div>
-        <div><dt>Base commit</dt><dd><code>{details.headSha.slice(0, 12)}</code></dd></div>
+        <div><dt>{t("Repository")}</dt><dd>{details.destination.fullName}</dd></div>
+        <div><dt>{t("Visibility")}</dt><dd>{details.destination.private ? t('Private') : t('Public')}</dd></div>
+        <div><dt>{t("Base commit")}</dt><dd><code>{details.headSha.slice(0, 12)}</code></dd></div>
       </dl>
-      {content && <details open><summary>Issue to publish</summary><strong>{issueTitle(content)}</strong><pre className="ticket-result">{issueBody(content)}</pre></details>}
+      {content && <details open><summary>{t("Issue to publish")}</summary><strong>{issueTitle(content)}</strong><pre className="ticket-result">{issueBody(content)}</pre></details>}
       <ModelPicker value={selection} onChange={setSelection} onReadyChange={setModelReady} disabled={busy} />
-      {selection.provider !== 'codex' && <label>Tracked files to edit<textarea value={files} maxLength={6000}
-        onChange={event => setFiles(event.target.value)} placeholder="One relative path per line" /></label>}
-      <p>Uses {selection.provider === 'codex' ? 'ChatGPT Codex allowance' : 'the selected API balance'}. Ticket and project notes are roughly {details.estimate.toLocaleString()} input tokens before runtime context.</p>
-      {selection.provider === 'codex' && details.budget > 0 && <p>Stop after {details.budget.toLocaleString()} reported tokens.</p>}
-      <button className="primary" disabled={busy || !modelReady || selection.provider !== 'codex' && !files.trim()} onClick={() => void act('start')}>{content ? 'Publish Issue and run' : 'Start'}</button>
-      {error && <button className="quiet-button" disabled={busy} onClick={() => void act('details')}>Refresh run details</button>}
-      <button className="quiet-button" disabled={busy} onClick={() => { setDetails(undefined); setModelReady(false); setError(''); }}>Cancel</button>
+      {selection.provider !== 'codex' && <label>{t("Tracked files to edit")}<textarea value={files} maxLength={6000}
+        onChange={event => setFiles(event.target.value)} placeholder={t("One relative path per line")} /></label>}
+      <p>{t("Uses")} {selection.provider === 'codex' ? t('ChatGPT Codex allowance') : t('the selected API balance')}{t(". Ticket and project notes are roughly")} {details.estimate.toLocaleString()} {t("input tokens before runtime context.")}</p>
+      {selection.provider === 'codex' && details.budget > 0 && <p>{t("Stop after")} {details.budget.toLocaleString()} {t("reported tokens.")}</p>}
+      <button className="primary" disabled={busy || !modelReady || selection.provider !== 'codex' && !files.trim()} onClick={() => void act('start')}>{content ? t('Publish Issue and run') : t('Start')}</button>
+      {error && <button className="quiet-button" disabled={busy} onClick={() => void act('details')}>{t("Refresh run details")}</button>}
+      <button className="quiet-button" disabled={busy} onClick={() => { setDetails(undefined); setModelReady(false); setError(''); }}>{t("Cancel")}</button>
     </>}
   </div>;
 }

@@ -1,9 +1,10 @@
+import type { ApiProvider } from '../shared/ai.ts';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { CredentialCrypto } from '../github/vault.ts';
 
-export function createProviderCredential(directory: string, crypto: CredentialCrypto, name: 'deepseek' | 'compatible' = 'deepseek') {
+export function createProviderCredential(directory: string, crypto: CredentialCrypto, name: ApiProvider | 'deepseek-api' = 'deepseek') {
   const path = join(directory, name + '.bin');
   return {
     async read() {

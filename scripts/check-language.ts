@@ -19,6 +19,7 @@ const paths = [...rootFiles];
 for (const root of sourceRoots) paths.push(...await sourceFiles(root));
 const violations: string[] = [];
 for (const path of paths) {
+  if (path === join('public', 'workspace', 'zh-CN.ts')) continue;
   const lines = (await readFile(path, 'utf8')).split(/\r?\n/);
   for (const [index, line] of lines.entries()) {
     if (/\p{Script=Han}/u.test(line)) violations.push(`${path}:${index + 1}`);

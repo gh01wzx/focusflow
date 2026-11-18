@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import type { ScoringRule } from '../../../src/shared/personal.ts';
@@ -70,9 +71,9 @@ export function NowCard({ candidates, due, rules, busy, sound, skipped, timer, f
   }, [running, elapsed, sound]);
 
   if (!task) {
-    return skipped > 0 ? <section className="now-card glass quiet" aria-label="Next">
-      <p>You set {skipped === 1 ? 'one thing' : skipped + ' things'} aside for now.</p>
-      <button className="text-button" disabled={busy} onClick={onShowSkipped}>Show again</button>
+    return skipped > 0 ? <section className="now-card glass quiet" aria-label={t("Next")}>
+      <p>{t("You set")} {skipped === 1 ? t('one thing') : skipped + t(' things')} {t("aside for now.")}</p>
+      <button className="text-button" disabled={busy} onClick={onShowSkipped}>{t("Show again")}</button>
     </section> : null;
   }
   const cue = cueLine(rule);
@@ -85,37 +86,37 @@ export function NowCard({ candidates, due, rules, busy, sound, skipped, timer, f
     if (saved) stop();
   }
 
-  return <section className={`now-card glass ${running ? 'running' : ''}`} aria-label="Next">
+  return <section className={`now-card glass ${running ? 'running' : ''}`} aria-label={t("Next")}>
     <div className="now-main">
-      <p className="eyebrow">{focus.includes(task.id) && <span className="focus-mark"><StarIcon />Focus</span>}
-        {running ? 'In progress' : later ? 'Next at ' + rule!.time : 'Next'}
-        {candidates.length > 1 && !running ? ` · ${candidates.length - 1} more after this` : ''}</p>
-      <h2 className="now-title"><span className="sr-only">Next: </span>{task.title}</h2>
+      <p className="eyebrow">{focus.includes(task.id) && <span className="focus-mark"><StarIcon />{t("Focus")}</span>}
+        {running ? t('In progress') : later ? t('Next at ') + rule!.time : t('Next')}
+        {candidates.length > 1 && !running ? t(" · {0} more after this", candidates.length - 1) : ''}</p>
+      <h2 className="now-title"><span className="sr-only">{t("Next:")} </span>{task.title}</h2>
       {cue && <p className="cue">{cue}</p>}
-      {rule?.starter && <p className="starter">Start with: {rule.starter}</p>}
+      {rule?.starter && <p className="starter">{t("Start with:")} {rule.starter}</p>}
       <div className="now-actions">
         {running ? <>
-          <button className="primary" disabled={busy} aria-label={`Finish ${task.title}`} onClick={() => void finish()}>
-            {minutesHabit ? `Done · log ${Math.max(1, Math.round(elapsed / 60))} min` : 'Done'}</button>
-          <button className="secondary-button" disabled={busy} onClick={stop}>Stop timer</button>
+          <button className="primary" disabled={busy} aria-label={t("Finish {0}", task.title)} onClick={() => void finish()}>
+            {minutesHabit ? t("Done · log {0} min", Math.max(1, Math.round(elapsed / 60))) : t('Done')}</button>
+          <button className="secondary-button" disabled={busy} onClick={stop}>{t("Stop timer")}</button>
         </> : <>
-          <button className="primary now-start" disabled={busy} aria-label={`Start two minutes on ${task.title}`} onClick={start}>
-            <PlayIcon />Start 2 minutes</button>
-          {!minutesHabit && <button className="secondary-button" disabled={busy} aria-label={`Mark ${task.title} done`}
-            onClick={() => void onComplete(task)}>Done</button>}
-          <button className="text-button" disabled={busy} aria-label={`Skip ${task.title} for now`} onClick={() => onSkip(task)}>
-            <SkipIcon />Later</button>
+          <button className="primary now-start" disabled={busy} aria-label={t("Start two minutes on {0}", task.title)} onClick={start}>
+            <PlayIcon />{t("Start 2 minutes")}</button>
+          {!minutesHabit && <button className="secondary-button" disabled={busy} aria-label={t("Mark {0} done", task.title)}
+            onClick={() => void onComplete(task)}>{t("Done")}</button>}
+          <button className="text-button" disabled={busy} aria-label={t("Skip {0} for now", task.title)} onClick={() => onSkip(task)}>
+            <SkipIcon />{t("Later")}</button>
         </>}
       </div>
     </div>
-    {running && <div className="now-timer" role="timer" aria-label={`Elapsed ${clock(elapsed)}`}>
+    {running && <div className="now-timer" role="timer" aria-label={t("Elapsed {0}", clock(elapsed))}>
       <svg viewBox="0 0 100 100" aria-hidden="true">
         <circle className="track" cx="50" cy="50" r="42" />
         <motion.circle className="fill" cx="50" cy="50" r="42" initial={false}
           animate={{ pathLength: Math.min(1, elapsed / goal) }} transition={spring} />
       </svg>
       <strong>{clock(elapsed)}</strong>
-      <span>{elapsed < START_SECONDS ? 'Just two minutes' : minutesHabit && elapsed < goal ? 'You showed up. Keep going?' : 'You showed up.'}</span>
+      <span>{elapsed < START_SECONDS ? t('Just two minutes') : minutesHabit && elapsed < goal ? t('You showed up. Keep going?') : t('You showed up.')}</span>
     </div>}
   </section>;
 }

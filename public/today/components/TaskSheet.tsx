@@ -1,3 +1,4 @@
+import { t } from '../../workspace/locale.ts';
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { emptyPlan, points } from '../../../src/shared/personal.ts';
@@ -125,20 +126,20 @@ function SheetForm({ request, today, busy, reward, anchors, habits, onCreate, on
 
   const subject = editing?.task.title ?? title.trim();
   const schedule = editing
-    ? (editing.task.frequency ? (editing.task.frequency === 'daily' ? 'Daily' : 'Weekly') : 'Once') + ' · ' + dateText(editing.task.plannedDate)
+    ? t(editing.task.frequency ? (editing.task.frequency === 'daily' ? 'Daily' : 'Weekly') : 'Once') + ' · ' + dateText(editing.task.plannedDate)
     : !repeating ? dateText(date)
-      : frequency === 'daily' ? 'Daily from ' + dateText(date)
-        : (weekdays.length ? WEEKDAYS.filter(day => weekdays.includes(day.value)).map(day => day.label).join(', ') : 'Choose weekdays') + ' from ' + dateText(date);
-  const scoreText = kind === 'timed' ? points(Math.round(Number(minutePoints) * 100)) + ' pt/min' : '+' + points(Math.round(Number(donePoints) * 100)) + ' points';
-  const choices = [...new Set([...anchors, 'wake up', 'pour my morning coffee', 'sit down at my desk', 'finish lunch',
-    'get home', 'finish dinner', 'get into bed'].map(item => item.trim()).filter(Boolean))].slice(0, 8);
+      : frequency === 'daily' ? t('Daily from ') + dateText(date)
+        : (weekdays.length ? WEEKDAYS.filter(day => weekdays.includes(day.value)).map(day => t(day.label)).join(', ') : t('Choose weekdays')) + t(' from ') + dateText(date);
+  const scoreText = kind === 'timed' ? points(Math.round(Number(minutePoints) * 100)) + t(' pt/min') : '+' + points(Math.round(Number(donePoints) * 100)) + t(' points');
+  const choices = [...new Set([...anchors, ...['wake up', 'pour my morning coffee', 'sit down at my desk', 'finish lunch',
+    'get home', 'finish dinner', 'get into bed'].map(item => t(item))].map(item => item.trim()).filter(Boolean))].slice(0, 8);
   const easy = <section className="sheet-group" aria-labelledby="law-easy">
-    <h3 id="law-easy"><span className="law">3</span>Make it easy</h3>
-    <label className="field">Two-minute version
-      <input value={plan.starter} maxLength={180} placeholder={repeating ? 'Put on my running shoes' : 'Open the file and write one line'}
+    <h3 id="law-easy"><span className="law">3</span>{t("Make it easy")}</h3>
+    <label className="field">{t("Two-minute version")}
+      <input value={plan.starter} maxLength={180} placeholder={repeating ? t('Put on my running shoes') : t('Open the file and write one line')}
         disabled={saving} onChange={field('starter')} data-step-focus /></label>
     {kind === 'timed' && <div className="field">
-      <span id="target-label">Daily target in minutes</span>
+      <span id="target-label">{t("Daily target in minutes")}</span>
       <div className="chip-row" role="group" aria-labelledby="target-label">
         {[2, 5, 10, 20, 30].map(value => <button key={value} type="button" disabled={saving}
           className={`chip ${Number(target) === value ? 'selected' : ''}`} onClick={() => setTarget(String(value))}>{value}</button>)}
@@ -146,84 +147,83 @@ function SheetForm({ request, today, busy, reward, anchors, habits, onCreate, on
           onChange={event => setTarget(event.target.value)} />
       </div>
     </div>}
-    <p className="group-note">Start smaller than feels useful. Doing only the two-minute version still counts as showing up.</p>
+    <p className="group-note">{t("Start smaller than feels useful. Doing only the two-minute version still counts as showing up.")}</p>
   </section>;
 
   return <form ref={form} className="sheet-form" onSubmit={event => void submit(event)}>
     <header className="sheet-header">
       <div>
-        <h2 id="sheet-title">{editing ? 'Edit plan' : guided || kind === 'timed' ? 'New habit' : 'New task'}</h2>
-        {guided && <p className="step-label" aria-live="polite">Step {step + 1} of {steps.length} &middot; {steps[step]}</p>}
+        <h2 id="sheet-title">{editing ? t('Edit plan') : guided || kind === 'timed' ? t('New habit') : t('New task')}</h2>
+        {guided && <p className="step-label" aria-live="polite">{t("Step")} {step + 1} {t("of")} {steps.length} &middot; {t(steps[step] ?? '')}</p>}
       </div>
-      <button type="button" className="icon-button" aria-label="Close" disabled={saving} onClick={onClose}><CloseIcon /></button>
+      <button type="button" className="icon-button" aria-label={t("Close")} disabled={saving} onClick={onClose}><CloseIcon /></button>
     </header>
     {guided && <ol className="step-dots" aria-hidden="true">{steps.map((name, index) =>
       <li key={name} className={index === step ? 'current' : index < step ? 'past' : ''} />)}</ol>}
     <div className="sheet-body">
       {shownStep(0) && <>
         <fieldset className="segmented" disabled={saving}>
-          <legend className="sr-only">Kind</legend>
+          <legend className="sr-only">{t("Kind")}</legend>
           {kinds.filter(item => !guided || item.value !== 'once').map(item => {
             const locked = !!editing && (editing.task.recurrenceId ? item.value === 'once' : item.value !== 'once');
-            return <label key={item.value} className={kind === item.value ? 'selected' : ''} title={item.hint}>
+            return <label key={item.value} className={kind === item.value ? 'selected' : ''} title={t(item.hint)}>
               <input type="radio" name="kind" value={item.value} checked={kind === item.value} disabled={locked}
-                onChange={() => setKind(item.value)} />{item.label}
+                onChange={() => setKind(item.value)} />{t(item.label)}
             </label>;
           })}
         </fieldset>
-        <p className="kind-hint">{kinds.find(item => item.value === kind)!.hint}</p>
+        <p className="kind-hint">{t(kinds.find(item => item.value === kind)!.hint)}</p>
 
         {editing ? <section className="sheet-group">
           <p className="sheet-subject">{'“' + editing.task.title + '”'}</p>
-          <p className="group-note">{schedule}. The title and schedule stay as created; stop repeating and add a new one to change them.</p>
+          <p className="group-note">{schedule}{t(". The title and schedule stay as created; stop repeating and add a new one to change them.")}</p>
         </section> : <section className="sheet-group">
-          <input className="title-input" aria-label="Task title" value={title} maxLength={300} required data-autofocus autoComplete="off"
-            placeholder={guided ? 'What habit do you want to build?' : kind === 'timed' ? 'What will you practice?' : 'What will you do?'}
+          <input className="title-input" aria-label={t("Task title")} value={title} maxLength={300} required data-autofocus autoComplete="off"
+            placeholder={guided ? t('What habit do you want to build?') : kind === 'timed' ? t('What will you practice?') : t('What will you do?')}
             disabled={saving} onChange={event => setTitle(event.target.value)} />
           <div className="field-row">
-            <label htmlFor="sheet-date">{repeating ? 'Start date' : 'Planned date'}</label>
-            <input id="sheet-date" aria-label="Planned date" type="date" value={date} required disabled={saving}
+            <label htmlFor="sheet-date">{repeating ? t('Start date') : t('Planned date')}</label>
+            <input id="sheet-date" aria-label={t("Planned date")} type="date" value={date} required disabled={saving}
               min={repeating ? today : undefined} onChange={event => setDate(event.target.value)} />
           </div>
           {repeating && <div className="field-row">
-            <label htmlFor="sheet-repeat">Repeat</label>
+            <label htmlFor="sheet-repeat">{t("Repeat")}</label>
             <select id="sheet-repeat" value={frequency} disabled={saving}
               onChange={event => setFrequency(event.target.value === 'weekly' ? 'weekly' : 'daily')}>
-              <option value="daily">Daily</option><option value="weekly">Weekly</option>
+              <option value="daily">{t("Daily")}</option><option value="weekly">{t("Weekly")}</option>
             </select>
           </div>}
           {repeating && frequency === 'weekly' && <WeekdayPicker selected={weekdays} disabled={saving} onChange={setWeekdays} />}
         </section>}
-        {!editing && repeating && habits >= HABIT_LIMIT && <p className="soft-note">You are already building {habits} habits.
-          New habits stick better one at a time, so you might add this one when another feels easy.</p>}
+        {!editing && repeating && habits >= HABIT_LIMIT && <p className="soft-note">{t("You are already building")} {habits} {t("habits. New habits stick better one at a time, so you might add this one when another feels easy.")}</p>}
       </>}
 
       {shownStep(1) && <section className="sheet-group" aria-labelledby="law-obvious">
-        <h3 id="law-obvious"><span className="law">1</span>Make it obvious</h3>
+        <h3 id="law-obvious"><span className="law">1</span>{t("Make it obvious")}</h3>
         {repeating && <>
-          <label className="field">After I&hellip;
-            <input value={plan.cue} maxLength={180} placeholder="pour my morning coffee" disabled={saving} onChange={field('cue')}
+          <label className="field">{t("After I…")}
+            <input value={plan.cue} maxLength={180} placeholder={t("pour my morning coffee")} disabled={saving} onChange={field('cue')}
               data-step-focus {...(editing ? { 'data-autofocus': true } : {})} /></label>
-          <div className="chip-row" role="group" aria-label="Common moments to follow">
+          <div className="chip-row" role="group" aria-label={t("Common moments to follow")}>
             {choices.map(item => <button key={item} type="button" disabled={saving} className={`chip ${plan.cue === item ? 'selected' : ''}`}
               onClick={() => setPlan(current => ({ ...current, cue: item }))}>{item}</button>)}
           </div>
         </>}
         <div className="field-pair">
-          <label className="field">Time<input type="time" value={plan.time} disabled={saving} onChange={field('time')}
+          <label className="field">{t("Time")}<input type="time" value={plan.time} disabled={saving} onChange={field('time')}
             {...(!repeating ? { 'data-step-focus': true } : {})} {...(editing && !repeating ? { 'data-autofocus': true } : {})} /></label>
-          <label className="field">Place<input value={plan.place} maxLength={80} placeholder="Kitchen table" disabled={saving} onChange={field('place')} /></label>
+          <label className="field">{t("Place")}<input value={plan.place} maxLength={80} placeholder={t("Kitchen table")} disabled={saving} onChange={field('place')} /></label>
         </div>
-        <p className="group-note">{repeating ? 'Attach it to something you already do every day. A reliable moment works better than a reminder.'
-          : 'Decide when and where. A clear time and place makes starting easier.'}</p>
+        <p className="group-note">{repeating ? t('Attach it to something you already do every day. A reliable moment works better than a reminder.')
+          : t('Decide when and where. A clear time and place makes starting easier.')}</p>
       </section>}
 
       {guided && step === 2 && easy}
 
       {shownStep(3) && <section className="sheet-group" aria-labelledby="law-attractive">
-        <h3 id="law-attractive"><span className="law">2</span>Make it attractive</h3>
+        <h3 id="law-attractive"><span className="law">2</span>{t("Make it attractive")}</h3>
         <div className="field">
-          <span id="points-label">{kind === 'timed' ? 'Points per minute' : 'Points when done'}</span>
+          <span id="points-label">{kind === 'timed' ? t('Points per minute') : t('Points when done')}</span>
           <div className="chip-row" role="group" aria-labelledby="points-label">
             {(kind === 'timed' ? [1, 1.5, 2] : [1, 3, 5, 10]).map(value => <button key={value} type="button" disabled={saving}
               className={`chip ${Number(pointsText) === value ? 'selected' : ''}`}
@@ -232,40 +232,40 @@ function SheetForm({ request, today, busy, reward, anchors, habits, onCreate, on
               onChange={event => (kind === 'timed' ? setMinutePoints : setDonePoints)(event.target.value)} />
           </div>
         </div>
-        {repeating && <label className="field">Only while doing this, I get to&hellip;
-          <input value={plan.bundle} maxLength={180} placeholder="listen to my favorite podcast" disabled={saving} onChange={field('bundle')}
+        {repeating && <label className="field">{t("Only while doing this, I get to…")}
+          <input value={plan.bundle} maxLength={180} placeholder={t("listen to my favorite podcast")} disabled={saving} onChange={field('bundle')}
             data-step-focus /></label>}
-        {reward && <p className="reward-hint">Working toward <strong>{reward.title}</strong>
-          {reward.remaining > 0 ? ` · ${points(reward.remaining)} points to go` : ' · ready to redeem'}</p>}
-        <p className="group-note">Keep something you enjoy for this habit only, and let points build toward a reward you chose.</p>
+        {reward && <p className="reward-hint">{t("Working toward")} <strong>{reward.title}</strong>
+          {reward.remaining > 0 ? t(" · {0} points to go", points(reward.remaining)) : t(' · ready to redeem')}</p>}
+        <p className="group-note">{t("Keep something you enjoy for this habit only, and let points build toward a reward you chose.")}</p>
       </section>}
 
       {!guided && easy}
 
       {shownStep(3) && repeating && <section className="sheet-group" aria-labelledby="law-satisfying">
-        <h3 id="law-satisfying"><span className="law">4</span>Make it satisfying</h3>
-        <label className="field">Who this makes you
-          <input value={plan.identity} maxLength={120} placeholder="I am a reader" disabled={saving} onChange={field('identity')} /></label>
-        <p className="group-note">Finishing gives points and grows your chain right away. Each time counts as a vote for this identity.</p>
+        <h3 id="law-satisfying"><span className="law">4</span>{t("Make it satisfying")}</h3>
+        <label className="field">{t("Who this makes you")}
+          <input value={plan.identity} maxLength={120} placeholder={t("I am a reader")} disabled={saving} onChange={field('identity')} /></label>
+        <p className="group-note">{t("Finishing gives points and grows your chain right away. Each time counts as a vote for this identity.")}</p>
       </section>}
 
-      {shownStep(3) && <section className="sheet-preview" aria-label="Plan summary">
-        <p className="preview-title">{subject ? '“' + subject + '”' : 'Your plan'}</p>
+      {shownStep(3) && <section className="sheet-preview" aria-label={t("Plan summary")}>
+        <p className="preview-title">{subject ? '“' + subject + '”' : t('Your plan')}</p>
         {cueLine({ ...plan, cue: repeating ? plan.cue : '' }) && <p>{cueLine({ ...plan, cue: repeating ? plan.cue : '' })}</p>}
         <p>{[schedule, scoreText, kind === 'timed' ? (target || '?') + ' min target' : ''].filter(Boolean).join(' · ')}</p>
-        {plan.starter && <p>Start with: {plan.starter}</p>}
-        {repeating && plan.identity && <p>Vote for: {plan.identity}</p>}
+        {plan.starter && <p>{t("Start with:")} {plan.starter}</p>}
+        {repeating && plan.identity && <p>{t("Vote for:")} {plan.identity}</p>}
       </section>}
     </div>
     <footer className="sheet-footer">
-      {error && <p role="alert" className="error">{error}</p>}
+      {error && <p role="alert" className="error">{t(error)}</p>}
       {guided && step > 0
-        ? <button type="button" className="secondary-button" disabled={saving} onClick={() => setStep(step - 1)}>Back</button>
-        : <button type="button" className="secondary-button" disabled={saving} onClick={onClose}>Cancel</button>}
+        ? <button type="button" className="secondary-button" disabled={saving} onClick={() => setStep(step - 1)}>{t("Back")}</button>
+        : <button type="button" className="secondary-button" disabled={saving} onClick={onClose}>{t("Cancel")}</button>}
       {guided && step < steps.length - 1
-        ? <button type="submit" className="primary" disabled={saving || (step === 0 && basicsMissing)}>{step === 0 ? 'Next' : 'Next (or skip)'}</button>
+        ? <button type="submit" className="primary" disabled={saving || (step === 0 && basicsMissing)}>{step === 0 ? t('Next') : t('Next (or skip)')}</button>
         : <button type="submit" className="primary" disabled={blocked}>
-          {saving ? 'Saving...' : editing ? 'Save plan' : guided || kind === 'timed' ? 'Add habit' : 'Add task'}</button>}
+          {saving ? t('Saving...') : editing ? t('Save plan') : guided || kind === 'timed' ? t('Add habit') : t('Add task')}</button>}
     </footer>
   </form>;
 }

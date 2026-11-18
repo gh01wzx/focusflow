@@ -15,7 +15,7 @@ export function SettingsPanel({ disabled }: { disabled: boolean }) {
     <button id="workspace-settings" className="nav-item" disabled={disabled} onClick={() => {
       setDraft(settings); setError('');
     }}>{t("Settings")}</button>
-    {draft && <ProjectDialog title={t("Settings")} locked={busy} returnFocusId="workspace-settings" onClose={() => setDraft(null)}>
+    {draft && <ProjectDialog centered title={t("Settings")} locked={busy} returnFocusId="workspace-settings" onClose={() => setDraft(null)}>
       {readError ? <>
         <p role="alert">{t("Could not read settings.")}</p>
         <button disabled={busy} onClick={async () => {

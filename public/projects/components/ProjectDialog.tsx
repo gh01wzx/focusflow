@@ -2,8 +2,9 @@ import { t } from '../../workspace/locale.ts';
 import { useLayoutEffect, useId, useRef } from 'react';
 import type { ReactNode } from 'react';
 
-export function ProjectDialog({ title, locked, onClose, children, returnFocusId }: {
+export function ProjectDialog({ title, locked, onClose, children, returnFocusId, centered = false }: {
   returnFocusId?: string;
+  centered?: boolean;
   title: string; locked: boolean; onClose(): void; children: ReactNode;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -18,7 +19,7 @@ export function ProjectDialog({ title, locked, onClose, children, returnFocusId 
       if (target instanceof HTMLElement && target.isConnected) target.focus();
     };
   }, []);
-  return <dialog ref={dialog} className="project-dialog" aria-labelledby={heading}
+  return <dialog ref={dialog} className={centered ? "ai-dialog settings-dialog" : "project-dialog"} aria-labelledby={heading}
     onCancel={event => { event.preventDefault(); if (!locked) onClose(); }}>
     <header className="dialog-heading">
       <h2 id={heading}>{title}</h2>

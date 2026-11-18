@@ -10,8 +10,8 @@ const activeRedemption = `p.kind='redeem' AND p.subject=r.id AND NOT EXISTS (
   SELECT 1 FROM personal_entries x WHERE x.reference=p.id AND x.kind='reverse')`;
 // Scoring subjects that the current Personal view can show: open one-off tasks,
 // active schedules and schedules that still have an open occurrence.
-const currentSubjects = `SELECT id FROM tasks WHERE status='pending' AND recurrence_id IS NULL
-  UNION SELECT recurrence_id FROM tasks WHERE status='pending' AND recurrence_id IS NOT NULL
+const currentSubjects = `SELECT id FROM visible_tasks WHERE status='pending' AND recurrence_id IS NULL
+  UNION SELECT recurrence_id FROM visible_tasks WHERE status='pending' AND recurrence_id IS NOT NULL
   UNION SELECT id FROM recurrence_rules WHERE stopped_at IS NULL`;
 
 export function createPersonalRepository(db: DatabaseSync) {
@@ -46,7 +46,7 @@ export function createPersonalRepository(db: DatabaseSync) {
   const subjectMinutes = db.prepare(`SELECT COALESCE(SUM(minutes),0) AS total FROM personal_entries
     WHERE subject=? AND kind IN ('earn','edit','reverse')`);
   const openProgress = db.prepare(`SELECT subject,SUM(minutes) AS minutes FROM personal_entries
-    WHERE subject IN (SELECT id FROM tasks WHERE status='pending')
+    WHERE subject IN (SELECT id FROM visible_tasks WHERE status='pending')
       AND kind IN ('earn','edit','reverse') AND minutes<>0
     GROUP BY subject HAVING SUM(minutes)>0`);
   // Only missed or still-open occurrences need their logs to decide the outcome.
@@ -55,12 +55,12 @@ export function createPersonalRepository(db: DatabaseSync) {
     WHERE p.subject=t.id AND p.kind IN ('earn','edit','reverse'))`;
   const recentOccurrences = db.prepare(`SELECT t.recurrence_id AS habit, t.planned_date AS day, t.status,
       CASE WHEN t.status='missed' THEN COALESCE(${occurrenceMinutes},0) ELSE 0 END AS minutes
-    FROM tasks t WHERE t.recurrence_id IS NOT NULL AND t.status IN ('completed','cancelled','missed')
+    FROM visible_tasks t WHERE t.recurrence_id IS NOT NULL AND t.status IN ('completed','cancelled','missed')
       AND t.planned_date BETWEEN ? AND ?`);
   // Visit only occurrences of rules with an identity. CROSS JOIN keeps this index
   // lookup inside the rule loop even on a database without planner statistics.
   const identityVotes = db.prepare(`SELECT s.identity, COUNT(*) AS votes
-    FROM personal_scoring s CROSS JOIN tasks t ON (t.recurrence_id=s.subject OR (t.id=s.subject AND t.recurrence_id IS NULL))
+    FROM personal_scoring s CROSS JOIN visible_tasks t ON (t.recurrence_id=s.subject OR (t.id=s.subject AND t.recurrence_id IS NULL))
     WHERE s.identity<>'' AND (t.status='completed' OR (t.status IN ('pending','missed') AND ${occurrenceMinutes}>0))
     GROUP BY s.identity`);
   const identityList = db.prepare("SELECT DISTINCT identity FROM personal_scoring WHERE identity<>'' ORDER BY identity COLLATE NOCASE, identity");

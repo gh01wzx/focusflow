@@ -16,6 +16,7 @@ export interface RecurrenceRule {
   stoppedAt: string | null;
 }
 export interface Task {
+  periodFrequency?: Frequency | null;
   category?: ActivityCategory;
   id: string;
   title: string;

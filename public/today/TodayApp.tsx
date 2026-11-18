@@ -7,7 +7,7 @@ import { usePersonal } from './usePersonal.ts';
 import { ActivityHistory, RewardShop } from './components/PersonalRewards.tsx';
 import type { ScoringRule } from '../../src/shared/personal.ts';
 import { isHabit, FOCUS_LIMIT, HISTORY_LIMIT } from '../../src/shared/tasks.ts';
-import type { Task } from '../../src/shared/tasks.ts';
+import type { RecurrenceRule, Task } from '../../src/shared/tasks.ts';
 import { localDay } from '../../src/shared/calendar.ts';
 import { habitInsight, identityKey, nextUp, reviewHabits, todayProgress } from '../../src/shared/habits.ts';
 import type { HabitReview } from '../../src/shared/habits.ts';
@@ -88,7 +88,15 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
     return () => clearInterval(id);
   }, []);
 
-  const edit = (task: Task) => setSheet({ mode: 'edit', id: crypto.randomUUID(), task, rule: ruleFor(task) });
+  function openEditor(task: Task | undefined, series: RecurrenceRule | undefined) {
+    const subject = series?.id ?? task?.recurrenceId ?? task?.id;
+    if (!subject) return;
+    const pending = series && [...(view?.due ?? []), ...(view?.upcoming ?? [])].find(item => item.recurrenceId === series.id);
+    const date = pending?.plannedDate ?? series?.nextDate ?? task?.plannedDate ?? today;
+    setSheet({ mode: 'edit', id: crypto.randomUUID(), task, series, effective: series && date < today ? today : date, rule: rules.get(subject) });
+  }
+  const edit = (task: Task) => openEditor(task, view?.recurrences.find(series => series.id === task.recurrenceId));
+  const editSeries = (series: RecurrenceRule) => openEditor(undefined, series);
   const votesFor = (rule: ScoringRule | undefined) => rule?.identity ? data?.votes[identityKey(rule.identity)] ?? 0 : 0;
   // Doing or starting a habit is a vote for the identity it supports. More minutes on the same day
   // add to the log, not to the votes. The count comes from before the save, plus this vote.
@@ -152,8 +160,8 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   }
   function editPlan(review: HabitReview) {
     setReviewing(false);
-    const task = view && [...view.due, ...view.upcoming, ...view.history].find(item => item.recurrenceId === review.id);
-    if (task) setSheet({ mode: 'edit', id: crypto.randomUUID(), task, rule: rules.get(review.id) });
+    const series = view?.recurrences.find(item => item.id === review.id);
+    if (series) editSeries(series);
   }
   // Habit stacking: the new habit starts right after this one, so its title becomes the cue.
   function stack(review: HabitReview) {
@@ -180,7 +188,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
           ? { on: liveFocus.includes(task.id), full: liveFocus.length >= FOCUS_LIMIT, toggle: toggleFocus } : undefined}
         votes={votesFor(rule)}
         {...(tab === 'due' && isHabit(task) ? { insight: insight(task) } : {})}
-        {...(tab !== 'history' && data ? { onEdit: edit } : {})}
+        {...(data ? { onEdit: edit } : {})}
         {...(tab === 'history' && canReopen(task, view!) ? { onReopen: (id: string) => void state.reopen(id) } : {})}
         onResolve={(_id, status) => status === 'completed' ? complete(task) : personal.resolve(task, status, state.resolve)} />
     </ListItem>;
@@ -252,7 +260,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               <p className="feedback" role="status" aria-live="polite">
                 {t(message) || (!view && !error ? t('Loading your tasks.') : '')}
               </p>
-              {undo && <button className="text-button" disabled={saving} onClick={() => void state.reopen(undo.id)}
+              {undo && view?.history.some(task => task.id === undo.id && canReopen(task, view)) && <button className="text-button" disabled={saving} onClick={() => void state.reopen(undo.id)}
                 aria-label={t("Undo {0} {1}", undo.status === 'completed' ? 'completing' : 'resting or cancelling', undo.title)}>{t("Undo")}</button>}
             </div>
             {/* Groups move as one when the content above them changes, so their rows never slide on their own. */}
@@ -298,13 +306,13 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
                 return completed.length > 0 && <details key={category} className="completions glass">
                 <summary>{t(category === 'habit' ? "Habits completed today" : "Tasks completed today")} ({completed.length})</summary>
                 <ul className="task-list">{completed.map(task => <li key={task.id} className="row-item">
-                  <TaskRow task={task} today={view!.today} busy={saving} onResolve={async () => false}
+                  <TaskRow task={task} today={view!.today} busy={saving} onResolve={async () => false} {...(data ? { onEdit: edit } : {})}
                     {...(canReopen(task, view!) ? { onReopen: (id: string) => void state.reopen(id) } : {})} />
                 </li>)}</ul>
               </details>;
               })}
-              <RepeatingTasks habits rules={view?.recurrences.filter(isHabit) ?? []} busy={saving} onStop={state.stopRecurrence} />
-              <RepeatingTasks rules={view?.recurrences.filter(rule => !isHabit(rule)) ?? []} busy={saving} onStop={state.stopRecurrence} />
+              <RepeatingTasks habits rules={view?.recurrences.filter(isHabit) ?? []} busy={saving || !data} onEdit={editSeries} onStop={state.stopRecurrence} />
+              <RepeatingTasks rules={view?.recurrences.filter(rule => !isHabit(rule)) ?? []} busy={saving || !data} onEdit={editSeries} onStop={state.stopRecurrence} />
             </>}
             {tab === 'history' && <ActivityHistory state={personal} />}
           </div>
@@ -318,7 +326,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
         <TaskSheet request={sheet} today={today} busy={saving} anchors={anchors} identities={data?.identities ?? []} habits={view?.recurrences.filter(isHabit).length ?? 0}
           reward={pinned && data ? { title: pinned.title, remaining: pinned.cost - data.balance } : null}
           onCreate={state.add}
-          onSavePlan={(task, update) => personal.savePlan(task.id, { ...update })}
+          onSavePlan={(id, update) => personal.savePlan(id, { ...update })} onRemove={personal.remove}
           onClose={() => setSheet(null)} />
         {view && <CloseDaySheet open={closing} view={view} rules={rules} minutes={data?.progress ?? {}} busy={saving} insightFor={insight}
           onCancel={task => state.settle(task.id, 'cancelled', true)}

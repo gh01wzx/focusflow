@@ -8,10 +8,11 @@ interface RepeatingTasksProps {
   rules: RecurrenceRule[];
   habits?: boolean;
   busy: boolean;
+  onEdit(rule: RecurrenceRule): void;
   onStop(id: string): Promise<void>;
 }
 
-export function RepeatingTasks({ rules, habits, busy, onStop }: RepeatingTasksProps) {
+export function RepeatingTasks({ rules, habits, busy, onEdit, onStop }: RepeatingTasksProps) {
   // Stopping cancels every future occurrence and cannot be undone, so it takes a second click.
   const [confirming, setConfirming] = useState<string | null>(null);
   if (rules.length === 0) return null;
@@ -30,6 +31,8 @@ export function RepeatingTasks({ rules, habits, busy, onStop }: RepeatingTasksPr
                   : WEEKDAYS.filter(day => rule.weekdays!.includes(day.value)).map(day => t(day.label)).join(', ')}
               </div>}
             </div>
+            <button type="button" className="text-button" disabled={busy} aria-label={t("Edit plan for {0}", rule.title)}
+              onClick={() => onEdit(rule)}>{t("Edit plan")}</button>
             {confirming === rule.id ? <div className="confirm-actions" role="group" aria-label={t("Stop repeating {0}?", rule.title)}>
               <span>{t("Stop all future repeats?")}</span>
               <button className="danger-button" disabled={busy} aria-label={t("Confirm stop repeating {0}", rule.title)}

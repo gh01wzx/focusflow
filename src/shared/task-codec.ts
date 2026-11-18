@@ -26,6 +26,7 @@ function task(value: unknown): value is Task {
     : typeof value.recurrenceId === 'string' && frequency(value.frequency);
   return typeof value.id === 'string' && typeof value.title === 'string'
     && (value.category === undefined || value.category === 'task' || value.category === 'habit' && value.recurrenceId !== null)
+    && (value.periodFrequency == null || frequency(value.periodFrequency))
     && validDate(value.plannedDate) && status(value.status) && timestamp(value.createdAt)
     && (value.status === 'pending' ? value.resolvedAt === null : timestamp(value.resolvedAt))
     && (value.status !== 'missed' || value.recurrenceId !== null) && validRecurrence;

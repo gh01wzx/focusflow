@@ -1,5 +1,5 @@
 import { localDay, nextOccurrence, validDate } from '../shared/calendar.ts';
-import { firstSelectedDate, nextScheduledDate, periodEnd } from '../shared/weekdays.ts';
+import { firstSelectedDate, nextScheduledDate, occurrenceEnd } from '../shared/weekdays.ts';
 import { FOCUS_LIMIT, HISTORY_LIMIT } from '../shared/tasks.ts';
 import type { RecurrenceRule, Task } from '../shared/tasks.ts';
 import type { TaskRepository } from './repository.ts';
@@ -110,7 +110,7 @@ export function createTaskService(repository: TaskRepository, transaction: TaskT
       if (task.recurrenceId !== null) {
         const today = localDay(now);
         const rule = repository.findRule(task.recurrenceId);
-        const end = rule ? periodEnd(task.plannedDate, rule.frequency, rule.weekdays) : today;
+        const end = rule ? occurrenceEnd(task, rule) : today;
         if (!rule || (end !== null && end <= today) || (rule.stoppedAt !== null && task.plannedDate > today)) {
           throw new TaskInputError('Only the current occurrence of a repeating task can be reopened.');
         }

@@ -1,5 +1,5 @@
 import type { Task, TaskView } from '../../src/shared/tasks.ts';
-import { periodEnd } from '../../src/shared/weekdays.ts';
+import { occurrenceEnd } from '../../src/shared/weekdays.ts';
 
 export type Tab = 'due' | 'upcoming' | 'history';
 // Mirrors the server rule: a repeating occurrence can be reopened only during its period.
@@ -8,7 +8,7 @@ export function canReopen(task: Task, view: TaskView): boolean {
   if (!task.recurrenceId) return true;
   const rule = view.recurrences.find(item => item.id === task.recurrenceId);
   if (!rule) return false;
-  const end = periodEnd(task.plannedDate, rule.frequency, rule.weekdays);
+  const end = occurrenceEnd(task, rule);
   return end === null || end > view.today;
 }
 export const labels: Record<Tab, string> = { due: 'Today', upcoming: 'Upcoming', history: 'History' };

@@ -16,8 +16,8 @@ function storedRule(value: unknown): RecurrenceRule {
 // SQL and row decoding stay here. Business rules belong to the service.
 export function createTaskRepository(db: DatabaseSync) {
   const taskColumns = `SELECT t.id,t.title,t.planned_date AS plannedDate,t.status,t.created_at AS createdAt,
-    t.resolved_at AS resolvedAt,t.recurrence_id AS recurrenceId,r.frequency, COALESCE(r.category, 'task') AS category
-    FROM tasks t LEFT JOIN recurrence_rules r ON r.id=t.recurrence_id`;
+    t.resolved_at AS resolvedAt,t.recurrence_id AS recurrenceId,COALESCE(x.frequency,r.frequency) AS frequency,x.period_frequency AS periodFrequency, COALESCE(r.category, 'task') AS category
+    FROM visible_tasks t LEFT JOIN task_exceptions x ON x.task_id=t.id LEFT JOIN recurrence_rules r ON r.id=t.recurrence_id`;
   const ruleColumns = `SELECT id,title,category,frequency,start_date AS startDate,next_date AS nextDate,
     created_at AS createdAt,stopped_at AS stoppedAt,weekdays_mask AS weekdaysMask FROM recurrence_rules`;
 
@@ -25,13 +25,13 @@ export function createTaskRepository(db: DatabaseSync) {
   const recentHistory = db.prepare(taskColumns
     + " WHERE t.status!='pending' ORDER BY t.resolved_at DESC,t.planned_date DESC,t.id DESC LIMIT ?");
   const taskById = db.prepare(taskColumns + ' WHERE t.id=?');
-  const ruleById = db.prepare(ruleColumns + ' WHERE id=?');
+  const ruleById = db.prepare(ruleColumns + ' WHERE id=? AND removed=0');
   const activeRules = db.prepare(ruleColumns + ' WHERE stopped_at IS NULL ORDER BY created_at,id');
   const dueRules = db.prepare(ruleColumns + ' WHERE stopped_at IS NULL AND next_date<=?');
   const pendingOccurrenceSql = taskColumns + " WHERE t.status='pending' AND t.recurrence_id IS NOT NULL";
   const pendingOccurrences = db.prepare(pendingOccurrenceSql);
   const pastPendingOccurrences = db.prepare(pendingOccurrenceSql + ' AND t.planned_date<?');
-  const insertTask = db.prepare('INSERT INTO tasks(id,title,planned_date,status,created_at,resolved_at,recurrence_id) VALUES(?,?,?,?,?,?,?)');
+  const insertTask = db.prepare('INSERT INTO tasks(id,title,planned_date,status,created_at,resolved_at,recurrence_id) VALUES(?,?,?,?,?,?,?) ON CONFLICT(recurrence_id,planned_date) DO NOTHING');
   const insertRule = db.prepare('INSERT INTO recurrence_rules(id,title,frequency,start_date,next_date,created_at,stopped_at,weekdays_mask,category) VALUES(?,?,?,?,?,?,?,?,?)');
   const expire = db.prepare("UPDATE tasks SET status='missed',resolved_at=? WHERE id=?");
   const advance = db.prepare('UPDATE recurrence_rules SET next_date=? WHERE id=?');
@@ -71,6 +71,34 @@ export function createTaskRepository(db: DatabaseSync) {
     },
     insertTask(task: Task) {
       insertTask.run(task.id, task.title, task.plannedDate, task.status, task.createdAt, task.resolvedAt, task.recurrenceId);
+    },
+    removeOccurrence(id: string) {
+      db.prepare('DELETE FROM day_focus WHERE task_id=?').run(id);
+      db.prepare('INSERT INTO task_exceptions(task_id,removed) VALUES(?,1) ON CONFLICT(task_id) DO UPDATE SET removed=1').run(id);
+    },
+    removePlan(id: string, at: string) {
+      db.prepare('UPDATE recurrence_rules SET stopped_at=COALESCE(stopped_at,?),removed=1 WHERE id=?').run(at, id);
+      db.prepare(`INSERT INTO task_exceptions(task_id,removed)
+        SELECT id,1 FROM tasks WHERE recurrence_id=? AND status='pending'
+        ON CONFLICT(task_id) DO UPDATE SET removed=1`).run(id);
+    },
+    prepareScheduleEdit(rule: RecurrenceRule) {
+      // Unstarted occurrences can be regenerated. Preserve any occurrence with recorded activity.
+      db.prepare(`DELETE FROM tasks WHERE recurrence_id=? AND status='pending'
+        AND NOT EXISTS(SELECT 1 FROM personal_entries p WHERE p.subject=tasks.id)
+        AND NOT EXISTS(SELECT 1 FROM task_exceptions x WHERE x.task_id=tasks.id AND x.removed=1)`).run(rule.id);
+      db.prepare(`INSERT INTO task_exceptions(task_id,frequency,period_frequency)
+        SELECT id,?,? FROM tasks WHERE recurrence_id=?
+        ON CONFLICT(task_id) DO UPDATE SET frequency=excluded.frequency,period_frequency=excluded.period_frequency
+        WHERE task_exceptions.frequency IS NULL`).run(rule.frequency, rule.weekdays === null ? rule.frequency : 'daily', rule.id);
+    },
+    hasOccurrence(id: string, day: string) {
+      return !!db.prepare('SELECT 1 FROM tasks WHERE recurrence_id=? AND planned_date=?').get(id, day);
+    },
+    updateSchedule(rule: RecurrenceRule) {
+      const mask = rule.weekdays?.reduce<number>((bits, day) => bits | (1 << day), 0) ?? null;
+      db.prepare('UPDATE recurrence_rules SET frequency=?,weekdays_mask=?,next_date=? WHERE id=?')
+        .run(rule.frequency, mask, rule.nextDate, rule.id);
     },
     setCategory(id: string, category: 'task' | 'habit') {
       db.prepare('UPDATE recurrence_rules SET category=? WHERE id=?').run(category, id);

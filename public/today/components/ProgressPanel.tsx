@@ -65,7 +65,7 @@ export function ProgressPanel({ state, habits, tasks, onOpenRewards, onCloseDay,
       {pinned && <div className="reward-progress">
         <span className="reward-name">{pinned.title}</span>
         <span className="meter"><motion.span initial={false} animate={{ scaleX: Math.min(1, Math.max(0, data.balance) / pinned.cost) }} transition={spring} /></span>
-        <small>{data.balance >= pinned.cost ? t('Ready to redeem') : points(pinned.cost - data.balance) + t(' points to go')}</small>
+        <small>{data.balance >= pinned.cost ? t('Ready to redeem') : t('{0} points to go', points(pinned.cost - data.balance))}</small>
       </div>}
     </div>
     <div className="panel-actions">

@@ -130,5 +130,3 @@ export function useTodayController() {
     },
   };
 }
-
-export type TodayController = ReturnType<typeof useTodayController>;

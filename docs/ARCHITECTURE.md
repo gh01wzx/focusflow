@@ -6,10 +6,10 @@ FocusFlow runs a React renderer, a loopback HTTP service and SQLite on the same 
 
 | Area | Entry points |
 | --- | --- |
-| Desktop and startup readiness | [Desktop entry](../src/desktop/main.ts), [profile selection](../src/runtime/profile.ts), [startup checks](../src/runtime/startup.ts) |
+| Desktop and startup readiness | [Desktop entry](../src/desktop/main.ts), [tray](../src/desktop/tray.ts), [profile selection](../src/runtime/profile.ts), [startup checks](../src/runtime/startup.ts) |
 | UI | [Workspace shell](../public/workspace/WorkspaceShell.tsx), [Personal](../public/today/TodayApp.tsx), [Projects](../public/projects/ProjectsApp.tsx) |
 | Requests and composition | [Client modules](../src/client), [HTTP checks](../src/http/request.ts), [workspace service](../src/workspace/server.ts), [store composition](../src/workspace/store.ts) |
-| Personal tasks, recurrence and points | [Tasks](../src/tasks), [calendar rules](../src/shared/calendar.ts) |
+| Personal tasks, recurrence and points | [Tasks](../src/tasks), [calendar rules](../src/shared/calendar.ts), [habit rules](../src/shared/habits.ts) |
 | Project state and planning | [Projects](../src/projects), [plans](../src/plans), [dependency rules](../src/shared/dependencies.ts) |
 | Coding, preview and review | [Execution](../src/execution), [Codex runtime](../src/codex), [provider adapters](../src/ai) |
 | GitHub and linked work | [GitHub](../src/github), [publication](../src/publication), [comparison](../src/sync) |
@@ -17,9 +17,9 @@ FocusFlow runs a React renderer, a loopback HTTP service and SQLite on the same 
 
 ## State and boundaries
 
-UI components own drafts and visual state. Controllers load, save and reconcile through local clients. The HTTP service checks request origin, input and scope before calling domain services. Services own business rules and use typed repositories for SQL. Workspace composition passes one transaction into operations that must commit together.
+UI components own drafts and visual state. A few Personal conveniences live only in the browser: the running timer, whether today was closed and the reviewed week ([local state](../public/today/local-state.ts)); saved tasks, logs and focus are the record. Controllers load, save and reconcile through local clients. The HTTP service checks request origin, input and scope before calling domain services. Services own business rules and use typed repositories for SQL. Workspace composition passes one transaction into operations that must commit together.
 
-The desktop confirms app readiness only after the renderer has loaded usable task data. A blank window or stalled startup has a bounded failure path. Shutdown stops transport and owned services and drains accepted handlers before closing SQLite. Everyday and review launches use separate directories. Fresh databases start without example tasks or planning drafts.
+The desktop confirms app readiness only after the renderer has loaded usable task data. Closing the window hides it to the tray or menu bar; Quit from the tray menu shuts the app down. Automated previews skip the tray and close normally. A blank window or stalled startup has a bounded failure path. Shutdown stops transport and owned services and drains accepted handlers before closing SQLite. Everyday and review launches use separate directories. Fresh databases start without example tasks or planning drafts.
 
 Each Personal scoring rule also stores its habit plan: cue, time, place, two-minute version, pairing and identity. Personal recurrence follows the local calendar. The store catches up missed periods before servicing task requests. Logging and points are transactional. Accumulated logs carry a minutes or count unit and their original rate. The legacy minutes quantity field stores either unit; an appended migration preserves existing minute logs. Repeated tasks and habits share this logging behavior, with separate category progress. History uses dated entries and original scoring rates, including when a duration log is corrected. Personal data never enters project or provider inputs.
 

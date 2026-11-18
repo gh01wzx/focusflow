@@ -14,7 +14,7 @@ const START_SECONDS = 120;
 const clock = (seconds: number) => Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
 
 interface NowProps {
-  // Today's timed habits still below their target, in Next order.
+  // Today's timed habits still below their target, ordered by planned time.
   items: Task[];
   due: Task[];
   rules: Map<string, ScoringRule>;

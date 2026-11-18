@@ -12,19 +12,16 @@ export function canReopen(task: Task, view: TaskView): boolean {
   return end === null || end > view.today;
 }
 export const labels: Record<Tab, string> = { due: 'Today', upcoming: 'Upcoming', history: 'History' };
-export const tabText: Record<Tab, { subtitle: string; emptyTitle: string; emptyDescription: string }> = {
+export const tabText: Record<Tab, { emptyTitle: string; emptyDescription: string }> = {
   due: {
-    subtitle: 'A clear view of what needs doing.',
     emptyTitle: "You're clear for today",
     emptyDescription: 'Choose New task or New habit to plan your day.',
   },
   upcoming: {
-    subtitle: 'Your plans for the days ahead.',
     emptyTitle: 'Nothing planned ahead',
     emptyDescription: 'Choose a future date when adding a task.',
   },
   history: {
-    subtitle: 'Completed, cancelled and missed tasks.',
     emptyTitle: 'Your history starts here',
     emptyDescription: 'Completed, cancelled and missed tasks will appear here.',
   },

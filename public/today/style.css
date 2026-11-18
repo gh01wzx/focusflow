@@ -187,6 +187,7 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: var(-
 /* Feedback */
 .feedback { min-height: 20px; margin: 8px 2px 0; color: var(--muted); font-size: 13px; }
 .feedback:empty { min-height: 0; }
+.feedback-row:not(:has(button)):has(.feedback:empty) { min-height: 0; margin: 0; }
 .feedback-row { display: flex; align-items: center; gap: 6px; min-height: 30px; margin-bottom: 4px; }
 .feedback-row .feedback { margin: 0 2px; }
 .error {
@@ -529,11 +530,6 @@ html[data-size="large"] { zoom: 1.125; }
 .consistency { padding: 1px 8px; border-radius: 999px; background: var(--green-soft); color: var(--green-text); font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* Today's focus */
-.focus-mark {
-  display: inline-flex; align-items: center; gap: 3px; margin-right: 8px; padding: 1px 8px 1px 6px; border-radius: 999px;
-  background: var(--orange-soft); color: var(--orange-text); vertical-align: 1px;
-}
-.focus-mark .icon { width: 12px; height: 12px; fill: currentColor; stroke-width: 1.4; }
 .icon-button.star.on { color: var(--orange); }
 .icon-button.star.on .icon { fill: currentColor; }
 .icon-button.star:disabled:not(.on) { opacity: .3; }

@@ -154,7 +154,7 @@ function CloseDayBody({ view, rules, minutes, busy, insightFor, onCancel, onMove
 
       <section className="sheet-group" aria-labelledby="close-focus">
         <h3 id="close-focus"><span className="law">3</span>{t("Tomorrow's focus")}<span className="focus-count">{t("{0} of {1}", focus.length, FOCUS_LIMIT)}</span></h3>
-        <p className="group-note">{t("Pick up to three that matter most. Tomorrow's Next card starts with them, so the morning needs no deciding.")}</p>
+        <p className="group-note">{t("Pick up to three that matter most. Tomorrow they wait at the top of Today, so the morning needs no deciding.")}</p>
         {choices.length === 0 ? <p className="group-note">{t("No one-off tasks are planned by tomorrow. Quick add can plan one.")}</p>
           : <div className="focus-choices" role="group" aria-label={t("Tomorrow's focus")}>
             {choices.map(task => {

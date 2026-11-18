@@ -72,17 +72,15 @@ export function todayProgress(view: TaskView, rules: Map<string, ScoringRule>, m
   };
 }
 
-// The order for "Next": planned times that have arrived first, then today's focus, then untimed
-// habits and tasks, then later planned times. A timed habit already started today moves to the
-// back, because showing up is what counts; one that met its target is finished for the day.
-export function nextUp(due: Task[], rules: Map<string, ScoringRule>, minutes: Record<string, number>, now: string,
-  focus: string[] = []): Task[] {
+// The order for the timer cards: planned times that have arrived first, then untimed habits and
+// tasks, then later planned times. A timed habit already started today moves to the back, because
+// showing up is what counts; one that met its target is finished for the day.
+export function nextUp(due: Task[], rules: Map<string, ScoringRule>, minutes: Record<string, number>, now: string): Task[] {
   const rank = (task: Task) => {
-    if ((minutes[task.id] ?? 0) > 0) return 5;
+    if ((minutes[task.id] ?? 0) > 0) return 4;
     const time = rules.get(task.recurrenceId ?? task.id)?.time ?? '';
     if (time && time <= now) return 0;
-    if (focus.includes(task.id)) return 1;
-    return !time ? (isHabit(task) ? 2 : 3) : 4;
+    return !time ? (isHabit(task) ? 1 : 2) : 3;
   };
   const time = (task: Task) => rules.get(task.recurrenceId ?? task.id)?.time ?? '';
   return due.map((task, index) => ({ task, index })).filter(({ task }) => {

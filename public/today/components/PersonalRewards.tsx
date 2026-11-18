@@ -60,7 +60,7 @@ export function RewardShop({ state }: { state: PersonalController }) {
         </div> : <div className="reward-actions">
           <button className="primary" disabled={state.busy || data.balance < item.cost || (item.onceOnly && item.used)}
             onClick={() => setRedeeming({ item, id: crypto.randomUUID() })}>
-            {item.onceOnly && item.used ? t('Redeemed') : data.balance < item.cost ? points(item.cost - data.balance) + ' points to go' : t('Redeem')}
+            {item.onceOnly && item.used ? t('Redeemed') : data.balance < item.cost ? t('{0} points to go', points(item.cost - data.balance)) : t('Redeem')}
           </button>
           <button className="quiet-button" disabled={state.busy} onClick={() => setEditing(item)}>{t("Edit")}</button>
           <button className="quiet-button" disabled={state.busy} onClick={() => void state.mutate('pin', {

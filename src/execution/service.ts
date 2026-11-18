@@ -232,4 +232,3 @@ export function createCodingService(repository:ExecutionRepository,projects:Proj
     async close(){closing=true;approvals.close();const owned=active;if(owned){owned.abort.abort();await owned.work;}},
   };
 }
-export type CodingService=ReturnType<typeof createCodingService>;

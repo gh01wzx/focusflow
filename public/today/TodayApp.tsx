@@ -50,7 +50,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const [othersOpen, setOthersOpen] = useState(false);
   // Upcoming and History show a page per group at first; Today always shows everything.
   const [limits, setLimits] = useState<Record<string, number>>({});
-  // A minute clock keeps "Next" in step with planned times.
+  // A minute clock keeps the timer cards in step with planned times.
   const [minute, setMinute] = useState(() => new Date().toTimeString().slice(0, 5));
   const saving = busy || personal.busy;
   const data = personal.data;
@@ -60,6 +60,16 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const completedToday = useMemo(() => view?.history.filter(task => task.status === 'completed' && task.resolvedAt
     && localDay(new Date(task.resolvedAt)) === view.today) ?? [], [view]);
   const progress = view ? todayProgress(view, rules, data?.progress ?? {}, completedToday) : null;
+  // Each habit's past occurrences, grouped once per view instead of scanning all history for every row.
+  const historyByHabit = useMemo(() => {
+    const groups = new Map<string, Task[]>();
+    for (const item of view?.history ?? []) {
+      if (!item.recurrenceId) continue;
+      const list = groups.get(item.recurrenceId);
+      if (list) list.push(item); else groups.set(item.recurrenceId, [item]);
+    }
+    return groups;
+  }, [view]);
   // Each habit finished today gets a quiet moment that grows as the day fills. Only increases
   // after the page has loaded count, so opening the app or undoing never celebrates.
   const [moment, setMoment] = useState<Moment | null>(null);
@@ -88,9 +98,8 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
     { key: 'tasks', title: tab === 'due' && focusOpen.length ? 'Other tasks' : 'Tasks', items: rows.filter(task => !isHabit(task) && (tab !== 'due' || !focusIds.includes(task.id))) },
   ];
   const text = tabText[tab];
-  const upNext = view && data ? nextUp(view.due, rules, data.progress, minute, focusIds) : [];
-  // The swipeable timer cards: today's timed habits still below their target, in Next order.
-  const timers = upNext.filter(task => { const rule = ruleFor(task); return rule?.mode === 'minutes' && rule.unit !== 'count'; });
+  // The swipeable timer cards: today's timed habits still below their target.
+  const timers = (view && data ? nextUp(view.due, rules, data.progress, minute) : []).filter(task => { const rule = ruleFor(task); return rule?.mode === 'minutes' && rule.unit !== 'count'; });
   const anchors = useMemo(() => [...new Set((data?.rules ?? []).map(rule => rule.cue).filter(Boolean))], [data]);
   const reviews = useMemo(() => view && data ? reviewHabits(view.today, view.recurrences, rules, data.recent) : [], [view, data, rules]);
   const week = today ? weekOf(today) : '';
@@ -149,7 +158,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
     setOthersOpen(true);
     void state.setFocus(today, next);
   }
-  // From Close the day: start the two-minute timer on the Next card.
+  // From Close the day: start the two-minute timer at the top of Today.
   function startNow(task: Task) {
     setClosing(false); setRewards(false); setTab('due');
     setTimer({ taskId: task.id, startedAt: Date.now() });
@@ -187,7 +196,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   function insight(task: Task) {
     const rule = ruleFor(task), minutes = data?.progress[task.id] ?? 0;
     const minutesByDay = data?.week.minutes[task.recurrenceId ?? ''] ?? {};
-    return habitInsight(task, view!.history, { done: rule?.mode === 'minutes' ? minutes >= rule.target : false, started: minutes > 0 },
+    return habitInsight(task, historyByHabit.get(task.recurrenceId ?? '') ?? [], { done: rule?.mode === 'minutes' ? minutes >= rule.target : false, started: minutes > 0 },
       day => (minutesByDay[day] ?? 0) > 0);
   }
   function row(task: Task) {
@@ -295,7 +304,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
                 </div>
                 {focus && focusOpen.length === 0 && <p className="group-note focus-done"><CheckIcon />{t("Focus done. Anything else today is a bonus.")}</p>}
                 {others && liveFocus.length === 0 && group.items.length > 1 && <p className="group-note">
-                  {t("Star up to {0} that matter most today. They move to the top and Next starts with them.", FOCUS_LIMIT)}</p>}
+                  {t("Star up to {0} that matter most today. They move to the top.", FOCUS_LIMIT)}</p>}
                 {!folded && group.items.length > 0 && <ul className="task-list">
                   <AnimatePresence initial={false} mode="popLayout">{group.items.slice(0, limit).map(row)}</AnimatePresence>
                 </ul>}

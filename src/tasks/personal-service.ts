@@ -158,7 +158,7 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
           if (!reward || reward.archived || (reward.onceOnly && reward.used)) throw new TaskInputError('This reward is unavailable.');
           if (value.cost !== reward.cost) throw new TaskInputError('The price changed. Refresh this reward first.');
           const balance = repository.totals(day).balance;
-          if (balance < reward.cost) throw new TaskInputError('You need ' + ((reward.cost - balance) / 100) + ' more points.');
+          if (balance < reward.cost) throw new TaskInputError('You need more points for this reward.');
           record(now, { id, kind: 'redeem', subject: reward.id, title: reward.title, minutes: 0,
             rate: reward.cost, amount: -reward.cost, reference: null });
         } else if (action === 'reverse' || action === 'edit') {

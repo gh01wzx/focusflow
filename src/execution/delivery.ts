@@ -176,4 +176,3 @@ export function createDeliveryService(repository:ExecutionRepository,projects:Pr
     publish:(id:string,input:unknown)=>owned(publish(id,input)),reconcile:(id:string)=>owned(reconcile(id)),
     async close(){closing=true;await Promise.allSettled([...pending]);}};
 }
-export type DeliveryService=ReturnType<typeof createDeliveryService>;

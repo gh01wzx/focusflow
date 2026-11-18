@@ -55,5 +55,6 @@ export interface TaskDraft {
   /** Legacy clients use this flag for minute tracking. */
   habit?: boolean;
   mode?: 'minutes' | 'complete';
+  unit?: 'minutes' | 'count';
   plan?: PlanDraft;
 }

@@ -64,9 +64,11 @@ export function todayProgress(view: TaskView, rules: Map<string, ScoringRule>, m
   }).length;
   const routinesDone = completedToday.filter(isHabit).length;
   const tasksDone = completedToday.filter(task => !isHabit(task)).length;
+  const countedTasksDone = view.due.filter(task => !isHabit(task) && rules.get(task.recurrenceId ?? task.id)?.mode === 'minutes'
+    && (minutes[task.id] ?? 0) >= rules.get(task.recurrenceId ?? task.id)!.target).length;
   return {
     habits: { done: timedDone + routinesDone, total: habitsDue.length + routinesDone },
-    tasks: { done: tasksDone, total: view.due.filter(task => !isHabit(task)).length + tasksDone },
+    tasks: { done: tasksDone + countedTasksDone, total: view.due.filter(task => !isHabit(task)).length + tasksDone },
   };
 }
 
@@ -146,13 +148,13 @@ export function reviewHabits(today: string, schedules: RecurrenceRule[], rules: 
     let suggestion: Suggestion;
     if (age < 7 || (!enough && age < 14)) suggestion = { kind: 'new' };
     else if (twoSteadyWeeks && age >= GRADUATE_DAYS) suggestion = { kind: 'graduate', days: age };
-    else if (twoSteadyWeeks && rule?.mode === 'minutes') {
+    else if (twoSteadyWeeks && rule?.mode === 'minutes' && rule.unit !== 'count') {
       // Growing needs the target met, not only showing up.
       const next = TARGET_STEPS.find(step => step > rule.target);
       suggestion = next && steady(tally(lastWeek, met)) && steady(tally(weekBefore, met)) ? { kind: 'grow', target: next } : { kind: 'steady' };
     } else if (twoSteadyWeeks) suggestion = started.length < HABIT_LIMIT ? { kind: 'stack' } : { kind: 'steady' };
     else if (week.total >= 3 && week.done / week.total < HARD) {
-      suggestion = { kind: 'ease', target: rule?.mode === 'minutes' ? TARGET_STEPS.findLast(step => step < rule.target) ?? null : null };
+      suggestion = { kind: 'ease', target: rule?.mode === 'minutes' && rule.unit !== 'count' ? TARGET_STEPS.findLast(step => step < rule.target) ?? null : null };
     } else suggestion = { kind: 'keep' };
     return { id: schedule.id, title: schedule.title, identity: rule?.identity ?? '', marks: held(lastWeek), week, before, suggestion };
   });

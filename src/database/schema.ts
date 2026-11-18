@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 25;
+export const SCHEMA_VERSION = 26;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -223,4 +223,6 @@ export const MIGRATIONS = [
   CREATE VIEW visible_tasks AS SELECT t.* FROM tasks t WHERE NOT EXISTS
     (SELECT 1 FROM task_exceptions x WHERE x.task_id=t.id AND x.removed=1);` },
   { version: 25, sql: 'ALTER TABLE recurrence_rules ADD COLUMN removed INTEGER NOT NULL DEFAULT 0 CHECK(removed IN (0,1));' },
+  { version: 26, sql: `ALTER TABLE personal_scoring ADD COLUMN unit TEXT NOT NULL DEFAULT 'minutes' CHECK(unit IN ('minutes','count'));
+    ALTER TABLE personal_entries ADD COLUMN unit TEXT NOT NULL DEFAULT 'minutes' CHECK(unit IN ('minutes','count'));` },
 ] as const;

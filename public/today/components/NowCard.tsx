@@ -14,7 +14,7 @@ const START_SECONDS = 120;
 const clock = (seconds: number) => Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
 
 interface NowProps {
-  // Today's timed habits, in Next order.
+  // Today's timed habits still below their target, in Next order.
   items: Task[];
   due: Task[];
   rules: Map<string, ScoringRule>;
@@ -41,7 +41,7 @@ export function NowCard(props: NowProps) {
   return <TimerCarousel {...props} />;
 }
 
-function TimerCarousel({ items, rules, progress, busy, onTimer, onLog }: NowProps) {
+function TimerCarousel({ items, rules, progress, busy, onTimer }: NowProps) {
   const track = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; left: number } | null>(null);
   const [index, setIndex] = useState(0);
@@ -96,9 +96,6 @@ function TimerCarousel({ items, rules, progress, busy, onTimer, onLog }: NowProp
               <button className="primary now-start" disabled={busy} tabIndex={focusable}
                 aria-label={t("Start two minutes on {0}", task.title)} onClick={() => onTimer({ taskId: task.id, startedAt: Date.now() })}>
                 <PlayIcon />{t("Start 2 minutes")}</button>
-              {rule && <button className="secondary-button" disabled={busy} tabIndex={focusable}
-                aria-label={t('Log {0} min for {1}', rule.target, task.title)} onClick={() => void onLog(task, rule.target)}>
-                {t('Log {0} min', rule.target)}</button>}
             </div>
           </div>
         </article>;

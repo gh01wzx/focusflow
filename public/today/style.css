@@ -371,7 +371,18 @@ html[data-size="large"] { zoom: 1.125; }
 .reward-progress small { color: var(--muted); font-size: 12px; }
 .reward-progress .meter { grid-column: 1 / -1; order: 3; }
 .reward-progress .meter > span { background: linear-gradient(90deg, #ffb340, #ff8a00); }
-.panel-actions { grid-area: actions; display: flex; flex-wrap: wrap; gap: 8px; }
+.panel-actions {
+  grid-area: actions; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
+  padding-top: 14px; border-top: 1px solid var(--separator);
+}
+/* Three even tiles: an icon over a short label, so the row stays balanced in any language. */
+.panel-action {
+  display: grid; justify-items: center; align-content: center; gap: 4px; min-height: 58px; padding: 8px 4px;
+  border: 0; border-radius: 12px; background: var(--accent-soft); color: var(--accent-text);
+  font-size: 12.5px; font-weight: 600; line-height: 1.2; text-align: center;
+}
+.panel-action:hover:not(:disabled) { background: rgba(88, 86, 214, .18); }
+.panel-action .icon { width: 18px; height: 18px; }
 
 /* Task window */
 .sheet {

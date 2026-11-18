@@ -4,6 +4,7 @@ import { points } from '../../../src/shared/personal.ts';
 import type { Progress } from '../../../src/shared/habits.ts';
 import type { PersonalController } from '../usePersonal.ts';
 import { AnimatedNumber, spring } from './Animated.tsx';
+import { MoonIcon, SparkIcon, StarIcon } from './Icons.tsx';
 
 const ratio = (progress: Progress) => progress.total ? Math.min(1, progress.done / progress.total) : 0;
 const narrowDay = (day: string) => new Intl.DateTimeFormat(document.documentElement.lang, { weekday: 'narrow', timeZone: 'UTC' }).format(new Date(day + 'T12:00:00Z'));
@@ -68,9 +69,9 @@ export function ProgressPanel({ state, habits, tasks, onOpenRewards, onCloseDay,
       </div>}
     </div>
     <div className="panel-actions">
-      <button className="quiet-button" disabled={state.busy} onClick={onCloseDay}>{t("Close the day")}</button>
-      <button className="quiet-button" disabled={state.busy} onClick={onReview}>{t("Weekly review")}</button>
-      <button className="quiet-button" disabled={state.busy} onClick={onOpenRewards}>{t("Open rewards")}</button>
+      <button className="panel-action" disabled={state.busy} onClick={onCloseDay}><MoonIcon />{t("Close the day")}</button>
+      <button className="panel-action" disabled={state.busy} onClick={onReview}><SparkIcon />{t("Weekly review")}</button>
+      <button className="panel-action" disabled={state.busy} onClick={onOpenRewards}><StarIcon />{t("Open rewards")}</button>
     </div>
   </aside>;
 }

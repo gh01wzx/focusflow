@@ -74,9 +74,8 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   ];
   const text = tabText[tab];
   const upNext = view && data ? nextUp(view.due, rules, data.progress, minute, focusIds) : [];
-  // The swipeable timer cards: today's timed habits, in Next order, then those already met.
-  const timedHabit = (task: Task) => { const rule = ruleFor(task); return rule?.mode === 'minutes' && rule.unit !== 'count'; };
-  const timers = [...upNext.filter(timedHabit), ...due.filter(task => timedHabit(task) && !upNext.includes(task))];
+  // The swipeable timer cards: today's timed habits still below their target, in Next order.
+  const timers = upNext.filter(task => { const rule = ruleFor(task); return rule?.mode === 'minutes' && rule.unit !== 'count'; });
   const anchors = useMemo(() => [...new Set((data?.rules ?? []).map(rule => rule.cue).filter(Boolean))], [data]);
   const reviews = useMemo(() => view && data ? reviewHabits(view.today, view.recurrences, rules, data.recent) : [], [view, data, rules]);
   const week = today ? weekOf(today) : '';

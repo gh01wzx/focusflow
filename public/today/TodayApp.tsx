@@ -261,7 +261,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
                 {t(message) || (!view && !error ? t('Loading your tasks.') : '')}
               </p>
               {undo && view?.history.some(task => task.id === undo.id && canReopen(task, view)) && <button className="text-button" disabled={saving} onClick={() => void state.reopen(undo.id)}
-                aria-label={t("Undo {0} {1}", undo.status === 'completed' ? 'completing' : 'resting or cancelling', undo.title)}>{t("Undo")}</button>}
+                aria-label={t(undo.status === 'completed' ? "Undo completing {0}" : "Undo resting or cancelling {0}", undo.title)}>{t("Undo")}</button>}
             </div>
             {/* Groups move as one when the content above them changes, so their rows never slide on their own. */}
             {view && groups.map(group => {
@@ -273,21 +273,21 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
                 className={`list-group glass ${focus ? 'focus-group' : ''}`} aria-label={t(group.title)} aria-busy={saving}>
                 <div className="group-heading">
                   <h2>{t(group.title)}{!focus && <span className="count">{group.items.length}</span>}</h2>
-                  {focus && <span className="focus-progress">{focusDone} {t("of")} {liveFocus.length} {t("done")}</span>}
-                  {late > 0 && <span className="overdue-count">{late} {t("overdue")}</span>}
+                  {focus && <span className="focus-progress">{t("{0} of {1} done", focusDone, liveFocus.length)}</span>}
+                  {late > 0 && <span className="overdue-count">{t("{0} overdue", late)}</span>}
                   {others && focusOpen.length > 0 && <button className="text-button fold-button" aria-expanded={!folded}
                     onClick={() => setOthersOpen(folded)}>{folded ? t('Show') : t('Hide')}</button>}
                 </div>
                 {focus && focusOpen.length === 0 && <p className="group-note focus-done"><CheckIcon />{t("Focus done. Anything else today is a bonus.")}</p>}
                 {others && liveFocus.length === 0 && group.items.length > 1 && <p className="group-note">
-                  {t("Star up to")} {FOCUS_LIMIT} {t("that matter most today. They move to the top and Next starts with them.")}</p>}
+                  {t("Star up to {0} that matter most today. They move to the top and Next starts with them.", FOCUS_LIMIT)}</p>}
                 {!folded && group.items.length > 0 && <ul className="task-list">
                   <AnimatePresence initial={false} mode="popLayout">{group.items.map(row)}</AnimatePresence>
                 </ul>}
               </motion.section>;
             })}
             {tab === 'history' && rows.length >= HISTORY_LIMIT && <p className="list-note">
-              {t("Showing the latest")} {HISTORY_LIMIT} {t("entries. Older history stays saved on this computer.")}</p>}
+              {t("Showing the latest {0} entries. Older history stays saved on this computer.", HISTORY_LIMIT)}</p>}
             {view && rows.length === 0 && (
               <div className="empty glass">
                 <span className="empty-icon"><CheckIcon /></span>

@@ -153,7 +153,7 @@ function CloseDayBody({ view, rules, minutes, busy, insightFor, onCancel, onMove
       </section>
 
       <section className="sheet-group" aria-labelledby="close-focus">
-        <h3 id="close-focus"><span className="law">3</span>{t("Tomorrow's focus")}<span className="focus-count">{focus.length} {t("of")} {FOCUS_LIMIT}</span></h3>
+        <h3 id="close-focus"><span className="law">3</span>{t("Tomorrow's focus")}<span className="focus-count">{t("{0} of {1}", focus.length, FOCUS_LIMIT)}</span></h3>
         <p className="group-note">{t("Pick up to three that matter most. Tomorrow's Next card starts with them, so the morning needs no deciding.")}</p>
         {choices.length === 0 ? <p className="group-note">{t("No one-off tasks are planned by tomorrow. Quick add can plan one.")}</p>
           : <div className="focus-choices" role="group" aria-label={t("Tomorrow's focus")}>
@@ -171,7 +171,7 @@ function CloseDayBody({ view, rules, minutes, busy, insightFor, onCancel, onMove
       <section className="sheet-preview" aria-label={t("Set up tomorrow")}>
         <p className="preview-title">{t("Set up tomorrow")}</p>
         {first ? <>
-          <p>{t("First up:")} {first.title} {t("at")} {first.plan!.time}{first.plan!.place ? ' · ' + first.plan!.place : ''}.</p>
+          <p>{t("First up: {0} at {1}", first.title, first.plan!.time)}{first.plan!.place ? ' · ' + first.plan!.place : ''}.</p>
           <p>{first.plan!.starter ? t('Get ready now for the two-minute start: ') + first.plan!.starter.replace(/[.!?]+$/, '') + '.'
             : t('Put what you need for it where you will see it.')}</p>
         </> : <p>{t("Put what you need for tomorrow's first step where you will see it in the morning.")}</p>}

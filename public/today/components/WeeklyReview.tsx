@@ -110,20 +110,20 @@ function ReviewBody({ today, reviews, votes, busy, onTarget, onGraduate, onEditP
     <header className="sheet-header">
       <div>
         <h2 id="review-title">{t("Weekly review")}</h2>
-        <p className="step-label">{shortDate(addDays(today, -7))} {t("to")} {shortDate(addDays(today, -1))}{t(". A minute to tune the week ahead.")}</p>
+        <p className="step-label">{t("{0} to {1}. A minute to tune the week ahead.", shortDate(addDays(today, -7)), shortDate(addDays(today, -1)))}</p>
       </div>
       <button type="button" className="icon-button" aria-label={t("Close")} disabled={busy} onClick={onClose}><CloseIcon /></button>
     </header>
     <div className="sheet-body">
       <section className="sheet-preview review-summary" aria-label={t("Last seven days")}>
         <p className="preview-title">{total ? t("You showed up {0} of {1} times.", shown, total) : t('No habit was scheduled in the last seven days.')}</p>
-        {total > 0 && earlier > 0 && change !== 0 && <p>{Math.abs(change)} {change > 0 ? 'more' : 'fewer'} {t("than the week before.")}</p>}
+        {total > 0 && earlier > 0 && change !== 0 && <p>{t(change > 0 ? "{0} more than the week before." : "{0} fewer than the week before.", Math.abs(change))}</p>}
         {identities.length > 0 && <ul className="vote-chips" aria-label={t("Identity votes")}>
           {identities.map(item => <li key={item.key}><strong>{item.label}</strong>
             {' · ' + item.week + t(' this week · ') + item.total + ' in all'}</li>)}
         </ul>}
       </section>
-      {reviews.length > HABIT_LIMIT && <p className="soft-note">{t("You are building")} {reviews.length} {t("habits at once. Habits stick better a few at a time; graduate or stop one when you are ready.")}</p>}
+      {reviews.length > HABIT_LIMIT && <p className="soft-note">{t("You are building {0} habits at once. Habits stick better a few at a time; graduate or stop one when you are ready.", reviews.length)}</p>}
 
       <section className="sheet-group" aria-labelledby="review-habits">
         <h3 id="review-habits">{t("Your habits")}</h3>
@@ -151,7 +151,7 @@ function ReviewBody({ today, reviews, votes, busy, onTarget, onGraduate, onEditP
                 {(suggestion.kind === 'grow' || suggestion.kind === 'ease') && suggestion.target !== null && <button className="primary" disabled={busy}
                   aria-label={t("Change {0} to {1} minutes a day", review.title, suggestion.target)}
                   onClick={() => void save(review, onTarget(review, suggestion.target!), t("Now {0} min a day.", suggestion.target!))}>
-                  {t("Make it")} {suggestion.target} {t("min")}</button>}
+                  {t("Make it {0} min", suggestion.target!)}</button>}
                 {suggestion.kind === 'ease' && <button className="secondary-button" disabled={busy} aria-label={t("Edit plan for {0}", review.title)}
                   onClick={() => onEditPlan(review)}><PencilIcon />{t("Edit plan")}</button>}
                 {suggestion.kind === 'stack' && <button className="primary" disabled={busy} aria-label={t("Stack a new habit after {0}", review.title)}

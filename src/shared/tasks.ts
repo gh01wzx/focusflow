@@ -46,6 +46,9 @@ export type TaskResolution = 'completed' | 'cancelled';
 export const HISTORY_LIMIT = 200;
 // A day's focus is a short list on purpose: picking at most three keeps the choice easy.
 export const FOCUS_LIMIT = 3;
+// A changed schedule can start at most this many days ahead. Until then the old schedule keeps
+// running, so its remaining occurrences are created at once and appear in Upcoming.
+export const SCHEDULE_LEAD_DAYS = 28;
 export interface TaskDraft {
   category?: ActivityCategory;
   title: string;

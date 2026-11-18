@@ -82,11 +82,15 @@ export function createTaskRepository(db: DatabaseSync) {
         SELECT id,1 FROM tasks WHERE recurrence_id=? AND status='pending'
         ON CONFLICT(task_id) DO UPDATE SET removed=1`).run(id);
     },
-    prepareScheduleEdit(rule: RecurrenceRule) {
-      // Unstarted occurrences can be regenerated. Preserve any occurrence with recorded activity.
-      db.prepare(`DELETE FROM tasks WHERE recurrence_id=? AND status='pending'
+    // Unstarted occurrences planned from this date can be regenerated. Preserve any occurrence with
+    // recorded activity, and every occurrence before the date, which keeps the old schedule.
+    clearUnstarted(ruleId: string, from: string) {
+      db.prepare(`DELETE FROM tasks WHERE recurrence_id=? AND status='pending' AND planned_date>=?
         AND NOT EXISTS(SELECT 1 FROM personal_entries p WHERE p.subject=tasks.id)
-        AND NOT EXISTS(SELECT 1 FROM task_exceptions x WHERE x.task_id=tasks.id AND x.removed=1)`).run(rule.id);
+        AND NOT EXISTS(SELECT 1 FROM task_exceptions x WHERE x.task_id=tasks.id AND x.removed=1)`).run(ruleId, from);
+    },
+    // Existing occurrences keep the frequency and period they were created with.
+    keepScheduleOfExisting(rule: RecurrenceRule) {
       db.prepare(`INSERT INTO task_exceptions(task_id,frequency,period_frequency)
         SELECT id,?,? FROM tasks WHERE recurrence_id=?
         ON CONFLICT(task_id) DO UPDATE SET frequency=excluded.frequency,period_frequency=excluded.period_frequency

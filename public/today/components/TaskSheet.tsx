@@ -1,4 +1,5 @@
-import { isHabit } from '../../../src/shared/tasks.ts';
+import { isHabit, SCHEDULE_LEAD_DAYS } from '../../../src/shared/tasks.ts';
+import { addDays } from '../../../src/shared/calendar.ts';
 import { t } from '../../workspace/locale.ts';
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
@@ -102,7 +103,11 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
   const category = kind === 'checkoff' ? 'habit' : 'task';
   const [unit, setUnit] = useState<'minutes' | 'count'>(rule?.mode === 'minutes' ? rule.unit ?? 'minutes' : 'count');
   const repeating = kind !== 'once';
-  const pointsText = repeating ? minutePoints : donePoints;
+  // Plans made before counts existed are checked off once per occurrence. Editing keeps that,
+  // so saving a cue or time never changes how the habit is recorded.
+  const checkOff = !!series && rule?.mode === 'complete';
+  const counted = repeating && !checkOff;
+  const pointsText = counted ? minutePoints : donePoints;
   const field = (key: keyof HabitPlan) => (event: ChangeEvent<HTMLInputElement>) =>
     setPlan(current => ({ ...current, [key]: event.target.value }));
   const [legacyWeekly, setLegacyWeekly] = useState(series?.frequency === 'weekly' && series.weekdays === null);
@@ -129,10 +134,10 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
     // Fields hidden for the chosen kind are saved empty.
     const shown: HabitPlan = category === 'habit' ? plan : { ...emptyPlan, time: plan.time, place: plan.place };
     const rate = Math.round(Number(pointsText) * 100);
-    const minutes = repeating ? Number(target) : 0;
+    const minutes = counted ? Number(target) : 0;
     const failure = editing
       ? await onSavePlan(series?.id ?? task!.id, { ...shown, category,
-          ...(changedSchedule ? { schedule: { date, frequency, weekdays: days, previous: JSON.stringify([series.frequency, series.weekdays, series.nextDate]) } } : {}), mode: repeating ? 'minutes' : 'complete', unit, rate, target: minutes })
+          ...(changedSchedule ? { schedule: { date, frequency, weekdays: days, previous: JSON.stringify([series.frequency, series.weekdays, series.nextDate]) } } : {}), mode: counted ? 'minutes' : 'complete', unit, rate, target: minutes })
       : await onCreate({ category, title, plannedDate: date, frequency: repeating ? frequency : 'none', mode: repeating ? 'minutes' : 'complete', unit,
         ...(repeating && frequency === 'weekly' ? { weekdays } : {}), plan: { ...shown, rate, target: minutes } });
     setSaving(false);
@@ -145,7 +150,7 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
       : frequency === 'daily' ? t('Daily from ') + formattedDate
         : legacyWeekly ? t('Every 7 days from the first date (existing schedule)') + ' ' + formattedDate
         : (weekdays.length ? WEEKDAYS.filter(day => weekdays.includes(day.value)).map(day => t(day.label)).join(', ') : t('Choose weekdays')) + t(' from ') + formattedDate;
-  const scoreText = repeating ? points(Math.round(Number(minutePoints) * 100)) + t(unit === 'count' ? ' pt/count' : ' pt/min') : '+' + points(Math.round(Number(donePoints) * 100)) + t(' points');
+  const scoreText = counted ? points(Math.round(Number(minutePoints) * 100)) + t(unit === 'count' ? ' pt/count' : ' pt/min') : '+' + points(Math.round(Number(donePoints) * 100)) + t(' points');
   const choices = [...new Set([...anchors, ...['wake up', 'pour my morning coffee', 'sit down at my desk', 'finish lunch',
     'get home', 'finish dinner', 'get into bed'].map(item => t(item))].map(item => item.trim()).filter(Boolean))].slice(0, 8);
   const easy = <section className="sheet-group" aria-labelledby="law-easy">
@@ -160,7 +165,7 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
     <header className="sheet-header">
       <div>
         <h2 id="sheet-title">{editing ? t('Edit plan') : category === 'habit' ? t('New habit') : t('New task')}</h2>
-        {guided && <p className="step-label" aria-live="polite">{t("Step")} {step + 1} {t("of")} {steps.length} &middot; {t(steps[step] ?? '')}</p>}
+        {guided && <p className="step-label" aria-live="polite">{t("Step {0} of {1}", step + 1, steps.length)} &middot; {t(steps[step] ?? '')}</p>}
       </div>
       <button type="button" className="icon-button" aria-label={t("Close")} disabled={saving} onClick={onClose}><CloseIcon /></button>
     </header>
@@ -192,7 +197,8 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
           <div className="field-row">
             <label htmlFor="sheet-date">{series ? t('Schedule from') : repeating ? t('Start date') : t('Planned date')}</label>
             <input id="sheet-date" aria-label={t(series ? "Schedule from" : "Planned date")} type="date" value={date} required disabled={saving}
-              min={repeating ? today : undefined} onChange={event => setDate(event.target.value)} />
+              min={repeating ? today : undefined} max={series ? addDays(today, SCHEDULE_LEAD_DAYS) : undefined}
+              onChange={event => setDate(event.target.value)} />
           </div>}
           {repeating && <div className="field-row">
             <label htmlFor="sheet-repeat">{t("Repeat")}</label>
@@ -203,8 +209,9 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
             </select>
           </div>}
           {repeating && frequency === 'weekly' && !legacyWeekly && <WeekdayPicker selected={weekdays} disabled={saving} onChange={setWeekdays} />}
-          {series && <p className="group-note">{t("Changes apply to unstarted occurrences. Recorded activity keeps its original dates.")}</p>}
-          {repeating && <div className="field-pair">
+          {series && <p className="group-note">{t("The new schedule starts on this date, up to four weeks ahead. Until then the current schedule continues. Recorded activity keeps its original dates.")}</p>}
+          {checkOff && <p className="group-note">{t("Checked off once each time it comes up. This plan keeps that way of recording.")}</p>}
+          {counted && <div className="field-pair">
             <label className="field">{t("Record by")}<select value={unit} disabled={saving}
               onChange={event => setUnit(event.target.value as 'minutes' | 'count')}>
               <option value="count">{t("Counts")}</option><option value="minutes">{t("Minutes")}</option>
@@ -214,7 +221,7 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
                 onChange={event => setTarget(event.target.value)} /></label>
           </div>}
         </section>
-        {!editing && category === 'habit' && habits >= HABIT_LIMIT && <p className="soft-note">{t("You are already building")} {habits} {t("habits. New habits stick better one at a time, so you might add this one when another feels easy.")}</p>}
+        {!editing && category === 'habit' && habits >= HABIT_LIMIT && <p className="soft-note">{t("You are already building {0} habits. New habits stick better one at a time, so you might add this one when another feels easy.", habits)}</p>}
       </>}
 
       {shownStep(1) && <section className="sheet-group" aria-labelledby="law-obvious">
@@ -242,13 +249,13 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
       {shownStep(3) && <section className="sheet-group" aria-labelledby="law-attractive">
         {category === 'habit' && <h3 id="law-attractive"><span className="law">2</span>{t("Make it attractive")}</h3>}
         <div className="field">
-          <span id="points-label">{repeating ? t(unit === 'count' ? 'Points per count' : 'Points per minute') : t('Points when done')}</span>
+          <span id="points-label">{counted ? t(unit === 'count' ? 'Points per count' : 'Points per minute') : t('Points when done')}</span>
           <div className="chip-row" role="group" aria-labelledby="points-label">
-            {(repeating ? [1, 1.5, 2] : [1, 3, 5, 10]).map(value => <button key={value} type="button" disabled={saving}
+            {(counted ? [1, 1.5, 2] : [1, 3, 5, 10]).map(value => <button key={value} type="button" disabled={saving}
               className={`chip ${Number(pointsText) === value ? 'selected' : ''}`}
-              onClick={() => (repeating ? setMinutePoints : setDonePoints)(String(value))}>{value}</button>)}
+              onClick={() => (counted ? setMinutePoints : setDonePoints)(String(value))}>{value}</button>)}
             <input type="number" aria-labelledby="points-label" min="0" max="1000" step=".01" required value={pointsText} disabled={saving}
-              onChange={event => (repeating ? setMinutePoints : setDonePoints)(event.target.value)} />
+              onChange={event => (counted ? setMinutePoints : setDonePoints)(event.target.value)} />
           </div>
         </div>
         {category === 'habit' && <label className="field">{t("Only while doing this, I get to…")}
@@ -279,7 +286,7 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
       {shownStep(3) && <section className="sheet-preview" aria-label={t("Plan summary")}>
         <p className="preview-title">{subject ? '“' + subject + '”' : t('Your plan')}</p>
         {cueLine(category === 'habit' ? plan : { ...emptyPlan, time: plan.time, place: plan.place }) && <p>{cueLine(category === 'habit' ? plan : { ...emptyPlan, time: plan.time, place: plan.place })}</p>}
-        <p>{[schedule, scoreText, repeating ? t(unit === 'count' ? '{0} counts per day' : '{0} minutes per day', target || '?') : ''].filter(Boolean).join(' · ')}</p>
+        <p>{[schedule, scoreText, counted ? t(unit === 'count' ? '{0} counts per day' : '{0} minutes per day', target || '?') : ''].filter(Boolean).join(' · ')}</p>
         {category === 'habit' && plan.starter && <p>{t("Start with:")} {plan.starter}</p>}
         {category === 'habit' && plan.identity && <p>{t("Vote for:")} {plan.identity}</p>}
       </section>}

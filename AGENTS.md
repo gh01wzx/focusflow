@@ -26,7 +26,7 @@
 
 ## CI cost and notifications
 
-- The owner requires no paid CI usage. Automatic workflows run only in public repositories on standard GitHub-hosted Windows/Linux runners. Keep persistent artifact uploads and caches disabled. Paid runners, storage and external services require explicit owner approval.
+- The owner requires no paid CI usage. Automatic workflows run only in public repositories on standard GitHub-hosted Windows/Linux runners. The manual-only Mac source check may use a standard GitHub-hosted macOS runner, which is free for public repositories. Keep persistent artifact uploads and caches disabled. Paid runners, storage and external services require explicit owner approval.
 - Automated verification is manual-only during owner-led local acceptance. Keep the existing workflow definitions and failure history, but do not trigger test, packaging or installer runs for this batch. Personal email notification settings and billing budgets are separate account controls.
 
 ## Code and data

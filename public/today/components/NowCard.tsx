@@ -74,7 +74,7 @@ export function NowCard({ candidates, due, rules, busy, sound, skipped, timer, f
 
   if (!task) {
     return skipped > 0 ? <section className="now-card glass quiet" aria-label={t("Next")}>
-      <p>{t("You set")} {skipped === 1 ? t('one thing') : skipped + t(' things')} {t("aside for now.")}</p>
+      <p>{t(skipped === 1 ? "You set one thing aside for now." : "You set {0} things aside for now.", skipped)}</p>
       <button className="text-button" disabled={busy} onClick={onShowSkipped}>{t("Show again")}</button>
     </section> : null;
   }

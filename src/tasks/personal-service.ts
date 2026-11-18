@@ -127,7 +127,11 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
           note: string(value.note, 500, 'Keep the note within 500 characters.'), onceOnly: value.onceOnly === true,
           archived: value.archived === true && !!previous });
       } else if (action === 'pin') {
-        repository.savePreferences(JSON.stringify({ ...preferences(), pinnedReward: string(value.pinnedReward, 36, 'Choose a reward.') }));
+        // An empty value unpins. Only a reward still in the shop can be pinned.
+        const pinned = string(value.pinnedReward, 36, 'Choose a reward.');
+        const reward = pinned ? repository.reward(pinned) : undefined;
+        if (pinned && (!reward || reward.archived)) throw new TaskInputError('This reward is unavailable.');
+        repository.savePreferences(JSON.stringify({ ...preferences(), pinnedReward: pinned }));
       } else if (action === 'preferences') {
         if (typeof value.volume !== 'number' || !Number.isFinite(value.volume) || value.volume < 0 || value.volume > 1) {
           throw new TaskInputError('Choose a volume between zero and full.');

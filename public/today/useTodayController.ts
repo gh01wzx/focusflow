@@ -1,3 +1,4 @@
+import { t } from '../workspace/locale.ts';
 import { isHabit } from '../../src/shared/tasks.ts';
 import { useEffect, useRef, useState } from 'react';
 import { createTaskClient } from '../../src/client/tasks.ts';
@@ -118,12 +119,12 @@ export function useTodayController() {
     reopen: (id: string) => change(() => client.reopen(id), 'Task reopened.'),
     // Inline calls come from the Close the day window, which shows its own errors.
     reschedule: (id: string, plannedDate: string, inline = false) =>
-      change(() => client.reschedule(id, plannedDate), 'Moved to ' + dateText(plannedDate) + '.', { inline }),
+      change(() => client.reschedule(id, plannedDate), t('Moved to {0}.', dateText(plannedDate)), { inline }),
     setFocus: (day: string, taskIds: string[], inline = false) =>
       change(() => client.setFocus(day, taskIds), day === view?.today ? 'Focus updated.' : "Tomorrow's focus saved.", { inline }),
     // From the weekly review: a steady habit leaves Today and keeps its history.
     graduate: (id: string, title: string) =>
-      change(() => client.stopRecurrence(id), `Graduated “${title}”. Its history stays.`, { inline: true }),
+      change(() => client.stopRecurrence(id), t('Graduated “{0}”. Its history stays.', title), { inline: true }),
     async stopRecurrence(id: string) {
       await change(() => client.stopRecurrence(id), 'Repeating stopped. Current-period tasks stay available.');
     },

@@ -8,8 +8,7 @@ import { ActivityHistory, RewardShop } from './components/PersonalRewards.tsx';
 import type { ScoringRule } from '../../src/shared/personal.ts';
 import { isHabit, FOCUS_LIMIT, HISTORY_LIMIT } from '../../src/shared/tasks.ts';
 import type { RecurrenceRule, Task } from '../../src/shared/tasks.ts';
-import { localDay } from '../../src/shared/calendar.ts';
-import { fullDaysBefore, habitInsight, identityKey, nextUp, reviewHabits, todayProgress } from '../../src/shared/habits.ts';
+import { doneToday, fullDaysBefore, habitInsight, identityKey, nextUp, reviewHabits, todayProgress } from '../../src/shared/habits.ts';
 import type { HabitReview } from '../../src/shared/habits.ts';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
@@ -57,8 +56,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const today = view?.today ?? '';
   const rules = useMemo(() => new Map<string, ScoringRule>(data?.rules.map(rule => [rule.subject, rule])), [data]);
   const ruleFor = (task: Task) => rules.get(task.recurrenceId ?? task.id);
-  const completedToday = useMemo(() => view?.history.filter(task => task.status === 'completed' && task.resolvedAt
-    && localDay(new Date(task.resolvedAt)) === view.today) ?? [], [view]);
+  const completedToday = useMemo(() => view?.history.filter(task => doneToday(task, view.today, view.recurrences)) ?? [], [view]);
   const progress = view ? todayProgress(view, rules, data?.progress ?? {}, completedToday) : null;
   // Each habit's past occurrences, grouped once per view instead of scanning all history for every row.
   const historyByHabit = useMemo(() => {

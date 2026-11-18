@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fullDaysBefore, habitInsight, nextUp, outcomeOf, reviewHabits } from '../src/shared/habits.ts';
+import { doneToday, fullDaysBefore, habitInsight, nextUp, outcomeOf, reviewHabits } from '../src/shared/habits.ts';
 import { addDays } from '../src/shared/calendar.ts';
 import type { Outcome, ScoringRule } from '../src/shared/personal.ts';
 import type { RecurrenceRule, Task, TaskStatus } from '../src/shared/tasks.ts';
@@ -98,4 +98,21 @@ test('full days count back from yesterday, skip rest days and stop at a day not 
   };
   assert.equal(fullDaysBefore('2026-11-16', ['read', 'walk'], recent), 3);
   assert.equal(fullDaysBefore('2026-11-16', [], recent), 0);
+});
+
+test('only items whose day or period is still current count as done today', () => {
+  // Resolved this morning, local time.
+  const morning = new Date(2026, 10, 19, 10, 32).toISOString();
+  const schedule: RecurrenceRule = { id: 'rule', title: 'Read', frequency: 'daily', weekdays: null, startDate: '2026-11-01',
+    nextDate: '2026-11-20', createdAt: '2026-11-01T00:00:00Z', stoppedAt: null };
+  const done = (plannedDate: string, recurrenceId: string | null = 'rule'): Task =>
+    ({ ...occurrence(plannedDate, 'completed'), resolvedAt: morning, recurrenceId, frequency: recurrenceId ? 'daily' : null });
+  // Yesterday's habit, settled when today's first refresh found its goal met.
+  assert.equal(doneToday(done('2026-11-18'), '2026-11-19', [schedule]), false);
+  assert.equal(doneToday(done('2026-11-19'), '2026-11-19', [schedule]), true);
+  // An overdue one-off task finished today still counts.
+  assert.equal(doneToday(done('2026-11-15', null), '2026-11-19', [schedule]), true);
+  // An older weekly schedule keeps its seven-day period.
+  const weekly = { ...schedule, frequency: 'weekly' } as RecurrenceRule;
+  assert.equal(doneToday({ ...done('2026-11-16'), frequency: 'weekly' }, '2026-11-19', [weekly]), true);
 });

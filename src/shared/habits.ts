@@ -1,5 +1,6 @@
 import { isHabit } from './tasks.ts';
-import { addDays, daysBetween } from './calendar.ts';
+import { addDays, daysBetween, localDay, nextOccurrence } from './calendar.ts';
+import { occurrenceEnd } from './weekdays.ts';
 import type { HabitPlan, Outcome, ScoringRule } from './personal.ts';
 import type { RecurrenceRule, Task, TaskStatus, TaskView } from './tasks.ts';
 
@@ -52,6 +53,17 @@ export function habitInsight(task: Task, history: Task[], today: { done: boolean
     consistency: { shown: counted.filter(shown).length, total: counted.length },
     missedLast: last === 'missed' && !shown(current),
   };
+}
+
+// Whether a completed item belongs to today's progress. A repeating occurrence counts only while
+// its period is current: one whose goal was met yesterday is settled at the first refresh after
+// midnight, so it is resolved today but belongs to yesterday.
+export function doneToday(task: Task, today: string, schedules: RecurrenceRule[]): boolean {
+  if (task.status !== 'completed' || !task.resolvedAt || localDay(new Date(task.resolvedAt)) !== today) return false;
+  if (!task.recurrenceId) return true;
+  const rule = schedules.find(item => item.id === task.recurrenceId);
+  const end = rule ? occurrenceEnd(task, rule) : nextOccurrence(task.plannedDate, 'daily');
+  return task.plannedDate <= today && (end === null || end > today);
 }
 
 // Count each occurrence in its own category. Timed habits can reach their target while open.

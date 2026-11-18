@@ -25,8 +25,15 @@ export function usePersonal(revision: object | null, refreshTasks: () => Promise
       if (current === generation.current) setError(failure instanceof Error ? failure.message : 'Could not load rewards.');
     }
   }
+  // Points load together with tasks when the page opens, instead of waiting for the task reply.
+  // Each later task view refreshes them, because finishing or reopening a task changes points.
+  const firstView = useRef(true);
+  useEffect(() => { void refresh(); }, []);
   useEffect(() => {
-    if (revision) void refresh();
+    if (!revision) return;
+    // The opening read already covers the first task view, unless it failed.
+    if (firstView.current) { firstView.current = false; if (!error) return; }
+    void refresh();
   }, [revision]);
   function prepareSound() {
     if (!feedback.sound) return;

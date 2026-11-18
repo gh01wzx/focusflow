@@ -34,7 +34,8 @@ if /i "%~1"=="--review" (
   if errorlevel 1 goto failed
   exit /b 0
 )
-call npm run build
+rem Rebuild only when the source or dependencies changed since the last successful build.
+node scripts\build-if-changed.ts
 if errorlevel 1 goto failed
 for /f "delims=" %%E in ('node -e "process.stdout.write(require('electron'))"') do set "FOCUSFLOW_ELECTRON=%%E"
 rem Start the everyday app on its own, so this window closes while FocusFlow keeps running in the tray.

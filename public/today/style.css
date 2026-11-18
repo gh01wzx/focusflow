@@ -89,12 +89,20 @@ body {
   margin: 0;
   min-height: 100vh;
   background-color: #eef0f7;
+}
+/* The gradients sit on their own fixed layer rather than a fixed body background, so scrolling
+   moves the page over them without repainting the whole window. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background-image:
     radial-gradient(60vw 60vw at -12% -18%, rgba(129, 140, 248, .3), transparent 62%),
     radial-gradient(50vw 50vw at 112% -6%, rgba(56, 189, 248, .22), transparent 60%),
     radial-gradient(56vw 56vw at 96% 112%, rgba(244, 114, 182, .2), transparent 62%),
     radial-gradient(44vw 44vw at 18% 108%, rgba(52, 211, 153, .16), transparent 60%);
-  background-attachment: fixed;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; transition: background-color .18s var(--ease), border-color .18s, color .18s, box-shadow .18s, transform .12s var(--ease); }

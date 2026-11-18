@@ -6,7 +6,6 @@ import type { TaskDraft, TaskResolution, TaskView } from '../../src/shared/tasks
 import { firstSelectedDate } from '../../src/shared/weekdays.ts';
 import { dateText } from './view-options.ts';
 import type { Tab } from './view-options.ts';
-import { reportInterfaceReady } from '../../src/client/build.ts';
 
 const client = createTaskClient();
 
@@ -22,11 +21,6 @@ export function useTodayController() {
   const busyRef = useRef(false);
   const generation = useRef(0);
   const mounted = useRef(true);
-  const readyReported = useRef(false);
-  useEffect(() => {
-    if (!view || readyReported.current) return;
-    readyReported.current = true; void reportInterfaceReady().catch(() => { readyReported.current = false; });
-  }, [view]);
 
   function apply(next: TaskView) {
     // Background refreshes usually return the same tasks. Keeping the current object

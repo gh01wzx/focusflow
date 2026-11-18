@@ -31,6 +31,7 @@ import { ListItem, spring } from './components/Animated.tsx';
 import { CheckIcon, PlusIcon, SparkIcon } from './components/Icons.tsx';
 import { readClosed, readReviewed, readTimer, writeClosed, writeReviewed, writeTimer } from './local-state.ts';
 import type { Timer } from './local-state.ts';
+import { reportInterfaceReady } from '../../src/client/build.ts';
 
 export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const state = useTodayController();
@@ -53,6 +54,23 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const [minute, setMinute] = useState(() => new Date().toTimeString().slice(0, 5));
   const saving = busy || personal.busy;
   const data = personal.data;
+  // The first screen waits for points as well as tasks, so habit cards and the timer card never
+  // slide the lists into place after the window opens. Slow or failed points hold back usable
+  // tasks for two seconds at most.
+  const [pointsLate, setPointsLate] = useState(false);
+  const pointsReady = !!data || !!personal.error || pointsLate;
+  useEffect(() => {
+    if (!view || pointsReady) return;
+    const timer = setTimeout(() => setPointsLate(true), 2000);
+    return () => clearTimeout(timer);
+  }, [!!view, pointsReady]);
+  // The desktop window opens once this first screen is complete.
+  const readyReported = useRef(false);
+  useEffect(() => {
+    if (!view || !pointsReady || readyReported.current) return;
+    readyReported.current = true;
+    void reportInterfaceReady().catch(() => { readyReported.current = false; });
+  }, [view, pointsReady]);
   const today = view?.today ?? '';
   const rules = useMemo(() => new Map<string, ScoringRule>(data?.rules.map(rule => [rule.subject, rule])), [data]);
   const ruleFor = (task: Task) => rules.get(task.recurrenceId ?? task.id);
@@ -284,7 +302,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
                 aria-label={t(undo.status === 'completed' ? "Undo completing {0}" : "Undo resting or cancelling {0}", undo.title)}>{t("Undo")}</button>}
             </div>
             {/* Groups move as one when the content above them changes, so their rows never slide on their own. */}
-            {view && groups.map(group => {
+            {view && pointsReady && groups.map(group => {
               const focus = group.key === 'focus', others = tab === 'due' && group.key === 'tasks';
               if (focus ? liveFocus.length === 0 : group.items.length === 0) return null;
               const late = group.items.filter(task => !task.frequency && task.plannedDate < view.today).length;

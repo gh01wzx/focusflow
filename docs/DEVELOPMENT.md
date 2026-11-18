@@ -21,12 +21,12 @@ Use the [task template](../.github/ISSUE_TEMPLATE/task.md) and [PR template](../
 
 | Command | Purpose |
 | --- | --- |
-| `Start-FocusFlow.cmd` / `./Start-FocusFlow.command` | Build and open the everyday app |
+| `Start-FocusFlow.cmd` / `./Start-FocusFlow.command` | Open the everyday app, rebuilding first only when the source or dependencies changed since the last successful launcher build |
 | Add `--review NAME` to either launcher | Build and open a named, separate workspace |
 | `npm start` / `npm run start:web` | Open a development workspace in Electron or a browser |
 | `npm run typecheck` | Check module boundaries and compile all TypeScript without writing output |
 | `npm run check:language` | Check maintained source and documentation language |
-| `npm run build` | Rebuild the ignored `dist` directory |
+| `npm run build` | Always rebuild the ignored `dist` directory |
 | `npm run diagnose:desktop` | Try the built desktop runtime once without opening task data |
 | `npm run ai:install` | Install the pinned Codex runtime before first use |
 | `npm test` / `npm run test:source` | Run compiled tests or source tests when authorized |

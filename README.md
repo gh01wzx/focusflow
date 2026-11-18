@@ -18,7 +18,7 @@ cd focusflow
 ./Start-FocusFlow.command
 ~~~
 
-After cloning, you can also double-click `Start-FocusFlow.command` in Finder. The first launch downloads the pinned dependencies and builds the app. The Mac launcher refreshes dependencies when the lockfile changes. On Windows, run `npm ci` if dependencies change after a Git update.
+After cloning, you can also double-click `Start-FocusFlow.command` in Finder. The first launch downloads the pinned dependencies and builds the app. Later launches rebuild only when the source or dependencies changed, so they open faster. The Mac launcher refreshes dependencies when the lockfile changes. On Windows, run `npm ci` if dependencies change after a Git update.
 
 Closing the window keeps FocusFlow running in the Windows notification area or the Mac menu bar. Click the tray icon, or open the launcher again, to bring the window back. To end FocusFlow, choose **Quit FocusFlow** from the tray icon's menu, or press Cmd+Q on a Mac. The launcher window closes once the app opens. Review workspaces opened with `--review` keep their launcher window open.
 

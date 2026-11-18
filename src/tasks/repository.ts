@@ -16,9 +16,9 @@ function storedRule(value: unknown): RecurrenceRule {
 // SQL and row decoding stay here. Business rules belong to the service.
 export function createTaskRepository(db: DatabaseSync) {
   const taskColumns = `SELECT t.id,t.title,t.planned_date AS plannedDate,t.status,t.created_at AS createdAt,
-    t.resolved_at AS resolvedAt,t.recurrence_id AS recurrenceId,r.frequency
+    t.resolved_at AS resolvedAt,t.recurrence_id AS recurrenceId,r.frequency, COALESCE(r.category, 'task') AS category
     FROM tasks t LEFT JOIN recurrence_rules r ON r.id=t.recurrence_id`;
-  const ruleColumns = `SELECT id,title,frequency,start_date AS startDate,next_date AS nextDate,
+  const ruleColumns = `SELECT id,title,category,frequency,start_date AS startDate,next_date AS nextDate,
     created_at AS createdAt,stopped_at AS stoppedAt,weekdays_mask AS weekdaysMask FROM recurrence_rules`;
 
   const pendingTasks = db.prepare(taskColumns + " WHERE t.status='pending' ORDER BY t.planned_date,t.created_at,t.id");
@@ -32,7 +32,7 @@ export function createTaskRepository(db: DatabaseSync) {
   const pendingOccurrences = db.prepare(pendingOccurrenceSql);
   const pastPendingOccurrences = db.prepare(pendingOccurrenceSql + ' AND t.planned_date<?');
   const insertTask = db.prepare('INSERT INTO tasks(id,title,planned_date,status,created_at,resolved_at,recurrence_id) VALUES(?,?,?,?,?,?,?)');
-  const insertRule = db.prepare('INSERT INTO recurrence_rules(id,title,frequency,start_date,next_date,created_at,stopped_at,weekdays_mask) VALUES(?,?,?,?,?,?,?,?)');
+  const insertRule = db.prepare('INSERT INTO recurrence_rules(id,title,frequency,start_date,next_date,created_at,stopped_at,weekdays_mask,category) VALUES(?,?,?,?,?,?,?,?,?)');
   const expire = db.prepare("UPDATE tasks SET status='missed',resolved_at=? WHERE id=?");
   const advance = db.prepare('UPDATE recurrence_rules SET next_date=? WHERE id=?');
   const stop = db.prepare('UPDATE recurrence_rules SET stopped_at=? WHERE id=? AND stopped_at IS NULL');
@@ -72,9 +72,12 @@ export function createTaskRepository(db: DatabaseSync) {
     insertTask(task: Task) {
       insertTask.run(task.id, task.title, task.plannedDate, task.status, task.createdAt, task.resolvedAt, task.recurrenceId);
     },
+    setCategory(id: string, category: 'task' | 'habit') {
+      db.prepare('UPDATE recurrence_rules SET category=? WHERE id=?').run(category, id);
+    },
     insertRule(rule: RecurrenceRule) {
       const mask = rule.weekdays === null ? null : rule.weekdays.reduce<number>((bits, day) => bits | (1 << day), 0);
-      insertRule.run(rule.id, rule.title, rule.frequency, rule.startDate, rule.nextDate, rule.createdAt, rule.stoppedAt, mask);
+      insertRule.run(rule.id, rule.title, rule.frequency, rule.startDate, rule.nextDate, rule.createdAt, rule.stoppedAt, mask, rule.category ?? 'habit');
     },
     expireTask: (id: string, at: string) => { expire.run(at, id); },
     advanceRule: (id: string, date: string | null) => { advance.run(date, id); },

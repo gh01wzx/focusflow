@@ -1,9 +1,10 @@
+import type { FeedbackSettings } from '../../src/shared/interface.ts';
 import { useEffect, useRef, useState } from 'react';
 import { readPersonal } from '../../src/client/personal.ts';
 import type { PersonalView } from '../../src/shared/personal.ts';
 import type { Task, TaskResolution } from '../../src/shared/tasks.ts';
 
-export function usePersonal(revision: object | null, refreshTasks: () => Promise<void>) {
+export function usePersonal(revision: object | null, refreshTasks: () => Promise<void>, feedback: FeedbackSettings) {
   const [data, setData] = useState<PersonalView>();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -28,7 +29,7 @@ export function usePersonal(revision: object | null, refreshTasks: () => Promise
     if (revision) void refresh();
   }, [revision]);
   function prepareSound() {
-    if (!data?.preferences.sound) return;
+    if (!feedback.sound) return;
     try {
       sound.current ??= new AudioContext();
       if (sound.current.state === 'suspended') void sound.current.resume().catch(() => {});
@@ -38,13 +39,13 @@ export function usePersonal(revision: object | null, refreshTasks: () => Promise
     if (earned <= 0) return;
     setReward({ id, points: earned, target });
     const channel = sound.current;
-    if (!channel || channel.state !== 'running' || !data?.preferences.sound) return;
+    if (!channel || channel.state !== 'running' || !feedback.sound) return;
     for (const [index, hz] of (target ? [680, 1040, 1440] : [620, 990]).entries()) {
       const oscillator = channel.createOscillator(), gain = channel.createGain();
       const start = channel.currentTime + 0.25 + index * 0.05;
       oscillator.type = 'sine'; oscillator.frequency.value = hz;
       gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(0.12 * data.preferences.volume, start + 0.008);
+      gain.gain.linearRampToValueAtTime(0.12 * feedback.volume, start + 0.008);
       gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.17);
       oscillator.connect(gain); gain.connect(channel.destination);
       oscillator.start(start); oscillator.stop(start + 0.18);
@@ -100,6 +101,7 @@ export function usePersonal(revision: object | null, refreshTasks: () => Promise
     try {
       const result = await readPersonal('rule', { ...update, subject });
       if (current === generation.current) setData(result.view);
+      if (update.category) await refreshTasks();
       return '';
     } catch (failure) {
       return failure instanceof Error ? failure.message : 'Could not save this plan.';

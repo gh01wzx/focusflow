@@ -62,25 +62,14 @@ export function RewardShop({ state }: { state: PersonalController }) {
             {item.onceOnly && item.used ? t('Redeemed') : data.balance < item.cost ? points(item.cost - data.balance) + ' points to go' : t('Redeem')}
           </button>
           <button className="quiet-button" disabled={state.busy} onClick={() => setEditing(item)}>{t("Edit")}</button>
-          <button className="quiet-button" disabled={state.busy} onClick={() => void state.mutate('preferences', {
-            ...data.preferences, pinnedReward: data.preferences.pinnedReward === item.id ? '' : item.id,
+          <button className="quiet-button" disabled={state.busy} onClick={() => void state.mutate('pin', {
+            pinnedReward: data.preferences.pinnedReward === item.id ? '' : item.id,
           })}>{data.preferences.pinnedReward === item.id ? t('Unpin') : t('Pin')}</button>
           <button className="quiet-button" disabled={state.busy} aria-label={t("Archive {0}", item.title)}
             onClick={() => setArchiving(item.id)}>{t("Archive")}</button>
         </div>}
       </li>;
     })}</ul>}
-    <details className="feedback-settings glass"><summary>{t("Feedback settings")}</summary><form className="inline-settings" onSubmit={event => {
-      event.preventDefault();
-      const values = new FormData(event.currentTarget);
-      void state.mutate('preferences', { ...data.preferences, volume: Number(values.get('volume')),
-        sound: values.has('sound'), reducedMotion: values.has('motion') });
-    }}>
-      <label>{t("Volume")} <input name="volume" type="range" min="0" max="1" step=".05" defaultValue={data.preferences.volume} /></label>
-      <label className="check-label"><input name="sound" type="checkbox" defaultChecked={data.preferences.sound} /> {t("Sound")}</label>
-      <label className="check-label"><input name="motion" type="checkbox" defaultChecked={data.preferences.reducedMotion} /> {t("Reduce motion")}</label>
-      <button className="primary" disabled={state.busy}>{t("Save settings")}</button>
-    </form></details>
     <ActivityHistory state={state} />
   </section>;
 }

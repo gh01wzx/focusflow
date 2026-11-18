@@ -1,3 +1,4 @@
+import { isHabit } from '../../../src/shared/tasks.ts';
 import { t } from '../../workspace/locale.ts';
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
@@ -76,6 +77,7 @@ export function NowCard({ candidates, due, rules, busy, sound, skipped, timer, f
       <button className="text-button" disabled={busy} onClick={onShowSkipped}>{t("Show again")}</button>
     </section> : null;
   }
+  const doneLabel = t(isHabit(task) ? 'Check in' : 'Done');
   const cue = cueLine(rule);
   const later = !running && rule?.time && rule.time > new Date(now).toTimeString().slice(0, 5);
   function start() { onTimer({ taskId: task!.id, startedAt: Date.now() }); }
@@ -97,13 +99,13 @@ export function NowCard({ candidates, due, rules, busy, sound, skipped, timer, f
       <div className="now-actions">
         {running ? <>
           <button className="primary" disabled={busy} aria-label={t("Finish {0}", task.title)} onClick={() => void finish()}>
-            {minutesHabit ? t("Done · log {0} min", Math.max(1, Math.round(elapsed / 60))) : t('Done')}</button>
+            {minutesHabit ? t("Done · log {0} min", Math.max(1, Math.round(elapsed / 60))) : doneLabel}</button>
           <button className="secondary-button" disabled={busy} onClick={stop}>{t("Stop timer")}</button>
         </> : <>
           <button className="primary now-start" disabled={busy} aria-label={t("Start two minutes on {0}", task.title)} onClick={start}>
             <PlayIcon />{t("Start 2 minutes")}</button>
-          {!minutesHabit && <button className="secondary-button" disabled={busy} aria-label={t("Mark {0} done", task.title)}
-            onClick={() => void onComplete(task)}>{t("Done")}</button>}
+          {!minutesHabit && <button className="secondary-button" disabled={busy} aria-label={t(isHabit(task) ? 'Check in {0}' : 'Mark {0} done', task.title)}
+            onClick={() => void onComplete(task)}>{doneLabel}</button>}
           <button className="text-button" disabled={busy} aria-label={t("Skip {0} for now", task.title)} onClick={() => onSkip(task)}>
             <SkipIcon />{t("Later")}</button>
         </>}

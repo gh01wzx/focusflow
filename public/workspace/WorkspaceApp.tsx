@@ -9,6 +9,7 @@ import { InterfaceContext } from './interface-context.ts';
 import type { Workspace } from './WorkspaceShell.tsx';
 
 function apply(settings: InterfaceSettings) {
+  document.documentElement.dataset.motion = settings.reducedMotion ? 'reduced' : 'system';
   document.documentElement.lang = settings.language;
   document.documentElement.dataset.size = settings.size;
 }

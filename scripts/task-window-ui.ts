@@ -15,7 +15,7 @@ export async function fillTaskWindow(page: Page, title: string,
   const window = page.getByRole('dialog', { name: 'New task', exact: true });
   await window.waitFor();
   const frequency = options.frequency ?? 'none';
-  await window.getByRole('radio', { name: frequency === 'none' ? 'One-off' : 'Repeating', exact: true }).check();
+  await window.getByRole('radio', { name: frequency === 'none' ? 'One-off' : 'Repeating task', exact: true }).check();
   await window.getByLabel('Task title', { exact: true }).fill(title);
   if (frequency !== 'none') await window.getByLabel('Repeat', { exact: true }).selectOption(frequency);
   if (options.date) await window.getByLabel('Planned date', { exact: true }).fill(options.date);

@@ -1,3 +1,4 @@
+import { isHabit } from '../../src/shared/tasks.ts';
 import { useEffect, useRef, useState } from 'react';
 import { createTaskClient } from '../../src/client/tasks.ts';
 import type { TaskDraft, TaskResolution, TaskView } from '../../src/shared/tasks.ts';
@@ -101,15 +102,15 @@ export function useTodayController() {
   // Completes or cancels a task and offers Undo. Returns an error message, or an empty string after saving.
   async function settle(id: string, status: TaskResolution, inline = false) {
     const task = view && [...view.due, ...view.upcoming].find(item => item.id === id);
-    const failure = await change(() => client.resolve(id, status), status === 'completed' ? 'Task completed.'
-      : task?.recurrenceId ? 'Rest day recorded. Your chain stays intact.' : 'Task cancelled.', { inline });
+    const failure = await change(() => client.resolve(id, status), status === 'completed' ? (task && isHabit(task) ? 'Habit completed.' : 'Task completed.')
+      : task && isHabit(task) ? 'Rest day recorded. Your chain stays intact.' : 'Task cancelled.', { inline });
     if (!failure && task && mounted.current) setUndo({ id, title: task.title, status });
     return failure;
   }
 
   return {
     view, tab, setTab, busy, error, message, undo, refresh, settle,
-    add: (draft: TaskDraft) => change(() => client.add(draft), 'Task added.', { draft, inline: true }),
+    add: (draft: TaskDraft) => change(() => client.add(draft), draft.category === 'habit' ? 'Habit added.' : 'Task added.', { draft, inline: true }),
     // Returns whether the change was saved, so a checked circle can clear again after a failure.
     resolve: async (id: string, status: TaskResolution) => !await settle(id, status),
     // Replaces the status line, for feedback from Personal points actions such as a habit log.

@@ -1,3 +1,4 @@
+import { isHabit } from '../../../src/shared/tasks.ts';
 import { t } from '../../workspace/locale.ts';
 import { useState } from 'react';
 import { points } from '../../../src/shared/personal.ts';
@@ -29,19 +30,20 @@ interface TaskRowProps {
 export function TaskRow({ task, today, busy, completable = true, rule, insight, onResolve, onReopen, onEdit, focus, votes = 0 }: TaskRowProps) {
   // The circle fills at once; it empties again only if saving fails.
   const [checking, setChecking] = useState(false);
+  const habit = isHabit(task);
   const pending = task.status === 'pending';
   const late = pending && !task.frequency && task.plannedDate < today;
   const statusLabel = task.status === 'completed' ? 'Completed' : task.status === 'missed' ? 'Missed'
-    : task.recurrenceId ? 'Rest day' : 'Cancelled';
+    : habit ? 'Rest day' : 'Cancelled';
   const cue = cueLine(rule);
 
   return (
-    <div className={`task ${pending ? '' : 'resolved'} ${checking ? 'checking' : ''}`}>
+    <div data-category={habit ? 'habit' : 'task'} className={`task ${pending ? '' : 'resolved'} ${checking ? 'checking' : ''}`}>
       {pending ? completable ? (
         <input
           className="check"
           type="checkbox"
-          aria-label={t("Complete {0}", task.title)}
+          aria-label={t(habit ? 'Check in {0}' : 'Complete {0}', task.title)}
           checked={checking}
           disabled={busy || checking}
           onChange={async () => {
@@ -75,9 +77,9 @@ export function TaskRow({ task, today, busy, completable = true, rule, insight, 
       {onEdit && <button className="icon-button" disabled={busy} aria-label={t("Edit plan for {0}", task.title)} title={t("Edit plan")}
         onClick={() => onEdit(task)}><PencilIcon /></button>}
       {/* Skipping a repeating occurrence is a planned rest day; it never breaks the habit chain. */}
-      {pending && task.recurrenceId && <button className="icon-button" disabled={busy || checking} aria-label={t("Rest today {0}", task.title)}
+      {pending && habit && <button className="icon-button" disabled={busy || checking} aria-label={t("Rest today {0}", task.title)}
         title={t("Rest today")} onClick={() => void onResolve(task.id, 'cancelled')}><MoonIcon /></button>}
-      {pending && !task.recurrenceId && <button className="icon-button" disabled={busy || checking} aria-label={t("Cancel {0}", task.title)}
+      {pending && !habit && <button className="icon-button" disabled={busy || checking} aria-label={t("Cancel {0}", task.title)}
         title={t("Cancel")} onClick={() => void onResolve(task.id, 'cancelled')}><CloseIcon /></button>}
       {!pending && onReopen && <button className="text-button" disabled={busy} aria-label={t("Reopen {0}", task.title)}
         onClick={() => onReopen(task.id)}>{t("Reopen")}</button>}

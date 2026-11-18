@@ -2,7 +2,7 @@ import { t } from '../../workspace/locale.ts';
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import type { ScoringRule } from '../../../src/shared/personal.ts';
-import { FOCUS_LIMIT } from '../../../src/shared/tasks.ts';
+import { isHabit, FOCUS_LIMIT } from '../../../src/shared/tasks.ts';
 import type { Task, TaskView } from '../../../src/shared/tasks.ts';
 import type { HabitInsight } from '../../../src/shared/habits.ts';
 import { nextOccurrence } from '../../../src/shared/calendar.ts';
@@ -63,8 +63,9 @@ function CloseDayBody({ view, rules, minutes, busy, insightFor, onCancel, onMove
   const [picking, setPicking] = useState<{ id: string; date: string } | null>(null);
   const tomorrow = nextOccurrence(view.today, 'daily') ?? view.today;
   // Habits with any logged minutes already count as showing up today.
-  const habits = view.due.filter(task => task.recurrenceId && (minutes[task.id] ?? 0) === 0);
-  const tasks = view.due.filter(task => !task.recurrenceId);
+  const habits = view.due.filter(task => isHabit(task) && (minutes[task.id] ?? 0) === 0);
+  const tasks = view.due.filter(task => !isHabit(task));
+  const movable = tasks.filter(task => !task.recurrenceId);
   const choices = [...view.due, ...view.upcoming].filter(task => !task.recurrenceId && task.plannedDate <= tomorrow);
   // A chosen task that was dropped or done tonight no longer takes a place.
   const focus = view.focus.tomorrow.filter(id => choices.some(task => task.id === id));
@@ -83,7 +84,7 @@ function CloseDayBody({ view, rules, minutes, busy, insightFor, onCancel, onMove
   // One save at a time; stops at the first error so nothing moves unseen.
   async function moveAll() {
     setError('');
-    for (const task of tasks) {
+    for (const task of movable) {
       const failure = await onMove(task, tomorrow);
       if (failure) { setError(failure); return; }
     }
@@ -122,7 +123,7 @@ function CloseDayBody({ view, rules, minutes, busy, insightFor, onCancel, onMove
       <section className="sheet-group" aria-labelledby="close-tasks">
         <div className="close-heading">
           <h3 id="close-tasks"><span className="law">2</span>{t("Tasks still open")}</h3>
-          {tasks.length > 1 && <button type="button" className="text-button" disabled={busy}
+          {movable.length > 1 && <button type="button" className="text-button" disabled={busy}
             onClick={() => void moveAll()}>{t("Move all to tomorrow")}</button>}
         </div>
         {tasks.length === 0 ? <p className="group-note">{t("Nothing left over.")}</p> : <ul className="close-list">
@@ -131,7 +132,8 @@ function CloseDayBody({ view, rules, minutes, busy, insightFor, onCancel, onMove
               <strong>{task.title}</strong>
               <span className="task-meta">{(task.plannedDate < view.today ? t('Overdue · ') : '') + dateText(task.plannedDate)}</span>
             </div>
-            {picking?.id === task.id ? <div className="close-actions">
+            {task.recurrenceId ? <button className="text-button" disabled={busy}
+              onClick={() => void run(onCancel(task))}>{t("Skip this occurrence")}</button> : picking?.id === task.id ? <div className="close-actions">
               <input type="date" className="date-choice" aria-label={t("New date for {0}", task.title)} min={tomorrow} autoFocus
                 value={picking.date} disabled={busy} onChange={event => setPicking({ id: task.id, date: event.target.value })} />
               <button className="quiet-button" disabled={busy || !picking.date} aria-label={t("Move {0} to the chosen date", task.title)}

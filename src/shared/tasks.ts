@@ -3,7 +3,9 @@ import type { PlanDraft } from './personal.ts';
 export type TaskStatus = 'pending' | 'completed' | 'cancelled' | 'missed';
 export type Frequency = 'daily' | 'weekly';
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+export type ActivityCategory = 'task' | 'habit';
 export interface RecurrenceRule {
+  category?: ActivityCategory;
   id: string;
   title: string;
   frequency: Frequency;
@@ -14,6 +16,7 @@ export interface RecurrenceRule {
   stoppedAt: string | null;
 }
 export interface Task {
+  category?: ActivityCategory;
   id: string;
   title: string;
   plannedDate: string;
@@ -22,6 +25,10 @@ export interface Task {
   resolvedAt: string | null;
   recurrenceId: string | null;
   frequency: Frequency | null;
+}
+export function isHabit(item: Task | RecurrenceRule): boolean {
+  if (item.category) return item.category === 'habit';
+  return !('recurrenceId' in item) || item.recurrenceId !== null;
 }
 export interface TaskView {
   today: string;
@@ -39,10 +46,13 @@ export const HISTORY_LIMIT = 200;
 // A day's focus is a short list on purpose: picking at most three keeps the choice easy.
 export const FOCUS_LIMIT = 3;
 export interface TaskDraft {
+  category?: ActivityCategory;
   title: string;
   plannedDate: string;
   frequency: 'none' | Frequency;
   weekdays?: Weekday[];
+  /** Legacy clients use this flag for minute tracking. */
   habit?: boolean;
+  mode?: 'minutes' | 'complete';
   plan?: PlanDraft;
 }

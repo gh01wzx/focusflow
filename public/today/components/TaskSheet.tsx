@@ -1,3 +1,4 @@
+import { isHabit } from '../../../src/shared/tasks.ts';
 import { t } from '../../workspace/locale.ts';
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
@@ -10,12 +11,12 @@ import { dateText } from '../view-options.ts';
 import { WeekdayPicker } from './WeekdayPicker.tsx';
 import { CloseIcon } from './Icons.tsx';
 
-type Kind = 'once' | 'repeat' | 'timed';
+type Kind = 'once' | 'repeat' | 'checkoff' | 'timed';
 // A guided request walks through a new habit one question at a time. A cue starts the
 // "After I" field, for example when stacking a new habit after a steady one.
 export type SheetRequest = { mode: 'create'; id: string; guided?: boolean; title?: string; cue?: string }
   | { mode: 'edit'; id: string; task: Task; rule: ScoringRule | undefined };
-export interface PlanUpdate extends HabitPlan { mode: 'minutes' | 'complete'; rate: number; target: number }
+export interface PlanUpdate extends HabitPlan { category: 'task' | 'habit'; mode: 'minutes' | 'complete'; rate: number; target: number }
 
 interface SheetProps {
   request: SheetRequest | null;
@@ -24,6 +25,7 @@ interface SheetProps {
   reward: { title: string; remaining: number } | null;
   // Moments the user already relies on, offered as one-tap cues.
   anchors: string[];
+  identities: string[];
   // Repeating habits already scheduled, for a gentle note when adding more than a few.
   habits: number;
   // Each returns an error message, or an empty string after saving.
@@ -34,7 +36,8 @@ interface SheetProps {
 
 const kinds: { value: Kind; label: string; hint: string }[] = [
   { value: 'once', label: 'One-off', hint: 'Done once on a planned date.' },
-  { value: 'repeat', label: 'Repeating', hint: 'Checked off each day or on chosen weekdays.' },
+  { value: 'repeat', label: 'Repeating task', hint: 'Checked off each day or on chosen weekdays.' },
+  { value: 'checkoff', label: 'Check-off habit', hint: 'Check in once each scheduled day.' },
   { value: 'timed', label: 'Timed habit', hint: 'Log minutes toward a small daily target.' },
 ];
 const steps = ['What and when', 'Make it obvious', 'Make it easy', 'Make it satisfying'];
@@ -72,14 +75,14 @@ function planOf(rule: ScoringRule | undefined): HabitPlan {
   return { cue: rule.cue, identity: rule.identity, time: rule.time, place: rule.place, starter: rule.starter, bundle: rule.bundle };
 }
 
-function SheetForm({ request, today, busy, reward, anchors, habits, onCreate, onSavePlan, onClose }: SheetProps & { request: SheetRequest }) {
+function SheetForm({ request, today, busy, reward, anchors, identities, habits, onCreate, onSavePlan, onClose }: SheetProps & { request: SheetRequest }) {
   const editing = request.mode === 'edit' ? request : null;
   const guided = request.mode === 'create' && !!request.guided;
   const rule = editing?.rule;
   const form = useRef<HTMLFormElement>(null);
   const [step, setStep] = useState(0);
-  const [kind, setKind] = useState<Kind>(guided ? 'repeat' : !editing ? 'once'
-    : !editing.task.recurrenceId ? 'once' : rule?.mode === 'minutes' ? 'timed' : 'repeat');
+  const [kind, setKind] = useState<Kind>(guided ? 'checkoff' : !editing ? 'once'
+    : !editing.task.recurrenceId ? 'once' : rule?.mode === 'minutes' ? 'timed' : isHabit(editing.task) ? 'checkoff' : 'repeat');
   const [title, setTitle] = useState(request.mode === 'create' ? request.title ?? '' : '');
   const [date, setDate] = useState(today);
   const [frequency, setFrequency] = useState<Frequency>('daily');
@@ -91,6 +94,7 @@ function SheetForm({ request, today, busy, reward, anchors, habits, onCreate, on
   const [plan, setPlan] = useState<HabitPlan>(request.mode === 'create' && request.cue ? { ...emptyPlan, cue: request.cue } : planOf(rule));
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const category = kind === 'timed' || kind === 'checkoff' ? 'habit' : 'task';
   const repeating = kind !== 'once';
   const pointsText = kind === 'timed' ? minutePoints : donePoints;
   const field = (key: keyof HabitPlan) => (event: ChangeEvent<HTMLInputElement>) =>
@@ -113,12 +117,12 @@ function SheetForm({ request, today, busy, reward, anchors, habits, onCreate, on
     if (blocked) return;
     setSaving(true); setError('');
     // Fields hidden for the chosen kind are saved empty.
-    const shown: HabitPlan = { ...plan, cue: repeating ? plan.cue : '', identity: repeating ? plan.identity : '', bundle: repeating ? plan.bundle : '' };
+    const shown: HabitPlan = { ...plan, cue: repeating ? plan.cue : '', bundle: repeating ? plan.bundle : '' };
     const rate = Math.round(Number(pointsText) * 100);
     const minutes = kind === 'timed' ? Number(target) : 0;
     const failure = editing
-      ? await onSavePlan(editing.task, { ...shown, mode: kind === 'timed' ? 'minutes' : 'complete', rate, target: minutes })
-      : await onCreate({ title, plannedDate: date, frequency: repeating ? frequency : 'none', habit: kind === 'timed',
+      ? await onSavePlan(editing.task, { ...shown, category, mode: kind === 'timed' ? 'minutes' : 'complete', rate, target: minutes })
+      : await onCreate({ category, title, plannedDate: date, frequency: repeating ? frequency : 'none', mode: kind === 'timed' ? 'minutes' : 'complete',
         ...(repeating && frequency === 'weekly' ? { weekdays } : {}), plan: { ...shown, rate, target: minutes } });
     setSaving(false);
     if (failure) setError(failure); else onClose();
@@ -164,10 +168,12 @@ function SheetForm({ request, today, busy, reward, anchors, habits, onCreate, on
       {shownStep(0) && <>
         <fieldset className="segmented" disabled={saving}>
           <legend className="sr-only">{t("Kind")}</legend>
-          {kinds.filter(item => !guided || item.value !== 'once').map(item => {
-            const locked = !!editing && (editing.task.recurrenceId ? item.value === 'once' : item.value !== 'once');
+          {kinds.filter(item => {
+            if (editing) return editing.task.recurrenceId ? item.value !== 'once' : item.value === 'once';
+            return guided ? item.value === 'checkoff' || item.value === 'timed' : item.value === 'once' || item.value === 'repeat';
+          }).map(item => {
             return <label key={item.value} className={kind === item.value ? 'selected' : ''} title={t(item.hint)}>
-              <input type="radio" name="kind" value={item.value} checked={kind === item.value} disabled={locked}
+              <input type="radio" name="kind" value={item.value} checked={kind === item.value}
                 onChange={() => setKind(item.value)} />{t(item.label)}
             </label>;
           })}
@@ -178,7 +184,7 @@ function SheetForm({ request, today, busy, reward, anchors, habits, onCreate, on
           <p className="sheet-subject">{'“' + editing.task.title + '”'}</p>
           <p className="group-note">{schedule}{t(". The title and schedule stay as created; stop repeating and add a new one to change them.")}</p>
         </section> : <section className="sheet-group">
-          <input className="title-input" aria-label={t("Task title")} value={title} maxLength={300} required data-autofocus autoComplete="off"
+          <input className="title-input" aria-label={t(guided ? 'Habit title' : 'Task title')} value={title} maxLength={300} required data-autofocus autoComplete="off"
             placeholder={guided ? t('What habit do you want to build?') : kind === 'timed' ? t('What will you practice?') : t('What will you do?')}
             disabled={saving} onChange={event => setTitle(event.target.value)} />
           <div className="field-row">
@@ -195,7 +201,7 @@ function SheetForm({ request, today, busy, reward, anchors, habits, onCreate, on
           </div>}
           {repeating && frequency === 'weekly' && <WeekdayPicker selected={weekdays} disabled={saving} onChange={setWeekdays} />}
         </section>}
-        {!editing && repeating && habits >= HABIT_LIMIT && <p className="soft-note">{t("You are already building")} {habits} {t("habits. New habits stick better one at a time, so you might add this one when another feels easy.")}</p>}
+        {!editing && category === 'habit' && habits >= HABIT_LIMIT && <p className="soft-note">{t("You are already building")} {habits} {t("habits. New habits stick better one at a time, so you might add this one when another feels easy.")}</p>}
       </>}
 
       {shownStep(1) && <section className="sheet-group" aria-labelledby="law-obvious">
@@ -237,16 +243,24 @@ function SheetForm({ request, today, busy, reward, anchors, habits, onCreate, on
             data-step-focus /></label>}
         {reward && <p className="reward-hint">{t("Working toward")} <strong>{reward.title}</strong>
           {reward.remaining > 0 ? t(" · {0} points to go", points(reward.remaining)) : t(' · ready to redeem')}</p>}
-        <p className="group-note">{t("Keep something you enjoy for this habit only, and let points build toward a reward you chose.")}</p>
+        {category === 'habit' && <p className="group-note">{t("Keep something you enjoy for this habit only, and let points build toward a reward you chose.")}</p>}
       </section>}
 
       {!guided && easy}
 
-      {shownStep(3) && repeating && <section className="sheet-group" aria-labelledby="law-satisfying">
+      {shownStep(3) && <section className="sheet-group" aria-labelledby="law-satisfying">
         <h3 id="law-satisfying"><span className="law">4</span>{t("Make it satisfying")}</h3>
         <label className="field">{t("Who this makes you")}
           <input value={plan.identity} maxLength={120} placeholder={t("I am a reader")} disabled={saving} onChange={field('identity')} /></label>
-        <p className="group-note">{t("Finishing gives points and grows your chain right away. Each time counts as a vote for this identity.")}</p>
+        {identities.length > 0 && <label className="field">{t("Use a saved identity")}
+          <select disabled={saving} value={identities.includes(plan.identity) ? plan.identity : ''}
+            onChange={e => setPlan(current => ({ ...current, identity: e.target.value }))}>
+            <option value="" disabled>{t("Choose an identity")}</option>
+            {identities.map(identity => <option key={identity} value={identity}>{identity}</option>)}
+          </select>
+        </label>}
+        <p className="group-note">{category === 'habit' ? t("Finishing gives points and grows your chain right away. Each time counts as a vote for this identity.")
+          : t("Completing this task adds one vote for this identity.")}</p>
       </section>}
 
       {shownStep(3) && <section className="sheet-preview" aria-label={t("Plan summary")}>
@@ -254,7 +268,7 @@ function SheetForm({ request, today, busy, reward, anchors, habits, onCreate, on
         {cueLine({ ...plan, cue: repeating ? plan.cue : '' }) && <p>{cueLine({ ...plan, cue: repeating ? plan.cue : '' })}</p>}
         <p>{[schedule, scoreText, kind === 'timed' ? (target || '?') + ' min target' : ''].filter(Boolean).join(' · ')}</p>
         {plan.starter && <p>{t("Start with:")} {plan.starter}</p>}
-        {repeating && plan.identity && <p>{t("Vote for:")} {plan.identity}</p>}
+        {plan.identity && <p>{t("Vote for:")} {plan.identity}</p>}
       </section>}
     </div>
     <footer className="sheet-footer">

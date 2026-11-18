@@ -62,10 +62,16 @@ export function createTaskService(repository: TaskRepository, transaction: TaskT
     }),
     addRecurrence: (input: unknown): RecurrenceRule => transaction(now => {
       const { title, plannedDate, frequency, weekdays } = recurrenceInput(input, localDay(now));
+      const value = input as Record<string, unknown>;
+      // Clients predating categories treated every repeating schedule as a habit.
+      const category = value.category ?? 'habit';
+      if (category !== 'habit' && category !== 'task' || category === 'task' && value.habit === true) {
+        throw new TaskInputError('Choose a valid activity category.');
+      }
       const firstDate = weekdays === null ? plannedDate : firstSelectedDate(plannedDate, weekdays);
       if (firstDate === null) throw new TaskInputError('No selected weekday remains in the supported date range.');
       const rule: RecurrenceRule = {
-        id: nextId(), title, frequency, weekdays, startDate: plannedDate,
+        id: nextId(), title, category, frequency, weekdays, startDate: plannedDate,
         nextDate: nextScheduledDate(firstDate, frequency, weekdays), createdAt: now.toISOString(), stoppedAt: null,
       };
       repository.insertRule(rule);

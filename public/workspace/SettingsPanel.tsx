@@ -41,6 +41,13 @@ export function SettingsPanel({ disabled }: { disabled: boolean }) {
           setDraft({...draft, size: e.target.value === 'large' ? 'large' : 'standard'})}>
           <option value="standard">{t("Standard")}</option><option value="large">{t("Large")}</option>
         </select></label>
+        <fieldset className="sound-settings" disabled={busy}>
+          <legend>{t("Sound and motion")}</legend>
+          <label><input type="checkbox" checked={draft.sound} onChange={e => setDraft({...draft, sound: e.target.checked})} />{t("Play sounds for points and timers")}</label>
+          <label>{t("Volume")} <input type="range" min="0" max="1" step=".05" disabled={!draft.sound} value={draft.volume}
+            onChange={e => setDraft({...draft, volume: Number(e.target.value)})} /></label>
+          <label><input type="checkbox" checked={draft.reducedMotion} onChange={e => setDraft({...draft, reducedMotion: e.target.checked})} />{t("Reduce motion")}</label>
+        </fieldset>
         <button className="primary" disabled={busy}>{t("Save settings")}</button>
       </form>}
       {error && <p role="alert">{t(error)}</p>}

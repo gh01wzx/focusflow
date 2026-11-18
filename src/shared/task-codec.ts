@@ -25,6 +25,7 @@ function task(value: unknown): value is Task {
     ? value.frequency === null
     : typeof value.recurrenceId === 'string' && frequency(value.frequency);
   return typeof value.id === 'string' && typeof value.title === 'string'
+    && (value.category === undefined || value.category === 'task' || value.category === 'habit' && value.recurrenceId !== null)
     && validDate(value.plannedDate) && status(value.status) && timestamp(value.createdAt)
     && (value.status === 'pending' ? value.resolvedAt === null : timestamp(value.resolvedAt))
     && (value.status !== 'missed' || value.recurrenceId !== null) && validRecurrence;
@@ -32,6 +33,7 @@ function task(value: unknown): value is Task {
 
 function rule(value: unknown): value is RecurrenceRule {
   return record(value) && typeof value.id === 'string' && typeof value.title === 'string'
+    && (value.category === undefined || value.category === 'task' || value.category === 'habit')
     && frequency(value.frequency) && validDate(value.startDate)
     && (value.weekdays === null || (value.frequency === 'weekly' && validWeekdays(value.weekdays)))
     && (value.nextDate === null || validDate(value.nextDate))

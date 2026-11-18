@@ -9,27 +9,20 @@ const ratio = (progress: Progress) => progress.total ? Math.min(1, progress.done
 const narrowDay = (day: string) => new Intl.DateTimeFormat(document.documentElement.lang, { weekday: 'narrow', timeZone: 'UTC' }).format(new Date(day + 'T12:00:00Z'));
 const longDay = (day: string) => new Intl.DateTimeFormat(document.documentElement.lang, { weekday: 'long', timeZone: 'UTC' }).format(new Date(day + 'T12:00:00Z'));
 
-// Two rings close as today's habits and tasks get done, like an activity summary.
-function Rings({ habits, tasks }: { habits: Progress; tasks: Progress }) {
-  const rings = [
-    { key: 'habits', radius: 46, progress: habits },
-    { key: 'tasks', radius: 30, progress: tasks },
-  ];
-  return <svg className="rings" viewBox="0 0 120 120" role="img"
-    aria-label={t("Habits {0} of {1} done. Tasks {2} of {3} done.", habits.done, habits.total, tasks.done, tasks.total)}>
-    <defs>
-      <linearGradient id="ring-habits" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#ff375f" /><stop offset="1" stopColor="#ff8aa8" /></linearGradient>
-      <linearGradient id="ring-tasks" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#28c76f" /><stop offset="1" stopColor="#8ee4a9" /></linearGradient>
-    </defs>
-    <g transform="rotate(-90 60 60)">
-      {rings.map(ring => <g key={ring.key} className={`ring ${ring.key} ${ring.progress.total && ring.progress.done >= ring.progress.total ? 'closed' : ''}`}>
-        <circle className="track" cx="60" cy="60" r={ring.radius} />
-        <motion.circle className="fill" cx="60" cy="60" r={ring.radius} stroke={`url(#ring-${ring.key})`}
-          initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: ratio(ring.progress), opacity: ring.progress.done ? 1 : 0 }}
-          transition={spring} />
-      </g>)}
-    </g>
-  </svg>;
+function ProgressRing({ category, progress }: { category: 'habits' | 'tasks'; progress: Progress }) {
+  const label = t(category === 'habits' ? 'Habits' : 'Tasks');
+  return <div className={'progress-category ' + category}>
+    <svg className="rings" viewBox="0 0 64 64" aria-hidden="true">
+      <g transform="rotate(-90 32 32)" className={'ring ' + category + (progress.total && progress.done >= progress.total ? ' closed' : '')}>
+        <circle className="track" cx="32" cy="32" r="26" />
+        <motion.circle className="fill" cx="32" cy="32" r="26" initial={false}
+          animate={{ pathLength: ratio(progress), opacity: progress.done ? 1 : 0 }} transition={spring} />
+      </g>
+      <path className="ring-symbol" fill="none" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"
+        d={category === 'tasks' ? 'M22 32l7 7 13-15' : 'M42 31a10 10 0 1 1-4-8 M42 20v9h-9'} />
+    </svg>
+    <div><span>{label}</span><strong>{progress.done}/{progress.total}</strong></div>
+  </div>;
 }
 
 export function ProgressPanel({ state, habits, tasks, onOpenRewards, onCloseDay, onReview }: {
@@ -42,11 +35,8 @@ export function ProgressPanel({ state, habits, tasks, onOpenRewards, onCloseDay,
   const award = state.reward;
   return <aside className="progress-panel glass" aria-label={t("Today's progress")}>
     <div className="rings-row">
-      <Rings habits={habits} tasks={tasks} />
-      <dl className="ring-legend">
-        <div className="habits"><dt>{t("Habits")}</dt><dd>{habits.done}/{habits.total}</dd></div>
-        <div className="tasks"><dt>{t("Tasks")}</dt><dd>{tasks.done}/{tasks.total}</dd></div>
-      </dl>
+      <ProgressRing category="habits" progress={habits} />
+      <ProgressRing category="tasks" progress={tasks} />
     </div>
     <div className="points-today">
       {/* The counting number is visual only; screen readers hear the exact total once. */}
@@ -81,10 +71,6 @@ export function ProgressPanel({ state, habits, tasks, onOpenRewards, onCloseDay,
       <button className="quiet-button" disabled={state.busy} onClick={onCloseDay}>{t("Close the day")}</button>
       <button className="quiet-button" disabled={state.busy} onClick={onReview}>{t("Weekly review")}</button>
       <button className="quiet-button" disabled={state.busy} onClick={onOpenRewards}>{t("Open rewards")}</button>
-      <button className="quiet-button" disabled={state.busy}
-        onClick={() => void state.mutate('preferences', { ...data.preferences, sound: !data.preferences.sound })}>
-        {data.preferences.sound ? t('Mute sound') : t('Enable sound')}
-      </button>
     </div>
   </aside>;
 }

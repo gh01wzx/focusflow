@@ -8,7 +8,7 @@ import { dateText } from '../view-options.ts';
 import { cueLine } from '../../../src/shared/habits.ts';
 import type { HabitInsight } from '../../../src/shared/habits.ts';
 import { HabitTrack, VoteCount } from './HabitCard.tsx';
-import { CheckIcon, CloseIcon, MoonIcon, PencilIcon, StarIcon } from './Icons.tsx';
+import { CheckIcon, CloseIcon, DashIcon, MoonIcon, PencilIcon, StarIcon } from './Icons.tsx';
 
 interface TaskRowProps {
   task: Task;
@@ -52,7 +52,7 @@ export function TaskRow({ task, today, busy, completable = true, rule, insight, 
           }}
         />
       ) : <span className="check placeholder" aria-hidden="true" />
-        : <span className={`check mark ${task.status}`} aria-hidden="true">{task.status === 'completed' ? <CheckIcon /> : '–'}</span>}
+        : <span className={`check mark ${task.status}`} aria-hidden="true">{task.status === 'completed' ? <CheckIcon /> : <DashIcon />}</span>}
       <div className="task-content">
         <span className="task-title">{task.title}</span>
         <div className="task-meta">

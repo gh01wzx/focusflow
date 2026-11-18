@@ -27,7 +27,7 @@ import { Celebration } from './components/Celebration.tsx';
 import type { Moment } from './components/Celebration.tsx';
 import { WeeklyReview, WeekPrompt, weekOf } from './components/WeeklyReview.tsx';
 import { ListItem } from './components/Animated.tsx';
-import { CheckIcon, PlusIcon, SparkIcon } from './components/Icons.tsx';
+import { CalendarIcon, CheckIcon, GiftIcon, HistoryIcon, PlusIcon, SparkIcon, SunIcon } from './components/Icons.tsx';
 import { FoldCard } from './components/FoldCard.tsx';
 import { readClosed, readFolded, readReviewed, readTimer, writeClosed, writeFolded, writeReviewed, writeTimer } from './local-state.ts';
 import type { Timer } from './local-state.ts';
@@ -244,14 +244,14 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               disabled={saving}
               onClick={() => { setRewards(false); setTab(key); }}
             >
-              <span className="nav-symbol" aria-hidden="true">{key === 'due' ? '●' : key === 'history' ? '↺' : '○'}</span>
+              <span className="nav-symbol" aria-hidden="true">{key === 'due' ? <SunIcon /> : key === 'history' ? <HistoryIcon /> : <CalendarIcon />}</span>
               {t(labels[key])}
               <span className="count">{view?.[key].length ?? '-'}</span>
             </button>
           ))}
           <button className={`nav-item ${rewards ? 'active' : ''}`} aria-current={rewards ? 'page' : undefined}
             disabled={saving} onClick={() => setRewards(true)}>
-            <span className="nav-symbol" aria-hidden="true">{'★'}</span>{t("Rewards")}
+            <span className="nav-symbol" aria-hidden="true"><GiftIcon /></span>{t("Rewards")}
           </button>
         </nav>
     }>

@@ -11,6 +11,17 @@ Source: the owner's Personal & Projects Tracker brief v0.1 and later approvals. 
 - Source and published development records are public; personal data and credentials remain private.
 - The interface supports English and Simplified Chinese. Source and docs use English. User-entered data keeps its language.
 
+## Interface design
+
+These choices follow findings about what people tend to prefer across cultures. The effects are modest averages, so they guide choices and never outrank clarity.
+
+- **Curves over sharp corners.** Surfaces use the shared corner scale, with smooth (squircle) corners where the browser supports them. Icons use rounded line ends; sharp text symbols are not used as icons.
+- **Easy to read.** Clear contrast, consistent alignment and familiar patterns. Text meets WCAG AA contrast (4.5:1 for small text). Card titles are short, in normal case and darker than row details.
+- **Moderate complexity.** Today shows only what helps now. Before adding anything to Today, check that it does not make the page busier; management tools belong where they are used, such as the task editor.
+- **Colors.** Blue and violet carry the brand. Avoid dark yellow, olive and brown, which people widely dislike; warnings use a clean red-orange.
+- **Natural motion.** Animations ease like physical objects (springs or eased curves), never move at a constant speed, and respect reduced motion.
+- **Good peaks and endings.** Finishing something gets a small, quiet moment, and the day and week end with a short review.
+
 ## Personal
 
 - Quick dated temporary tasks, completion/cancellation and basic history.
@@ -43,7 +54,7 @@ Do not control existing Codex App UI/sessions or automatically start the next Ti
 
 The target is a useful local tool for the owner, not a distributed app. Formal installers, signing, public releases, update feeds, update installation and installer rollback are outside scope. They do not block feature completion or personal use.
 
-Each platform launcher builds source and opens the fixed personal profile. Named review workspaces are separate and start empty. Existing personal data retains verified migration snapshots and separate-path recovery; these remain necessary for personal use.
+Each platform launcher builds the source when it changed since the last successful build and opens the fixed personal profile. Named review workspaces are separate and start empty. Existing personal data retains verified migration snapshots and separate-path recovery; these remain necessary for personal use.
 
 The owner requested implementation first and unified manual acceptance later. Do not run test suites or live model trials for this batch. Keep source, Issues/PRs and concise usage/architecture docs readable, and distinguish source delivery from verified behavior.
 

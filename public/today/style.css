@@ -338,16 +338,18 @@ html[data-size="large"] { zoom: 1.125; }
 .progress-category div { display: grid; }
 .progress-category span { color: var(--muted); font-size: 12px; font-weight: 600; }
 .progress-category strong { font-size: 21px; line-height: 1.2; font-variant-numeric: tabular-nums; }
-.rings { width: 46px; height: 46px; flex: none; }
+.rings { width: 46px; height: 46px; flex: none; overflow: visible; transition: filter .6s var(--ease); }
 .rings circle { fill: none; stroke-width: 7; stroke-linecap: round; }
-.progress-category.habits .ring-symbol, .ring.habits .fill { stroke: #ff527f; }
-.progress-category.tasks .ring-symbol, .ring.tasks .fill { stroke: #28b86b; }
-.ring.habits .track { stroke: rgba(255, 55, 95, .15); }
-.ring.tasks .track { stroke: rgba(40, 199, 111, .16); }
-.ring.closed .fill { animation: ring-glow 2.4s var(--ease) 1; }
-.ring.habits.closed .fill { filter: drop-shadow(0 0 4px rgba(255, 55, 95, .55)); }
-.ring.tasks.closed .fill { filter: drop-shadow(0 0 4px rgba(40, 199, 111, .55)); }
-@keyframes ring-glow { 0% { stroke-width: 12.5; } 30% { stroke-width: 15; } 100% { stroke-width: 12.5; } }
+.progress-category.habits .ring-symbol { stroke: #ff2d55; }
+.progress-category.tasks .ring-symbol { stroke: #1fb35f; }
+.ring.habits .track { stroke: rgba(255, 45, 85, .14); }
+.ring.tasks .track { stroke: rgba(31, 179, 95, .15); }
+/* A closed ring settles with one small pulse and a soft shadow around the whole ring. The shadow
+   sits on the svg, not the stroke, so it stays round instead of being clipped to a box. */
+.progress-category.closed .rings { animation: ring-close .7s var(--ease) 1; }
+.progress-category.habits.closed .rings { filter: drop-shadow(0 2px 5px rgba(255, 45, 85, .3)); }
+.progress-category.tasks.closed .rings { filter: drop-shadow(0 2px 5px rgba(31, 179, 95, .3)); }
+@keyframes ring-close { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
 .points-today { grid-area: points; position: relative; }
 .points-today p { margin: 0; color: var(--muted); }
 .points-today strong { color: var(--text); font-size: 30px; font-weight: 750; letter-spacing: -.025em; font-variant-numeric: tabular-nums; }

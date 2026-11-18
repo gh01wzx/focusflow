@@ -10,13 +10,20 @@ const ratio = (progress: Progress) => progress.total ? Math.min(1, progress.done
 const narrowDay = (day: string) => new Intl.DateTimeFormat(document.documentElement.lang, { weekday: 'narrow', timeZone: 'UTC' }).format(new Date(day + 'T12:00:00Z'));
 const longDay = (day: string) => new Intl.DateTimeFormat(document.documentElement.lang, { weekday: 'long', timeZone: 'UTC' }).format(new Date(day + 'T12:00:00Z'));
 
+// Ring colors run from deep to light along the stroke, like an activity ring.
+const ringColors = { habits: ['#ff2d55', '#ff7a9c'], tasks: ['#1fb35f', '#7ee2a0'] } as const;
+
 function ProgressRing({ category, progress }: { category: 'habits' | 'tasks'; progress: Progress }) {
   const label = t(category === 'habits' ? 'Habits' : 'Tasks');
-  return <div className={'progress-category ' + category}>
+  const closed = !!progress.total && progress.done >= progress.total;
+  return <div className={'progress-category ' + category + (closed ? ' closed' : '')}>
     <svg className="rings" viewBox="0 0 64 64" aria-hidden="true">
-      <g transform="rotate(-90 32 32)" className={'ring ' + category + (progress.total && progress.done >= progress.total ? ' closed' : '')}>
+      <defs><linearGradient id={'ring-' + category} x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor={ringColors[category][0]} /><stop offset="1" stopColor={ringColors[category][1]} />
+      </linearGradient></defs>
+      <g transform="rotate(-90 32 32)" className={'ring ' + category}>
         <circle className="track" cx="32" cy="32" r="26" />
-        <motion.circle className="fill" cx="32" cy="32" r="26" initial={false}
+        <motion.circle className="fill" cx="32" cy="32" r="26" stroke={`url(#ring-${category})`} initial={false}
           animate={{ pathLength: ratio(progress), opacity: progress.done ? 1 : 0 }} transition={spring} />
       </g>
       <path className="ring-symbol" fill="none" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"

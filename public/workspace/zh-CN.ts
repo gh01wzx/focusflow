@@ -1065,4 +1065,9 @@ export const chinese: Record<string, string> = {
   "Log {0} min for {1}": "为 {1} 记录 {0} 分钟",
   "Log {0} min": "记录 {0} 分钟",
   "You showed up. Keep going as long as you like.": "你已经开始了，想做多久都可以。",
+  "Habit timers": "习惯计时",
+  "{0} of {1}: {2}": "第 {0} 个，共 {1} 个：{2}",
+  "Previous habit": "上一个习惯",
+  "Next habit": "下一个习惯",
+  "Stop · check in": "停止 · 打卡",
 };

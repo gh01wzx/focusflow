@@ -28,7 +28,7 @@ import { PAGE, ShowMore } from './components/ShowMore.tsx';
 import { WeeklyReview, WeekPrompt, weekOf } from './components/WeeklyReview.tsx';
 import { ListItem, spring } from './components/Animated.tsx';
 import { CheckIcon, PlusIcon, SparkIcon } from './components/Icons.tsx';
-import { readClosed, readReviewed, readSkipped, readTimer, writeClosed, writeReviewed, writeSkipped, writeTimer } from './local-state.ts';
+import { readClosed, readReviewed, readTimer, writeClosed, writeReviewed, writeTimer } from './local-state.ts';
 import type { Timer } from './local-state.ts';
 
 export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
@@ -38,7 +38,6 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const personal = usePersonal(view, refresh, settings);
   const [rewards, setRewards] = useState(false);
   const [sheet, setSheet] = useState<SheetRequest | null>(null);
-  const [skipped, setSkipped] = useState<string[]>([]);
   const [timer, setTimerState] = useState<Timer | null>(readTimer);
   const [closing, setClosing] = useState(false);
   const [closedDay, setClosedDay] = useState(readClosed);
@@ -75,7 +74,9 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   ];
   const text = tabText[tab];
   const upNext = view && data ? nextUp(view.due, rules, data.progress, minute, focusIds) : [];
-  const candidates = upNext.filter(task => !skipped.includes(task.id));
+  // The swipeable timer cards: today's timed habits, in Next order, then those already met.
+  const timedHabit = (task: Task) => { const rule = ruleFor(task); return rule?.mode === 'minutes' && rule.unit !== 'count'; };
+  const timers = [...upNext.filter(timedHabit), ...due.filter(task => timedHabit(task) && !upNext.includes(task))];
   const anchors = useMemo(() => [...new Set((data?.rules ?? []).map(rule => rule.cue).filter(Boolean))], [data]);
   const reviews = useMemo(() => view && data ? reviewHabits(view.today, view.recurrences, rules, data.recent) : [], [view, data, rules]);
   const week = today ? weekOf(today) : '';
@@ -84,7 +85,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
 
   useEffect(() => {
     if (!today) return;
-    setSkipped(readSkipped(today)); setOthersOpen(false);
+    setOthersOpen(false);
   }, [today]);
   useEffect(() => {
     const id = setInterval(() => setMinute(new Date().toTimeString().slice(0, 5)), 60_000);
@@ -125,10 +126,6 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
     state.announce(t(ruleFor(task)?.unit === 'count' ? 'Logged {0} counts for {1}.' : 'Logged {0} min for {1}.', minutes, task.title) + vote(task, first));
   }
   function rest(task: Task) { void personal.resolve(task, 'cancelled', state.resolve); }
-  function skip(task: Task) {
-    const ids = [...new Set([...skipped, task.id])];
-    setSkipped(ids); writeSkipped(today, ids);
-  }
   function setTimer(next: Timer | null) {
     setTimerState(next); writeTimer(next);
   }
@@ -255,10 +252,9 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               onOpen={() => setReviewing(true)} onDismiss={() => finishReview(false)} />}
             {tab === 'due' && view && minute >= EVENING && closedDay !== today && <EveningPrompt busy={saving}
               onOpen={() => setClosing(true)} onDismiss={() => closeDay(false)} />}
-            {tab === 'due' && view && data && <NowCard candidates={candidates} due={view.due} rules={rules} busy={saving}
-              skipped={upNext.length - candidates.length}
-              timer={timer} focus={focusIds} onTimer={setTimer}
-              onComplete={complete} onLog={log} onSkip={skip} onShowSkipped={() => { setSkipped([]); writeSkipped(today, []); }} />}
+            {tab === 'due' && view && data && <NowCard items={timers} due={view.due} rules={rules} progress={data.progress} busy={saving}
+              timer={timer} onTimer={setTimer}
+              onComplete={complete} onLog={log} />}
             <div className="feedback-row">
               <p className="feedback" role="status" aria-live="polite">
                 {t(message) || (!view && !error ? t('Loading your tasks.') : '')}

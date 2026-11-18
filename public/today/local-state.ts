@@ -1,8 +1,7 @@
-// Small conveniences kept in this browser only: the running timer, tasks set aside with "Later",
+// Small conveniences kept in this browser only: the running timer,
 // whether today was closed and whether this week was reviewed. Saved tasks, logged minutes and
 // focus are the record.
 const TIMER_KEY = 'focusflow.timer';
-const SKIPPED_KEY = 'focusflow.skipped';
 const CLOSED_KEY = 'focusflow.closed';
 const REVIEWED_KEY = 'focusflow.reviewed';
 
@@ -22,13 +21,6 @@ export function readTimer(): Timer | null {
   return value && typeof value.taskId === 'string' && Number.isFinite(value.startedAt) ? value as Timer : null;
 }
 export const writeTimer = (timer: Timer | null) => write(TIMER_KEY, timer);
-
-// "Later" lasts for one local day.
-export function readSkipped(day: string): string[] {
-  const value = read(SKIPPED_KEY) as { day?: unknown; ids?: unknown } | null;
-  return value?.day === day && Array.isArray(value.ids) ? value.ids.filter((id): id is string => typeof id === 'string') : [];
-}
-export const writeSkipped = (day: string, ids: string[]) => write(SKIPPED_KEY, { day, ids });
 
 // The last local day closed with Close the day, so the evening prompt shows once per day.
 export function readClosed(): string {

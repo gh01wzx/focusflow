@@ -93,21 +93,22 @@ export function usePersonal(revision: object | null, refreshTasks: () => Promise
     } finally { pending.current = false; setBusy(false); }
   }
   // Saves a habit plan from the task window. Errors return to the window instead of the page.
-  async function savePlan(subject: string, update: Record<string, unknown>) {
+  async function changePlan(action: 'rule' | 'remove', subject: string, update: Record<string, unknown>) {
     if (pending.current) return 'Another change is still saving. Try again in a moment.';
     pending.current = true;
     const current = ++generation.current;
     setBusy(true);
     try {
-      const result = await readPersonal('rule', { ...update, subject });
+      const result = await readPersonal(action, { ...update, subject });
       if (current === generation.current) setData(result.view);
-      if (update.category) await refreshTasks();
+      if (update.category || action === 'remove') await refreshTasks();
       return '';
     } catch (failure) {
       return failure instanceof Error ? failure.message : 'Could not save this plan.';
     } finally { pending.current = false; setBusy(false); }
   }
-  return { data, error, busy, reward, mutate, resolve, savePlan, refresh };
+  return { data, error, busy, reward, mutate, resolve, savePlan: (id: string, update: Record<string, unknown>) => changePlan('rule', id, update),
+    remove: (id: string, scope: 'plan' | 'occurrence') => changePlan('remove', id, { scope }), refresh };
 }
 
 export type PersonalController = ReturnType<typeof usePersonal>;

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { emptyPlan, points } from '../../../src/shared/personal.ts';
 import type { HabitPlan, ScoringRule } from '../../../src/shared/personal.ts';
-import type { Frequency, Task, TaskDraft, Weekday } from '../../../src/shared/tasks.ts';
+import type { Frequency, RecurrenceRule, Task, TaskDraft, Weekday } from '../../../src/shared/tasks.ts';
 import { WEEKDAYS } from '../../../src/shared/weekdays.ts';
 import { HABIT_LIMIT, cueLine } from '../../../src/shared/habits.ts';
 import { dateText } from '../view-options.ts';
@@ -15,8 +15,8 @@ type Kind = 'once' | 'repeat' | 'checkoff' | 'timed';
 // A guided request walks through a new habit one question at a time. A cue starts the
 // "After I" field, for example when stacking a new habit after a steady one.
 export type SheetRequest = { mode: 'create'; id: string; guided?: boolean; title?: string; cue?: string }
-  | { mode: 'edit'; id: string; task: Task; rule: ScoringRule | undefined };
-export interface PlanUpdate extends HabitPlan { category: 'task' | 'habit'; mode: 'minutes' | 'complete'; rate: number; target: number }
+  | { mode: 'edit'; id: string; task: Task | undefined; series: RecurrenceRule | undefined; effective: string; rule: ScoringRule | undefined };
+export interface PlanUpdate extends HabitPlan { category: 'task' | 'habit'; mode: 'minutes' | 'complete'; rate: number; target: number; schedule?: { frequency: Frequency; weekdays: Weekday[] | null; date: string; previous: string } }
 
 interface SheetProps {
   request: SheetRequest | null;
@@ -30,7 +30,8 @@ interface SheetProps {
   habits: number;
   // Each returns an error message, or an empty string after saving.
   onCreate(draft: TaskDraft): Promise<string>;
-  onSavePlan(task: Task, update: PlanUpdate): Promise<string>;
+  onRemove(id: string, scope: 'plan' | 'occurrence'): Promise<string>;
+  onSavePlan(id: string, update: PlanUpdate): Promise<string>;
   onClose(): void;
 }
 
@@ -75,18 +76,23 @@ function planOf(rule: ScoringRule | undefined): HabitPlan {
   return { cue: rule.cue, identity: rule.identity, time: rule.time, place: rule.place, starter: rule.starter, bundle: rule.bundle };
 }
 
-function SheetForm({ request, today, busy, reward, anchors, identities, habits, onCreate, onSavePlan, onClose }: SheetProps & { request: SheetRequest }) {
+function SheetForm({ request, today, busy, reward, anchors, identities, habits, onCreate, onSavePlan, onRemove, onClose }: SheetProps & { request: SheetRequest }) {
   const editing = request.mode === 'edit' ? request : null;
   const guided = request.mode === 'create' && !!request.guided;
   const rule = editing?.rule;
+  const series = editing?.series;
+  const task = editing?.task;
+  const historyOnly = !!editing && !series && (task?.status !== 'pending' || !!task.recurrenceId);
+  const initialDate = editing?.effective ?? today;
+  const [deletion, setDeletion] = useState<'plan' | 'occurrence' | null>(null);
   const form = useRef<HTMLFormElement>(null);
   const [step, setStep] = useState(0);
   const [kind, setKind] = useState<Kind>(guided ? 'checkoff' : !editing ? 'once'
-    : !editing.task.recurrenceId ? 'once' : rule?.mode === 'minutes' ? 'timed' : isHabit(editing.task) ? 'checkoff' : 'repeat');
+    : !series ? 'once' : rule?.mode === 'minutes' ? 'timed' : isHabit(series) ? 'checkoff' : 'repeat');
   const [title, setTitle] = useState(request.mode === 'create' ? request.title ?? '' : '');
-  const [date, setDate] = useState(today);
-  const [frequency, setFrequency] = useState<Frequency>('daily');
-  const [weekdays, setWeekdays] = useState<Weekday[]>([]);
+  const [date, setDate] = useState(initialDate);
+  const [frequency, setFrequency] = useState<Frequency>(series?.frequency ?? 'daily');
+  const [weekdays, setWeekdays] = useState<Weekday[]>(series?.weekdays ?? []);
   // Number fields keep their typed text, so clearing one does not snap it back to zero.
   const [donePoints, setDonePoints] = useState(rule?.mode === 'complete' ? String(rule.rate / 100) : '5');
   const [minutePoints, setMinutePoints] = useState(rule?.mode === 'minutes' ? String(rule.rate / 100) : '1');
@@ -99,7 +105,11 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
   const pointsText = kind === 'timed' ? minutePoints : donePoints;
   const field = (key: keyof HabitPlan) => (event: ChangeEvent<HTMLInputElement>) =>
     setPlan(current => ({ ...current, [key]: event.target.value }));
-  const basicsMissing = !editing && (!title.trim() || (repeating && frequency === 'weekly' && !weekdays.length));
+  const [legacyWeekly, setLegacyWeekly] = useState(series?.frequency === 'weekly' && series.weekdays === null);
+  const days = frequency === 'weekly' && !legacyWeekly ? weekdays : null;
+  const changedSchedule = series && (date !== initialDate || frequency !== series.frequency ||
+    JSON.stringify(days) !== JSON.stringify(series.weekdays));
+  const basicsMissing = ((!editing || !!series) && (!date || (repeating && date < today))) || (!editing && !title.trim()) || (!!days && !days.length);
   const blocked = saving || busy || basicsMissing;
   const shownStep = (index: number) => !guided || step === index;
 
@@ -114,26 +124,27 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
       if (step > 0 || !basicsMissing) setStep(step + 1);
       return;
     }
-    if (blocked) return;
+    if (blocked || deletion || historyOnly) return;
     setSaving(true); setError('');
     // Fields hidden for the chosen kind are saved empty.
     const shown: HabitPlan = { ...plan, cue: repeating ? plan.cue : '', bundle: repeating ? plan.bundle : '' };
     const rate = Math.round(Number(pointsText) * 100);
     const minutes = kind === 'timed' ? Number(target) : 0;
     const failure = editing
-      ? await onSavePlan(editing.task, { ...shown, category, mode: kind === 'timed' ? 'minutes' : 'complete', rate, target: minutes })
+      ? await onSavePlan(series?.id ?? task!.id, { ...shown, category,
+          ...(changedSchedule ? { schedule: { date, frequency, weekdays: days, previous: JSON.stringify([series.frequency, series.weekdays, series.nextDate]) } } : {}), mode: kind === 'timed' ? 'minutes' : 'complete', rate, target: minutes })
       : await onCreate({ category, title, plannedDate: date, frequency: repeating ? frequency : 'none', mode: kind === 'timed' ? 'minutes' : 'complete',
         ...(repeating && frequency === 'weekly' ? { weekdays } : {}), plan: { ...shown, rate, target: minutes } });
     setSaving(false);
     if (failure) setError(failure); else onClose();
   }
 
-  const subject = editing?.task.title ?? title.trim();
-  const schedule = editing
-    ? t(editing.task.frequency ? (editing.task.frequency === 'daily' ? 'Daily' : 'Weekly') : 'Once') + ' · ' + dateText(editing.task.plannedDate)
-    : !repeating ? dateText(date)
-      : frequency === 'daily' ? t('Daily from ') + dateText(date)
-        : (weekdays.length ? WEEKDAYS.filter(day => weekdays.includes(day.value)).map(day => t(day.label)).join(', ') : t('Choose weekdays')) + t(' from ') + dateText(date);
+  const subject = series?.title ?? task?.title ?? title.trim();
+  const formattedDate = date ? dateText(date) : '';
+  const schedule = !repeating ? formattedDate
+      : frequency === 'daily' ? t('Daily from ') + formattedDate
+        : legacyWeekly ? t('Every 7 days from the first date (existing schedule)') + ' ' + formattedDate
+        : (weekdays.length ? WEEKDAYS.filter(day => weekdays.includes(day.value)).map(day => t(day.label)).join(', ') : t('Choose weekdays')) + t(' from ') + formattedDate;
   const scoreText = kind === 'timed' ? points(Math.round(Number(minutePoints) * 100)) + t(' pt/min') : '+' + points(Math.round(Number(donePoints) * 100)) + t(' points');
   const choices = [...new Set([...anchors, ...['wake up', 'pour my morning coffee', 'sit down at my desk', 'finish lunch',
     'get home', 'finish dinner', 'get into bed'].map(item => t(item))].map(item => item.trim()).filter(Boolean))].slice(0, 8);
@@ -165,11 +176,12 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
     {guided && <ol className="step-dots" aria-hidden="true">{steps.map((name, index) =>
       <li key={name} className={index === step ? 'current' : index < step ? 'past' : ''} />)}</ol>}
     <div className="sheet-body">
+      {historyOnly ? <p className="sheet-subject">{subject} · {dateText(task!.plannedDate)}</p> : <>
       {shownStep(0) && <>
         <fieldset className="segmented" disabled={saving}>
           <legend className="sr-only">{t("Kind")}</legend>
           {kinds.filter(item => {
-            if (editing) return editing.task.recurrenceId ? item.value !== 'once' : item.value === 'once';
+            if (editing) return series ? item.value !== 'once' : item.value === 'once';
             return guided ? item.value === 'checkoff' || item.value === 'timed' : item.value === 'once' || item.value === 'repeat';
           }).map(item => {
             return <label key={item.value} className={kind === item.value ? 'selected' : ''} title={t(item.hint)}>
@@ -180,27 +192,28 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
         </fieldset>
         <p className="kind-hint">{t(kinds.find(item => item.value === kind)!.hint)}</p>
 
-        {editing ? <section className="sheet-group">
-          <p className="sheet-subject">{'“' + editing.task.title + '”'}</p>
-          <p className="group-note">{schedule}{t(". The title and schedule stay as created; stop repeating and add a new one to change them.")}</p>
-        </section> : <section className="sheet-group">
-          <input className="title-input" aria-label={t(guided ? 'Habit title' : 'Task title')} value={title} maxLength={300} required data-autofocus autoComplete="off"
-            placeholder={guided ? t('What habit do you want to build?') : kind === 'timed' ? t('What will you practice?') : t('What will you do?')}
-            disabled={saving} onChange={event => setTitle(event.target.value)} />
+        <section className="sheet-group">
+          {editing ? <p className="sheet-subject">{subject}</p> :
+            <input className="title-input" aria-label={t(guided ? 'Habit title' : 'Task title')} value={title} maxLength={300} required data-autofocus autoComplete="off"
+              placeholder={guided ? t('What habit do you want to build?') : t('What will you do?')}
+              disabled={saving} onChange={event => setTitle(event.target.value)} />}
+          {(!editing || series) &&
           <div className="field-row">
-            <label htmlFor="sheet-date">{repeating ? t('Start date') : t('Planned date')}</label>
-            <input id="sheet-date" aria-label={t("Planned date")} type="date" value={date} required disabled={saving}
+            <label htmlFor="sheet-date">{series ? t('Schedule from') : repeating ? t('Start date') : t('Planned date')}</label>
+            <input id="sheet-date" aria-label={t(series ? "Schedule from" : "Planned date")} type="date" value={date} required disabled={saving}
               min={repeating ? today : undefined} onChange={event => setDate(event.target.value)} />
-          </div>
+          </div>}
           {repeating && <div className="field-row">
             <label htmlFor="sheet-repeat">{t("Repeat")}</label>
-            <select id="sheet-repeat" value={frequency} disabled={saving}
-              onChange={event => setFrequency(event.target.value === 'weekly' ? 'weekly' : 'daily')}>
+            <select id="sheet-repeat" value={legacyWeekly ? 'legacy' : frequency} disabled={saving}
+              onChange={event => { setLegacyWeekly(event.target.value === 'legacy'); setFrequency(event.target.value === 'daily' ? 'daily' : 'weekly'); }}>
+              {series?.frequency === 'weekly' && series.weekdays === null && <option value="legacy">{t('Every 7 days from the first date (existing schedule)')}</option>}
               <option value="daily">{t("Daily")}</option><option value="weekly">{t("Weekly")}</option>
             </select>
           </div>}
-          {repeating && frequency === 'weekly' && <WeekdayPicker selected={weekdays} disabled={saving} onChange={setWeekdays} />}
-        </section>}
+          {repeating && frequency === 'weekly' && !legacyWeekly && <WeekdayPicker selected={weekdays} disabled={saving} onChange={setWeekdays} />}
+          {series && <p className="group-note">{t("Changes apply to unstarted occurrences. Recorded activity keeps its original dates.")}</p>}
+        </section>
         {!editing && category === 'habit' && habits >= HABIT_LIMIT && <p className="soft-note">{t("You are already building")} {habits} {t("habits. New habits stick better one at a time, so you might add this one when another feels easy.")}</p>}
       </>}
 
@@ -270,16 +283,34 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
         {plan.starter && <p>{t("Start with:")} {plan.starter}</p>}
         {plan.identity && <p>{t("Vote for:")} {plan.identity}</p>}
       </section>}
+      </>}
     </div>
     <footer className="sheet-footer">
       {error && <p role="alert" className="error">{t(error)}</p>}
+      {deletion ? <div className="delete-confirm">
+        <p>{t(deletion === 'plan' ? 'Delete this plan and its open occurrences? Past records and points will stay.' :
+          task?.recurrenceId ? 'Delete this occurrence from your lists? Recorded points and other dates will stay.' : 'Delete this task? Recorded points will stay.')}</p>
+        <button type="button" className="secondary-button" disabled={saving} onClick={() => setDeletion(null)}>{t("Back")}</button>
+        <button type="button" className="danger-button" disabled={saving || busy} onClick={async () => {
+          setSaving(true); setError('');
+          const failure = await onRemove(deletion === 'plan' ? series!.id : task!.id, deletion);
+          setSaving(false); if (failure) setError(failure); else onClose();
+        }}>{t("Confirm deletion")}</button>
+      </div> : <>
+      {editing && <div className="sheet-delete-actions">
+        {task && <button type="button" className="text-button danger-text" disabled={saving || busy}
+          onClick={() => setDeletion('occurrence')}>{t(task.recurrenceId ? "Delete this occurrence" : "Delete task")}</button>}
+        {series && <button type="button" className="text-button danger-text" disabled={saving || busy}
+          onClick={() => setDeletion('plan')}>{t("Delete plan")}</button>}
+      </div>}
       {guided && step > 0
         ? <button type="button" className="secondary-button" disabled={saving} onClick={() => setStep(step - 1)}>{t("Back")}</button>
         : <button type="button" className="secondary-button" disabled={saving} onClick={onClose}>{t("Cancel")}</button>}
       {guided && step < steps.length - 1
         ? <button type="submit" className="primary" disabled={saving || (step === 0 && basicsMissing)}>{step === 0 ? t('Next') : t('Next (or skip)')}</button>
-        : <button type="submit" className="primary" disabled={blocked}>
+        : !historyOnly && <button type="submit" className="primary" disabled={blocked}>
           {saving ? t('Saving...') : editing ? t('Save plan') : guided || kind === 'timed' ? t('Add habit') : t('Add task')}</button>}
+      </>}
     </footer>
   </form>;
 }

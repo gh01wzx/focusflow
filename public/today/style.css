@@ -396,6 +396,10 @@ html[data-size="large"] { zoom: 1.125; }
   display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; padding: 14px 22px 18px;
   border-top: 1px solid var(--separator); background: rgba(255, 255, 255, .55);
 }
+.sheet-delete-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-inline-end: auto; }
+.sheet-delete-actions .danger-text { color: var(--red-text); }
+.delete-confirm { display: flex; flex: 1; flex-wrap: wrap; gap: .5rem; justify-content: flex-end; align-items: center; }
+.delete-confirm p { flex: 1 1 15rem; margin: 0; }
 .sheet-footer .error { flex: 1 1 100%; margin: 0; }
 .segmented { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 3px; border: 0; border-radius: 12px; background: var(--fill-strong); }
 .segmented label {

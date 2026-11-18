@@ -23,7 +23,7 @@ Type in **Add a task for today** and press Enter for a quick task. Choose **New 
 - **Make it easy:** a two-minute version that counts as showing up, and a small daily target for timed habits.
 - **Make it satisfying:** the identity each completion votes for, such as "I am a reader".
 
-Only the title is required. The summary at the bottom shows the whole plan. Use the pencil on a task or habit to edit its plan later; the title and schedule stay as created.
+Only the title is required. The summary at the bottom shows the whole plan. Use the pencil on a task or habit to edit its plan. For a repeat, choose the effective date and daily or weekly frequency. A weekly plan can run on selected weekdays. Recorded activity keeps its original dates. From the editor, delete a single task, just one occurrence, or the whole repeating plan. Deleting a plan removes its open occurrences and keeps past records and earned points. You can also open the editor directly from Habit schedules or Repeating tasks.
 
 Tick the square to complete a task. Use the pink circle to check in a habit. A timed habit card shows minutes against its target and a **Log 2 min** button for its two-minute version. Every habit shows its recent occurrences, how many of the latest seven you showed up for, and its chain. A habit with an identity also shows its votes so far: every day done or started counts as one vote for that identity, across all habits that name it. Any logged minutes count as showing up. One miss does not break the chain; two misses in a row do, and the card reminds you never to miss twice. Choose **Rest today** for a planned day off; a rest day never counts as a miss. A future habit occurrence in **Upcoming** is logged on its day.
 

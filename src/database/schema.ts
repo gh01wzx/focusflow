@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 23;
+export const SCHEMA_VERSION = 25;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -214,4 +214,13 @@ export const MIGRATIONS = [
   );` },
   // Older schedules all appeared as habits. The owner can correct their category in Edit plan.
   { version: 23, sql: "ALTER TABLE recurrence_rules ADD COLUMN category TEXT NOT NULL DEFAULT 'habit' CHECK(category IN ('task','habit'));" },
+  { version: 24, sql: `CREATE TABLE task_exceptions (
+    task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+    removed INTEGER NOT NULL DEFAULT 0 CHECK(removed IN (0,1)),
+    frequency TEXT CHECK(frequency IN ('daily','weekly')),
+    period_frequency TEXT CHECK(period_frequency IN ('daily','weekly'))
+  );
+  CREATE VIEW visible_tasks AS SELECT t.* FROM tasks t WHERE NOT EXISTS
+    (SELECT 1 FROM task_exceptions x WHERE x.task_id=t.id AND x.removed=1);` },
+  { version: 25, sql: 'ALTER TABLE recurrence_rules ADD COLUMN removed INTEGER NOT NULL DEFAULT 0 CHECK(removed IN (0,1));' },
 ] as const;

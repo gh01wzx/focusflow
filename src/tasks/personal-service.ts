@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { editSchedule } from './edit-schedule.ts';
 import { addDays, localDay, validDate } from '../shared/calendar.ts';
-import { periodEnd } from '../shared/weekdays.ts';
+import { occurrenceEnd } from '../shared/weekdays.ts';
 import { PLAN_LIMITS, personalDefaults } from '../shared/personal.ts';
 import type { ActivityEntry, HabitPlan, PersonalPreferences, PersonalView } from '../shared/personal.ts';
 import type { PersonalRepository } from './personal-repository.ts';
@@ -69,7 +70,7 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
     if (!target || target.status === 'cancelled' || !recurrence) {
       throw new TaskInputError('Choose a date when this habit was scheduled.');
     }
-    const end = periodEnd(target.plannedDate, recurrence.frequency, recurrence.weekdays);
+    const end = occurrenceEnd(target, recurrence);
     if (end !== null && newDay >= end) throw new TaskInputError('Choose a date when this habit was scheduled.');
     return target.id;
   }
@@ -81,7 +82,16 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
     return transaction(now => {
       const value = fields(input), day = localDay(now);
       let award = 0;
-      if (action === 'rule') {
+      if (action === 'remove') {
+        const id = operationId(value.subject);
+        if (value.scope === 'occurrence') {
+          const task = tasks.findTask(id);
+          if (task) tasks.removeOccurrence(task.id);
+        } else if (value.scope === 'plan') {
+          const rule = tasks.findRule(id);
+          if (rule) tasks.removePlan(id, now.toISOString());
+        } else throw new TaskInputError('Choose what to delete.');
+      } else if (action === 'rule') {
         const id = operationId(value.subject), task = tasks.findTask(id), recurrence = tasks.findRule(id);
         if (!task && !recurrence) throw new TaskInputError('Choose an existing task or habit.');
         const subject = task?.recurrenceId ?? id;
@@ -98,6 +108,10 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
         if (previous && previous.mode !== mode && ((task && repository.minutes(task.id) > 0)
           || tasks.listPendingOccurrences().some(item => item.recurrenceId === subject && repository.minutes(item.id) > 0))) {
           throw new TaskInputError('Wait for the next scheduled occurrence before changing how this habit is logged.');
+        }
+        if (value.schedule !== undefined) {
+          if (!schedule) throw new TaskInputError('Open an active plan to change its schedule.');
+          editSchedule(tasks, schedule, value.schedule, now);
         }
         repository.saveRule({ subject, mode, rate: integer(value.rate, 0, 100000, 'Enter a valid point value.'),
           target: mode === 'minutes' ? integer(value.target, 1, 1440, 'Enter a target between 1 and 1440 minutes.') : 0,
@@ -163,7 +177,7 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
           }
           if (action === 'reverse' && entry.kind === 'earn' && entry.minutes === 0) {
             const task = tasks.findTask(entry.subject);
-            if (task && (!task.recurrenceId || task.plannedDate === day)) tasks.reopenTask(task.id);
+            if (task && (!task.recurrenceId || (task.plannedDate === day && tasks.findRule(task.recurrenceId)))) tasks.reopenTask(task.id);
           }
         } else throw new TaskInputError('Unknown Personal action.');
       }

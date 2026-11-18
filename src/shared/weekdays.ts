@@ -1,5 +1,5 @@
 import { nextOccurrence } from './calendar.ts';
-import type { Frequency, Weekday } from './tasks.ts';
+import type { Frequency, RecurrenceRule, Task, Weekday } from './tasks.ts';
 
 export const WEEKDAYS = [
   { value: 1, label: 'Mon', name: 'Monday' },
@@ -36,4 +36,8 @@ export function nextScheduledDate(date: string, frequency: Frequency, weekdays: 
 // one local day; older weekly schedules keep their seven-day periods.
 export function periodEnd(date: string, frequency: Frequency, weekdays: Weekday[] | null): string | null {
   return nextOccurrence(date, weekdays === null ? frequency : 'daily');
+}
+
+export function occurrenceEnd(task: Task, rule: RecurrenceRule): string | null {
+  return task.periodFrequency ? nextOccurrence(task.plannedDate, task.periodFrequency) : periodEnd(task.plannedDate, rule.frequency, rule.weekdays);
 }

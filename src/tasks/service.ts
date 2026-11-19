@@ -1,6 +1,6 @@
 import { localDay, nextOccurrence, validDate } from '../shared/calendar.ts';
-import { firstSelectedDate, nextScheduledDate, occurrenceEnd } from '../shared/weekdays.ts';
-import { FOCUS_LIMIT, HISTORY_LIMIT } from '../shared/tasks.ts';
+import { firstSelectedDate, nextScheduledDate, occurrenceEnd, scheduleDay } from '../shared/weekdays.ts';
+import { FOCUS_LIMIT, HABIT_FREQUENCIES, HISTORY_LIMIT } from '../shared/tasks.ts';
 import type { RecurrenceRule, Task } from '../shared/tasks.ts';
 import type { TaskRepository } from './repository.ts';
 import { recurrenceInput, taskInput, TaskInputError } from './validation.ts';
@@ -68,11 +68,12 @@ export function createTaskService(repository: TaskRepository, transaction: TaskT
       if (category !== 'habit' && category !== 'task' || category === 'task' && value.habit === true) {
         throw new TaskInputError('Choose a valid activity category.');
       }
+      if (category === 'habit' && !HABIT_FREQUENCIES.includes(frequency)) throw new TaskInputError('Habits repeat daily or weekly.');
       const firstDate = weekdays === null ? plannedDate : firstSelectedDate(plannedDate, weekdays);
       if (firstDate === null) throw new TaskInputError('No selected weekday remains in the supported date range.');
       const rule: RecurrenceRule = {
         id: nextId(), title, category, frequency, weekdays, startDate: plannedDate,
-        nextDate: nextScheduledDate(firstDate, frequency, weekdays), createdAt: now.toISOString(), stoppedAt: null,
+        nextDate: nextScheduledDate(firstDate, frequency, weekdays, scheduleDay({ startDate: plannedDate })), createdAt: now.toISOString(), stoppedAt: null,
       };
       repository.insertRule(rule);
       repository.insertTask({

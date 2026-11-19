@@ -1,4 +1,4 @@
-import type { Task, TaskView } from '../../src/shared/tasks.ts';
+import type { Frequency, Task, TaskView } from '../../src/shared/tasks.ts';
 import { occurrenceEnd } from '../../src/shared/weekdays.ts';
 
 export type Tab = 'due' | 'upcoming' | 'history';
@@ -11,6 +11,7 @@ export function canReopen(task: Task, view: TaskView): boolean {
   const end = occurrenceEnd(task, rule);
   return end === null || end > view.today;
 }
+export const frequencyLabels: Record<Frequency, string> = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', quarterly: 'Quarterly', yearly: 'Yearly' };
 export const labels: Record<Tab, string> = { due: 'Today', upcoming: 'Upcoming', history: 'History' };
 export const tabText: Record<Tab, { emptyTitle: string; emptyDescription: string }> = {
   due: {

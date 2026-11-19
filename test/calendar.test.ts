@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addDays, daysBetween, localDay, nextOccurrence, validDate } from '../src/shared/calendar.ts';
+import { addDays, addMonths, daysBetween, localDay, nextOccurrence, validDate } from '../src/shared/calendar.ts';
 
 test('local calendar day follows Auckland midnight and DST rather than UTC date slicing', () => {
   const previous = process.env.TZ;
@@ -23,6 +23,17 @@ test('calendar recurrence handles leap days, year boundaries and the final suppo
   assert.equal(nextOccurrence('0099-12-31', 'daily'), '0100-01-01');
   assert.equal(nextOccurrence('9999-12-31', 'daily'), null);
   assert.equal(nextOccurrence('9999-12-28', 'weekly'), null);
+});
+
+test('month-based dates keep their day and fall on the last day of shorter months', () => {
+  assert.equal(nextOccurrence('2026-01-31', 'monthly'), '2026-02-28');
+  assert.equal(nextOccurrence('2026-02-28', 'monthly', 31), '2026-03-31');
+  assert.equal(nextOccurrence('2028-01-31', 'monthly'), '2028-02-29');
+  assert.equal(nextOccurrence('2026-11-30', 'quarterly'), '2027-02-28');
+  assert.equal(nextOccurrence('2028-02-29', 'yearly'), '2029-02-28');
+  assert.equal(nextOccurrence('2031-02-28', 'yearly', 29), '2032-02-29');
+  assert.equal(addMonths('2026-12-15', 1), '2027-01-15');
+  assert.equal(nextOccurrence('9999-12-01', 'monthly'), null);
 });
 
 test('date offsets cross month, year and leap-day boundaries', () => {

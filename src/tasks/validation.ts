@@ -1,4 +1,5 @@
 import { validDate } from '../shared/calendar.ts';
+import { FREQUENCIES } from '../shared/tasks.ts';
 import type { Frequency, Weekday } from '../shared/tasks.ts';
 import { validWeekdays, WEEKDAYS } from '../shared/weekdays.ts';
 
@@ -9,15 +10,15 @@ export function recurrenceInput(input: unknown, today: string): {
 } {
   const task = taskInput(input);
   const frequency = (input as Record<string, unknown>).frequency;
-  if (frequency !== 'daily' && frequency !== 'weekly') throw new TaskInputError('Choose daily or weekly repetition.');
+  if (!FREQUENCIES.includes(frequency as Frequency)) throw new TaskInputError('Choose how often it repeats.');
   if (task.plannedDate < today) throw new TaskInputError('Choose today or a future first date for a repeating task.');
   const weekdays = (input as Record<string, unknown>).weekdays;
   if (frequency === 'weekly') {
     if (!validWeekdays(weekdays)) throw new TaskInputError('Choose one or more different weekdays.');
-    return { ...task, frequency, weekdays: WEEKDAYS.filter(day => weekdays.includes(day.value)).map(day => day.value) };
+    return { ...task, frequency: 'weekly', weekdays: WEEKDAYS.filter(day => weekdays.includes(day.value)).map(day => day.value) };
   }
   if (weekdays !== undefined && weekdays !== null) throw new TaskInputError('Choose weekdays only for a weekly task.');
-  return { ...task, frequency, weekdays: null };
+  return { ...task, frequency: frequency as Frequency, weekdays: null };
 }
 
 export function taskInput(input: unknown): { title: string; plannedDate: string } {

@@ -1,5 +1,5 @@
 import { localDay } from '../shared/calendar.ts';
-import { nextScheduledDate, occurrenceEnd, periodEnd } from '../shared/weekdays.ts';
+import { nextScheduledDate, occurrenceEnd, periodEnd, scheduleDay } from '../shared/weekdays.ts';
 import type { TaskRepository } from './repository.ts';
 
 export function reconcileRecurrences(repository: TaskRepository, now: Date, nextId: () => string, reachedTarget: (task: ReturnType<TaskRepository['listPendingOccurrences']>[number]) => boolean = () => false): void {
@@ -18,16 +18,17 @@ export function reconcileRecurrences(repository: TaskRepository, now: Date, next
   }
 
   for (const rule of repository.listDueRules(today)) {
+    const day = scheduleDay(rule);
     let date = rule.nextDate;
     while (date !== null && date <= today) {
-      const end = periodEnd(date, rule.frequency, rule.weekdays);
+      const end = periodEnd(date, rule.frequency, rule.weekdays, day);
       const missed = end !== null && end <= today;
       repository.insertTask({
         id: nextId(), title: rule.title, plannedDate: date,
         status: missed ? 'missed' : 'pending', createdAt: timestamp,
         resolvedAt: missed ? timestamp : null, recurrenceId: rule.id, frequency: rule.frequency,
       });
-      date = nextScheduledDate(date, rule.frequency, rule.weekdays);
+      date = nextScheduledDate(date, rule.frequency, rule.weekdays, day);
     }
     repository.advanceRule(rule.id, date);
   }

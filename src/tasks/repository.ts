@@ -101,8 +101,16 @@ export function createTaskRepository(db: DatabaseSync) {
     },
     updateSchedule(rule: RecurrenceRule) {
       const mask = rule.weekdays?.reduce<number>((bits, day) => bits | (1 << day), 0) ?? null;
-      db.prepare('UPDATE recurrence_rules SET frequency=?,weekdays_mask=?,next_date=? WHERE id=?')
-        .run(rule.frequency, mask, rule.nextDate, rule.id);
+      db.prepare('UPDATE recurrence_rules SET frequency=?,weekdays_mask=?,start_date=?,next_date=? WHERE id=?')
+        .run(rule.frequency, mask, rule.startDate, rule.nextDate, rule.id);
+    },
+    // A new name applies to the plan and its open occurrences. Resolved ones keep the name they had.
+    renamePlan(id: string, title: string) {
+      db.prepare('UPDATE recurrence_rules SET title=? WHERE id=?').run(title, id);
+      db.prepare("UPDATE tasks SET title=? WHERE recurrence_id=? AND status='pending'").run(title, id);
+    },
+    renameTask(id: string, title: string) {
+      db.prepare("UPDATE tasks SET title=? WHERE id=? AND status='pending' AND recurrence_id IS NULL").run(title, id);
     },
     setCategory(id: string, category: 'task' | 'habit') {
       db.prepare('UPDATE recurrence_rules SET category=? WHERE id=?').run(category, id);

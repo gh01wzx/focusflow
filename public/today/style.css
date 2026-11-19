@@ -480,6 +480,9 @@ html[data-size="large"] { zoom: 1.125; }
 }
 .sheet-preview p { margin: 0; }
 .preview-title, .sheet-subject { margin: 0; color: var(--text); font-size: 15.5px; font-weight: 650; overflow-wrap: anywhere; }
+/* A saved plan's name with the pencil that turns it into a field. */
+.sheet-title-row { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.sheet-title-row .sheet-subject { flex: 1; min-width: 0; font-size: 18px; font-weight: 600; }
 .weekday-picker { margin: 0; padding: 4px 0 0; border: 0; }
 .weekday-picker legend { padding: 0; color: var(--text-secondary); font-size: 13px; font-weight: 600; }
 .weekday-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }

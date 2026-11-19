@@ -1,4 +1,4 @@
-import { isHabit, SCHEDULE_LEAD_DAYS } from '../../../src/shared/tasks.ts';
+import { FREQUENCIES, HABIT_FREQUENCIES, isHabit, monthsBetween, SCHEDULE_LEAD_DAYS } from '../../../src/shared/tasks.ts';
 import { addDays } from '../../../src/shared/calendar.ts';
 import { t } from '../../workspace/locale.ts';
 import { useEffect, useRef, useState } from 'react';
@@ -8,16 +8,16 @@ import type { HabitPlan, ScoringRule } from '../../../src/shared/personal.ts';
 import type { Frequency, RecurrenceRule, Task, TaskDraft, Weekday } from '../../../src/shared/tasks.ts';
 import { WEEKDAYS } from '../../../src/shared/weekdays.ts';
 import { HABIT_LIMIT, cueLine } from '../../../src/shared/habits.ts';
-import { dateText } from '../view-options.ts';
+import { dateText, frequencyLabels } from '../view-options.ts';
 import { WeekdayPicker } from './WeekdayPicker.tsx';
-import { CloseIcon } from './Icons.tsx';
+import { CloseIcon, PencilIcon } from './Icons.tsx';
 
 type Kind = 'once' | 'repeat' | 'checkoff';
 // A guided request walks through a new habit one question at a time. A cue starts the
 // "After I" field, for example when stacking a new habit after a steady one.
 export type SheetRequest = { mode: 'create'; id: string; guided?: boolean; title?: string; cue?: string }
   | { mode: 'edit'; id: string; task: Task | undefined; series: RecurrenceRule | undefined; effective: string; rule: ScoringRule | undefined };
-export interface PlanUpdate extends HabitPlan { category: 'task' | 'habit'; mode: 'minutes' | 'complete'; unit?: 'minutes' | 'count'; rate: number; target: number; schedule?: { frequency: Frequency; weekdays: Weekday[] | null; date: string; previous: string } }
+export interface PlanUpdate extends HabitPlan { category: 'task' | 'habit'; mode: 'minutes' | 'complete'; unit?: 'minutes' | 'count'; rate: number; target: number; schedule?: { frequency: Frequency; weekdays: Weekday[] | null; date: string; previous: string }; title?: string }
 
 interface SheetProps {
   request: SheetRequest | null;
@@ -38,10 +38,14 @@ interface SheetProps {
 
 const kinds: { value: Kind; label: string; hint: string }[] = [
   { value: 'once', label: 'One-off', hint: 'Done once on a planned date.' },
-  { value: 'repeat', label: 'Repeating task', hint: 'Checked off each day or on chosen weekdays.' },
+  { value: 'repeat', label: 'Repeating task', hint: 'Repeats daily, on chosen weekdays, or monthly, quarterly or yearly.' },
   { value: 'checkoff', label: 'Habit', hint: 'Build consistency with a daily goal.' },
 ];
 const steps = ['What and when', 'Make it obvious', 'Make it easy', 'Make it satisfying'];
+// The plan summary for each schedule except weekly, which lists its weekdays.
+const scheduleFrom: Record<Exclude<Frequency, 'weekly'>, string> = {
+  daily: 'Daily from ', monthly: 'Monthly from ', quarterly: 'Every three months from ', yearly: 'Yearly from ',
+};
 
 // A modal window for creating a task or editing its habit plan. The native dialog keeps
 // keyboard focus inside and returns it to the opening button when it closes.
@@ -89,10 +93,16 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
   const [step, setStep] = useState(0);
   const [kind, setKind] = useState<Kind>(guided ? 'checkoff' : !editing ? 'once'
     : !series ? 'once' : isHabit(series) ? 'checkoff' : 'repeat');
-  const [title, setTitle] = useState(request.mode === 'create' ? request.title ?? '' : '');
+  // A saved plan keeps its name until the pencil beside it is chosen.
+  const original = series?.title ?? task?.title ?? '';
+  const [title, setTitle] = useState(request.mode === 'create' ? request.title ?? '' : original);
+  const [renaming, setRenaming] = useState(false);
+  const renamed = !!editing && title.trim() !== original;
   const [date, setDate] = useState(initialDate);
   const [frequency, setFrequency] = useState<Frequency>(series?.frequency ?? 'daily');
   const [weekdays, setWeekdays] = useState<Weekday[]>(series?.weekdays ?? []);
+  // A month-based schedule set aside while Habit is chosen, restored on switching back.
+  const [setAside, setSetAside] = useState<Frequency | null>(null);
   // Number fields keep their typed text, so clearing one does not snap it back to zero.
   const [donePoints, setDonePoints] = useState(rule?.mode === 'complete' ? String(rule.rate / 100) : '5');
   const [minutePoints, setMinutePoints] = useState(rule ? String(rule.rate / 100) : '1');
@@ -114,7 +124,7 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
   const days = frequency === 'weekly' && !legacyWeekly ? weekdays : null;
   const changedSchedule = series && (date !== initialDate || frequency !== series.frequency ||
     JSON.stringify(days) !== JSON.stringify(series.weekdays));
-  const basicsMissing = ((!editing || !!series) && (!date || (repeating && date < today))) || (!editing && !title.trim()) || (!!days && !days.length);
+  const basicsMissing = ((!editing || !!series) && (!date || (repeating && date < today))) || !title.trim() || (!!days && !days.length);
   const blocked = saving || busy || basicsMissing;
   const shownStep = (index: number) => !guided || step === index;
 
@@ -137,17 +147,19 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
     const minutes = counted ? Number(target) : 0;
     const failure = editing
       ? await onSavePlan(series?.id ?? task!.id, { ...shown, category,
-          ...(changedSchedule ? { schedule: { date, frequency, weekdays: days, previous: JSON.stringify([series.frequency, series.weekdays, series.nextDate]) } } : {}), mode: counted ? 'minutes' : 'complete', unit, rate, target: minutes })
+          ...(changedSchedule ? { schedule: { date, frequency, weekdays: days, previous: JSON.stringify([series.frequency, series.weekdays, series.nextDate]) } } : {}),
+          ...(renamed ? { title: title.trim() } : {}), mode: counted ? 'minutes' : 'complete', unit, rate, target: minutes })
       : await onCreate({ category, title, plannedDate: date, frequency: repeating ? frequency : 'none', mode: repeating ? 'minutes' : 'complete', unit,
         ...(repeating && frequency === 'weekly' ? { weekdays } : {}), plan: { ...shown, rate, target: minutes } });
     setSaving(false);
     if (failure) setError(failure); else onClose();
   }
 
-  const subject = series?.title ?? task?.title ?? title.trim();
+  const subject = title.trim() || original;
   const formattedDate = date ? dateText(date) : '';
+  const monthly = repeating && monthsBetween(frequency) !== null;
   const schedule = !repeating ? formattedDate
-      : frequency === 'daily' ? t('Daily from ') + formattedDate
+      : frequency !== 'weekly' ? t(scheduleFrom[frequency]) + formattedDate
         : legacyWeekly ? t('Every 7 days from the first date (existing schedule)') + ' ' + formattedDate
         : (weekdays.length ? WEEKDAYS.filter(day => weekdays.includes(day.value)).map(day => t(day.label)).join(', ') : t('Choose weekdays')) + t(' from ') + formattedDate;
   const scoreText = counted ? points(Math.round(Number(minutePoints) * 100)) + t(unit === 'count' ? ' pt/count' : ' pt/min') : '+' + points(Math.round(Number(donePoints) * 100)) + t(' points');
@@ -182,16 +194,25 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
           }).map(item => {
             return <label key={item.value} className={kind === item.value ? 'selected' : ''} title={t(item.hint)}>
               <input type="radio" name="kind" value={item.value} checked={kind === item.value}
-                onChange={() => setKind(item.value)} />{t(item.label)}
+                onChange={() => {
+                  setKind(item.value);
+                  // Habits repeat daily or weekly, so a month-based schedule waits as daily until
+                  // Repeating task is chosen again.
+                  if (item.value === 'checkoff' && !HABIT_FREQUENCIES.includes(frequency)) { setSetAside(frequency); setFrequency('daily'); }
+                  else if (item.value === 'repeat' && setAside) { if (frequency === 'daily') setFrequency(setAside); setSetAside(null); }
+                }} />{t(item.label)}
             </label>;
           })}
         </fieldset>
         <p className="kind-hint">{t(kinds.find(item => item.value === kind)!.hint)}</p>
 
         <section className="sheet-group">
-          {editing ? <p className="sheet-subject">{subject}</p> :
-            <input className="title-input" aria-label={t(guided ? 'Habit title' : 'Task title')} value={title} maxLength={300} required data-autofocus autoComplete="off"
-              placeholder={guided ? t('What habit do you want to build?') : t('What will you do?')}
+          {editing && !renaming ? <div className="sheet-title-row"><p className="sheet-subject">{subject}</p>
+            <button type="button" className="icon-button" aria-label={t("Rename {0}", subject)} title={t("Rename")} disabled={saving}
+              onClick={() => setRenaming(true)}><PencilIcon /></button></div> :
+            <input className="title-input" aria-label={t(guided || category === 'habit' ? 'Habit title' : 'Task title')} value={title} maxLength={300} required
+              data-autofocus={!editing || undefined} autoFocus={renaming} autoComplete="off"
+              placeholder={guided || category === 'habit' ? t('What habit do you want to build?') : t('What will you do?')}
               disabled={saving} onChange={event => setTitle(event.target.value)} />}
           {(!editing || series) &&
           <div className="field-row">
@@ -203,11 +224,12 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
           {repeating && <div className="field-row">
             <label htmlFor="sheet-repeat">{t("Repeat")}</label>
             <select id="sheet-repeat" value={legacyWeekly ? 'legacy' : frequency} disabled={saving}
-              onChange={event => { setLegacyWeekly(event.target.value === 'legacy'); setFrequency(event.target.value === 'daily' ? 'daily' : 'weekly'); }}>
+              onChange={event => { const value = event.target.value; setLegacyWeekly(value === 'legacy'); setFrequency(value === 'legacy' ? 'weekly' : value as Frequency); }}>
               {series?.frequency === 'weekly' && series.weekdays === null && <option value="legacy">{t('Every 7 days from the first date (existing schedule)')}</option>}
-              <option value="daily">{t("Daily")}</option><option value="weekly">{t("Weekly")}</option>
+              {(category === 'habit' ? HABIT_FREQUENCIES : FREQUENCIES).map(item => <option key={item} value={item}>{t(frequencyLabels[item])}</option>)}
             </select>
           </div>}
+          {monthly && Number(date.slice(8, 10)) > 28 && <p className="group-note">{t("In months without this day, it falls on the last day of the month.")}</p>}
           {repeating && frequency === 'weekly' && !legacyWeekly && <WeekdayPicker selected={weekdays} disabled={saving} onChange={setWeekdays} />}
           {series && <p className="group-note">{t("The new schedule starts on this date, up to four weeks ahead. Until then the current schedule continues. Recorded activity keeps its original dates.")}</p>}
           {checkOff && <p className="group-note">{t("Checked off once each time it comes up. This plan keeps that way of recording.")}</p>}
@@ -216,7 +238,8 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
               onChange={event => setUnit(event.target.value as 'minutes' | 'count')}>
               <option value="count">{t("Counts")}</option><option value="minutes">{t("Minutes")}</option>
             </select></label>
-            <label className="field">{t(unit === 'count' ? "Daily target in counts" : "Daily target in minutes")}
+            <label className="field">{t(monthly ? (unit === 'count' ? "Target each time in counts" : "Target each time in minutes")
+              : unit === 'count' ? "Daily target in counts" : "Daily target in minutes")}
               <input type="number" min="1" max="1440" step="1" required value={target} disabled={saving}
                 onChange={event => setTarget(event.target.value)} /></label>
           </div>}

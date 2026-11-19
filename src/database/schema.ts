@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 26;
+export const SCHEMA_VERSION = 27;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -225,4 +225,36 @@ export const MIGRATIONS = [
   { version: 25, sql: 'ALTER TABLE recurrence_rules ADD COLUMN removed INTEGER NOT NULL DEFAULT 0 CHECK(removed IN (0,1));' },
   { version: 26, sql: `ALTER TABLE personal_scoring ADD COLUMN unit TEXT NOT NULL DEFAULT 'minutes' CHECK(unit IN ('minutes','count'));
     ALTER TABLE personal_entries ADD COLUMN unit TEXT NOT NULL DEFAULT 'minutes' CHECK(unit IN ('minutes','count'));` },
+  // Repeating tasks can also repeat monthly, quarterly or yearly; habits stay daily or weekly.
+  // SQLite cannot widen a CHECK in place, so both tables are rebuilt with their rows kept.
+  // Tasks keep pointing at their schedules: foreign key checks wait until the end of this
+  // transaction, when every schedule is back under the same id.
+  { version: 27, sql: `PRAGMA defer_foreign_keys=ON;
+    CREATE TEMP TABLE retained_rules AS SELECT id,title,frequency,start_date,next_date,created_at,stopped_at,weekdays_mask,category,removed FROM recurrence_rules;
+    DROP TABLE recurrence_rules;
+    CREATE TABLE recurrence_rules (
+      id TEXT PRIMARY KEY, title TEXT NOT NULL,
+      frequency TEXT NOT NULL CHECK(frequency IN ('daily','weekly','monthly','quarterly','yearly')),
+      start_date TEXT NOT NULL, next_date TEXT, created_at TEXT NOT NULL, stopped_at TEXT,
+      weekdays_mask INTEGER CHECK(weekdays_mask IS NULL OR (frequency='weekly' AND typeof(weekdays_mask)='integer' AND weekdays_mask BETWEEN 1 AND 127)),
+      category TEXT NOT NULL DEFAULT 'habit' CHECK(category IN ('task','habit')),
+      removed INTEGER NOT NULL DEFAULT 0 CHECK(removed IN (0,1)),
+      CHECK(category='task' OR frequency IN ('daily','weekly'))
+    );
+    INSERT INTO recurrence_rules(id,title,frequency,start_date,next_date,created_at,stopped_at,weekdays_mask,category,removed)
+      SELECT id,title,frequency,start_date,next_date,created_at,stopped_at,weekdays_mask,category,removed FROM retained_rules;
+    DROP TABLE retained_rules;
+    DROP VIEW visible_tasks;
+    CREATE TABLE next_task_exceptions (
+      task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+      removed INTEGER NOT NULL DEFAULT 0 CHECK(removed IN (0,1)),
+      frequency TEXT CHECK(frequency IN ('daily','weekly','monthly','quarterly','yearly')),
+      period_frequency TEXT CHECK(period_frequency IN ('daily','weekly','monthly','quarterly','yearly'))
+    );
+    INSERT INTO next_task_exceptions(task_id,removed,frequency,period_frequency)
+      SELECT task_id,removed,frequency,period_frequency FROM task_exceptions;
+    DROP TABLE task_exceptions;
+    ALTER TABLE next_task_exceptions RENAME TO task_exceptions;
+    CREATE VIEW visible_tasks AS SELECT t.* FROM tasks t WHERE NOT EXISTS
+      (SELECT 1 FROM task_exceptions x WHERE x.task_id=t.id AND x.removed=1);` },
 ] as const;

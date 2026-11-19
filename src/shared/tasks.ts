@@ -1,7 +1,14 @@
 import type { PlanDraft } from './personal.ts';
 
 export type TaskStatus = 'pending' | 'completed' | 'cancelled' | 'missed';
-export type Frequency = 'daily' | 'weekly';
+export type Frequency = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+export const FREQUENCIES: readonly Frequency[] = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'];
+// Habits build consistency day by day, so only repeating tasks use month-based schedules.
+export const HABIT_FREQUENCIES: readonly Frequency[] = ['daily', 'weekly'];
+// Whole months between occurrences, or null for day-based schedules.
+export function monthsBetween(frequency: Frequency): number | null {
+  return frequency === 'monthly' ? 1 : frequency === 'quarterly' ? 3 : frequency === 'yearly' ? 12 : null;
+}
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export type ActivityCategory = 'task' | 'habit';
 export interface RecurrenceRule {

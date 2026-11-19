@@ -26,7 +26,7 @@ These choices follow findings about what people tend to prefer across cultures. 
 
 - Quick dated temporary tasks, completion/cancellation and basic history.
 - Pending temporary tasks remain visible until resolved and retain their planned dates.
-- At least daily and weekly recurrence.
+- Daily and weekly recurrence; repeating tasks can also repeat monthly, quarterly or yearly.
 - Missed recurring periods remain recorded without accumulating overdue instances.
 - Recurrence editing, timezone and week-boundary defaults need explicit design/tests.
 

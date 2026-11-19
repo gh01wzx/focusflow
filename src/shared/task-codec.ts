@@ -1,6 +1,6 @@
 import { validDate } from './calendar.ts';
 import { validWeekdays } from './weekdays.ts';
-import { FOCUS_LIMIT } from './tasks.ts';
+import { FOCUS_LIMIT, FREQUENCIES } from './tasks.ts';
 import type { Frequency, RecurrenceRule, Task, TaskStatus, TaskView } from './tasks.ts';
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -8,7 +8,7 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 function frequency(value: unknown): value is Frequency {
-  return value === 'daily' || value === 'weekly';
+  return FREQUENCIES.includes(value as Frequency);
 }
 
 function status(value: unknown): value is TaskStatus {

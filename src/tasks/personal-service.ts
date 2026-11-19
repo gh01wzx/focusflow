@@ -3,6 +3,8 @@ import { editSchedule } from './edit-schedule.ts';
 import { addDays, localDay, validDate } from '../shared/calendar.ts';
 import { occurrenceEnd } from '../shared/weekdays.ts';
 import { PLAN_LIMITS, personalDefaults } from '../shared/personal.ts';
+import { HABIT_FREQUENCIES } from '../shared/tasks.ts';
+import type { Frequency } from '../shared/tasks.ts';
 import type { ActivityEntry, HabitPlan, PersonalPreferences, PersonalView } from '../shared/personal.ts';
 import type { PersonalRepository } from './personal-repository.ts';
 import type { TaskRepository } from './repository.ts';
@@ -106,7 +108,9 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
         if (category !== 'task' && category !== 'habit' || category === 'habit' && !schedule) {
           throw new TaskInputError('Choose a valid activity category.');
         }
-        if (schedule) tasks.setCategory(subject, category);
+        // Habits repeat daily or weekly, including after a schedule change saved with this plan.
+        const planned = value.schedule && typeof value.schedule === 'object' ? (value.schedule as Record<string, unknown>).frequency : schedule?.frequency;
+        if (category === 'habit' && !HABIT_FREQUENCIES.includes(planned as Frequency)) throw new TaskInputError('Habits repeat daily or weekly.');
         const previous = repository.rule(subject);
         if (previous && (previous.mode !== mode || (previous.unit ?? 'minutes') !== unit) && ((task && repository.hasActivity(task.id))
           || tasks.listPendingOccurrences().some(item => item.recurrenceId === subject && repository.hasActivity(item.id)))) {
@@ -115,6 +119,13 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
         if (value.schedule !== undefined) {
           if (!schedule) throw new TaskInputError('Open an active plan to change its schedule.');
           editSchedule(tasks, schedule, value.schedule, now);
+        }
+        // After any schedule change, so a monthly task can become a daily habit in one save.
+        if (schedule) tasks.setCategory(subject, category);
+        if (value.title !== undefined) {
+          const title = string(value.title, 300, 'Enter a task title with 1 to 300 characters.');
+          if (!title) throw new TaskInputError('Enter a task title with 1 to 300 characters.');
+          if (schedule) tasks.renamePlan(schedule.id, title); else if (task) tasks.renameTask(task.id, title);
         }
         repository.saveRule({ subject, mode, unit, rate: integer(value.rate, 0, 100000, 'Enter a valid point value.'),
           target: mode === 'minutes' ? integer(value.target, 1, 1440, 'Enter a target from 1 to 1440.') : 0,

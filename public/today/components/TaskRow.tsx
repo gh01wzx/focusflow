@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { points } from '../../../src/shared/personal.ts';
 import type { ScoringRule } from '../../../src/shared/personal.ts';
 import type { Task, TaskResolution } from '../../../src/shared/tasks.ts';
-import { dateText } from '../view-options.ts';
+import { dateText, frequencyLabels } from '../view-options.ts';
 import { cueLine } from '../../../src/shared/habits.ts';
 import type { HabitInsight } from '../../../src/shared/habits.ts';
 import { HabitTrack, VoteCount } from './HabitCard.tsx';
@@ -56,7 +56,7 @@ export function TaskRow({ task, today, busy, completable = true, rule, insight, 
       <div className="task-content">
         <span className="task-title">{task.title}</span>
         <div className="task-meta">
-          <span>{task.frequency ? (task.frequency === 'daily' ? t('Daily') : t('Weekly')) + ' · ' : ''}{dateText(task.plannedDate)}</span>
+          <span>{task.frequency ? t(frequencyLabels[task.frequency]) + ' · ' : ''}{dateText(task.plannedDate)}</span>
           {late && <span className="overdue">{t("Overdue")}</span>}
           {pending && !completable && <span>{t(rule?.unit === 'count' ? "Log counts on the day" : "Log minutes on the day")}</span>}
           {cue && pending && <span className="cue">{cue}</span>}

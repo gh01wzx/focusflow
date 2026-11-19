@@ -26,18 +26,24 @@ export function firstSelectedDate(date: string, weekdays: Weekday[]): string | n
   return null;
 }
 
-export function nextScheduledDate(date: string, frequency: Frequency, weekdays: Weekday[] | null): string | null {
-  if (weekdays === null) return nextOccurrence(date, frequency);
+// The day of month a month-based schedule repeats on: the day it started.
+export function scheduleDay(rule: Pick<RecurrenceRule, 'startDate'>): number {
+  return Number(rule.startDate.slice(8, 10));
+}
+
+export function nextScheduledDate(date: string, frequency: Frequency, weekdays: Weekday[] | null, day?: number): string | null {
+  if (weekdays === null) return nextOccurrence(date, frequency, day);
   const tomorrow = nextOccurrence(date, 'daily');
   return tomorrow === null ? null : firstSelectedDate(tomorrow, weekdays);
 }
 
 // An occurrence stays current until this date. Selected-weekday occurrences last
-// one local day; older weekly schedules keep their seven-day periods.
-export function periodEnd(date: string, frequency: Frequency, weekdays: Weekday[] | null): string | null {
-  return nextOccurrence(date, weekdays === null ? frequency : 'daily');
+// one local day; older weekly schedules keep their seven-day periods, and month-based
+// occurrences stay current until the next one is due.
+export function periodEnd(date: string, frequency: Frequency, weekdays: Weekday[] | null, day?: number): string | null {
+  return weekdays === null ? nextOccurrence(date, frequency, day) : nextOccurrence(date, 'daily');
 }
 
 export function occurrenceEnd(task: Task, rule: RecurrenceRule): string | null {
-  return task.periodFrequency ? nextOccurrence(task.plannedDate, task.periodFrequency) : periodEnd(task.plannedDate, rule.frequency, rule.weekdays);
+  return task.periodFrequency ? nextOccurrence(task.plannedDate, task.periodFrequency) : periodEnd(task.plannedDate, rule.frequency, rule.weekdays, scheduleDay(rule));
 }

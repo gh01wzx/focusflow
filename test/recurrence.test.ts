@@ -133,12 +133,39 @@ test('stopping future and current rules preserves history and never schedules an
   } finally { store.close(); }
 });
 
+test('monthly, quarterly and yearly tasks keep their day of month and stay open for their period', async t => {
+  const { path } = await fixture(t);
+  let now = new Date(2026, 0, 31);
+  const store = await openWorkspaceStore(path, () => now);
+  const due = (title: string) => store.tasks.view().due.find(task => task.title === title)?.plannedDate;
+  try {
+    for (const [title, frequency] of [['Pay rent', 'monthly'], ['Review goals', 'quarterly'], ['Renew insurance', 'yearly']]) {
+      store.tasks.addRecurrence({ title, plannedDate: '2026-01-31', frequency, category: 'task' });
+    }
+    // An occurrence stays current until the next one is due.
+    now = new Date(2026, 1, 27);
+    assert.deepEqual(store.tasks.view().due.map(task => task.title).sort(), ['Pay rent', 'Renew insurance', 'Review goals']);
+    now = new Date(2026, 1, 28);
+    assert.equal(due('Pay rent'), '2026-02-28');
+    assert.equal(store.tasks.view().history.find(task => task.title === 'Pay rent')?.status, 'missed');
+    // The 31st returns after shorter months, for months and quarters alike.
+    now = new Date(2026, 3, 30);
+    assert.equal(due('Pay rent'), '2026-04-30');
+    assert.equal(due('Review goals'), '2026-04-30');
+    now = new Date(2026, 4, 31);
+    assert.equal(due('Pay rent'), '2026-05-31');
+    assert.equal(due('Renew insurance'), '2026-01-31');
+    assert.throws(() => store.tasks.addRecurrence({ title: 'Monthly habit', plannedDate: '2026-05-31', frequency: 'monthly', category: 'habit' }));
+  } finally { store.close(); }
+});
+
 test('invalid recurrence definitions leave no rules or occurrences', async t => {
   const { path } = await fixture(t);
   const store = await openWorkspaceStore(path, () => new Date(2026, 10, 4));
   try {
     for (const input of [null, {},
-      { title: 'Bad', plannedDate: '2026-11-04', frequency: 'monthly' },
+      { title: 'Bad', plannedDate: '2026-11-04', frequency: 'hourly' },
+      { title: 'Bad', plannedDate: '2026-11-04', frequency: 'monthly', category: 'habit' },
       { title: 'Bad', plannedDate: '2026-11-03', frequency: 'daily' },
       { title: 'Bad', plannedDate: '2026-02-30', frequency: 'weekly' },
       { title: ' ', plannedDate: '2026-11-04', frequency: 'daily' },

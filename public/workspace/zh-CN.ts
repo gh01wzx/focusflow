@@ -1066,4 +1066,12 @@ export const chinese: Record<string, string> = {
   "Choose JSON or CSV.": "请选择 JSON 或 CSV。",
   "Choose whether to show reminders.": "请选择是否显示提醒。",
   "Starting at login is available in the Windows desktop app.": "开机启动只在 Windows 桌面应用中可用。",
+  "Pause habits": "暂停习惯",
+  "Pause habits until": "暂停习惯到",
+  "Paused days count as rest days, so no chain breaks. Repeating tasks continue.": "暂停的日子算作休息日，连续记录不会断。重复任务照常进行。",
+  "Pause": "暂停",
+  "Habits paused until {0}.": "习惯已暂停到 {0}。",
+  "These days count as rest days.": "这些天算作休息日。",
+  "Resume now": "现在恢复",
+  "Choose an end date within 90 days.": "请选择 90 天以内的结束日期。",
 };

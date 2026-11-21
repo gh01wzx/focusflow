@@ -159,6 +159,26 @@ test('monthly, quarterly and yearly tasks keep their day of month and stay open 
   } finally { store.close(); }
 });
 
+test('paused days turn habit occurrences into rest days and resuming brings today back', async t => {
+  const { path } = await fixture(t);
+  let now = new Date(2026, 10, 22, 9);
+  const store = await openWorkspaceStore(path, () => now);
+  try {
+    const walk = store.tasks.addRecurrence({ title: 'Walk', plannedDate: '2026-11-22', frequency: 'daily', category: 'habit', mode: 'minutes', plan: { target: 10 } });
+    const chore = store.tasks.addRecurrence({ title: 'Dishes', plannedDate: '2026-11-22', frequency: 'daily', category: 'task' });
+    assert.deepEqual(store.personal.mutate('pause', { until: '2026-11-24' }).view.pause, { start: '2026-11-22', end: '2026-11-24' });
+    assert.ok(!store.tasks.view().due.some(task => task.recurrenceId === walk.id));
+    now = new Date(2026, 10, 25, 9);
+    const view = store.tasks.view();
+    assert.deepEqual(view.history.filter(task => task.recurrenceId === walk.id).map(task => task.status), ['cancelled', 'cancelled', 'cancelled']);
+    assert.equal(view.history.filter(task => task.recurrenceId === chore.id && task.status === 'missed').length, 3);
+    store.personal.mutate('pause', { until: '2026-11-28' });
+    store.personal.mutate('resume', {});
+    assert.ok(store.tasks.view().due.some(task => task.recurrenceId === walk.id && task.plannedDate === '2026-11-25'));
+    assert.equal(store.personal.view().pause, null);
+  } finally { store.close(); }
+});
+
 test('invalid recurrence definitions leave no rules or occurrences', async t => {
   const { path } = await fixture(t);
   const store = await openWorkspaceStore(path, () => new Date(2026, 10, 4));

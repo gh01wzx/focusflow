@@ -29,6 +29,7 @@ import { WeeklyReview, WeekPrompt, weekOf } from './components/WeeklyReview.tsx'
 import { ListItem } from './components/Animated.tsx';
 import { CalendarIcon, CheckIcon, GiftIcon, HistoryIcon, PlusIcon, SparkIcon, SunIcon } from './components/Icons.tsx';
 import { FoldCard } from './components/FoldCard.tsx';
+import { PauseBanner } from './components/PauseControl.tsx';
 import { readClosed, readFolded, readReviewed, readTimer, writeClosed, writeFolded, writeReviewed, writeTimer } from './local-state.ts';
 import type { Timer } from './local-state.ts';
 import { reportInterfaceReady } from '../../src/client/build.ts';
@@ -283,6 +284,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
                 <button onClick={() => void refresh()} disabled={busy}>{t("Retry")}</button>
               </div>
             )}
+            {tab === 'due' && <PauseBanner state={personal} />}
             {tab === 'due' && view && <QuickAdd disabled={saving}
               onAdd={title => state.add({ title, plannedDate: view.today, frequency: 'none' })}
               onMore={title => setSheet({ mode: 'create', id: crypto.randomUUID(), title })} />}

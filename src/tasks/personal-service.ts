@@ -63,13 +63,19 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
     const stored = repository.preferences();
     return typeof stored === 'string' ? { ...personalDefaults, ...JSON.parse(stored) } : { ...personalDefaults };
   };
+  // The pause covering today or starting later, if any.
+  const currentPause = (day: string) => {
+    const pause = repository.pauses().find(item => item.end >= day);
+    return pause ? { start: pause.start, end: pause.end } : null;
+  };
   const view = (now: Date): PersonalView => {
     const day = localDay(now);
     const days = Array.from({ length: 7 }, (_, i) => addDays(day, i - 6));
     return { day, week: { days, minutes: repository.week(days[0]!, day), points: repository.weekPoints(days[0]!, day) },
       recent: repository.recent(addDays(day, -14), addDays(day, -1)), votes: repository.votes(),
       ...repository.totals(day), rules: repository.rules(), identities: repository.identities(), entries: repository.entries(),
-      rewards: repository.rewards().filter(item => !item.archived), preferences: preferences(), progress: repository.progress() };
+      rewards: repository.rewards().filter(item => !item.archived), preferences: preferences(), progress: repository.progress(),
+      pause: currentPause(day) };
   };
   function record(now: Date, entry: Omit<ActivityEntry, 'day' | 'loggedAt'>, day = localDay(now)) {
     repository.insert({ ...entry, day, loggedAt: now.toISOString() }, now);
@@ -158,6 +164,23 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
         const reward = pinned ? repository.reward(pinned) : undefined;
         if (pinned && (!reward || reward.archived)) throw new TaskInputError('This reward is unavailable.');
         repository.savePreferences(JSON.stringify({ ...preferences(), pinnedReward: pinned }));
+      } else if (action === 'pause') {
+        // Habits rest from today until the chosen day; a new pause replaces any current one.
+        const until = value.until;
+        if (!validDate(until) || until < day || until > addDays(day, 90)) throw new TaskInputError('Choose an end date within 90 days.');
+        repository.endPausesFrom(day, addDays(day, -1));
+        repository.insertPause({ id: randomUUID(), start: day, end: until, createdAt: now.toISOString() });
+        // Today's habits rest at once, unless something is already logged for them.
+        for (const task of tasks.listPendingOccurrences()) {
+          if (task.category === 'habit' && task.plannedDate <= day && !repository.hasActivity(task.id)) tasks.resolveTask(task.id, 'cancelled', now.toISOString());
+        }
+      } else if (action === 'resume') {
+        const active = repository.pauses().find(item => item.start <= day && item.end >= day);
+        repository.endPausesFrom(day, addDays(day, -1));
+        // Habits that rested today only because of the pause come back.
+        if (active) for (const task of tasks.cancelledOccurrencesOn(day)) {
+          if (task.category === 'habit' && task.resolvedAt && task.resolvedAt >= active.createdAt) tasks.reopenResolvedTask(task.id);
+        }
       } else if (action === 'preferences') {
         if (typeof value.volume !== 'number' || !Number.isFinite(value.volume) || value.volume < 0 || value.volume > 1) {
           throw new TaskInputError('Choose a volume between zero and full.');

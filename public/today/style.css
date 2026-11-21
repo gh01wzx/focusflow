@@ -426,6 +426,15 @@ html[data-size="large"] { zoom: 1.125; }
 }
 .panel-action:hover:not(:disabled) { background: rgba(88, 86, 214, .18); }
 .panel-action .icon { width: 18px; height: 18px; }
+/* Pausing habits sits under the daily actions; while paused, a banner at the top of Today offers Resume. */
+.panel-pause { grid-column: 1 / -1; }
+.pause-open { color: var(--muted); }
+.pause-form { display: grid; gap: 8px; }
+.pause-form .group-note { margin: 0; }
+.pause-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; margin-bottom: 12px; padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(88, 86, 214, .1), rgba(52, 199, 89, .08)), var(--glass); }
+.pause-banner p { margin: 0; color: var(--text-secondary); font-size: 13px; }
+.pause-banner strong { color: var(--text); font-size: 14px; }
 
 /* Task window */
 .sheet {

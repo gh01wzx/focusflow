@@ -161,6 +161,19 @@ export function createPersonalRepository(db: DatabaseSync) {
     preferences() {
       return storedPreferences.get()?.value;
     },
+    // Paused stretches, as local start and end days.
+    pauses() {
+      return db.prepare('SELECT id,start_date AS start,end_date AS end,created_at AS createdAt FROM habit_pauses ORDER BY start_date').all()
+        .map(row => ({ id: String(row.id), start: String(row.start), end: String(row.end), createdAt: String(row.createdAt) }));
+    },
+    insertPause(pause: { id: string; start: string; end: string; createdAt: string }) {
+      db.prepare('INSERT INTO habit_pauses(id,start_date,end_date,created_at) VALUES(?,?,?,?)').run(pause.id, pause.start, pause.end, pause.createdAt);
+    },
+    // Ends every pause from this day on: earlier days stay paused, later ones are removed.
+    endPausesFrom(day: string, yesterday: string) {
+      db.prepare('DELETE FROM habit_pauses WHERE start_date>=?').run(day);
+      db.prepare('UPDATE habit_pauses SET end_date=? WHERE end_date>=?').run(yesterday, day);
+    },
     savePreferences(json: string) {
       db.prepare("INSERT INTO personal_preferences VALUES ('settings',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(json);
     },

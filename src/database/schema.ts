@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 28;
+export const SCHEMA_VERSION = 29;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -261,4 +261,9 @@ export const MIGRATIONS = [
   // so existing plans need no change.
   { version: 28, sql: `ALTER TABLE personal_scoring ADD COLUMN start_amount INTEGER CHECK(start_amount IS NULL OR start_amount BETWEEN 1 AND 1440);
     ALTER TABLE personal_scoring ADD COLUMN maintain_amount INTEGER CHECK(maintain_amount IS NULL OR maintain_amount BETWEEN 1 AND 1440);` },
+  // Paused stretches of local days. Habit occurrences on these days count as rest days.
+  { version: 29, sql: `CREATE TABLE habit_pauses (
+    id TEXT PRIMARY KEY, start_date TEXT NOT NULL, end_date TEXT NOT NULL, created_at TEXT NOT NULL,
+    CHECK(start_date <= end_date)
+  );` },
 ] as const;

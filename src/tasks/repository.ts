@@ -138,6 +138,10 @@ export function createTaskRepository(db: DatabaseSync) {
       dropEarlierFocus.run(id, plannedDate);
     },
     resolveTask: (id: string, status: TaskResolution, at: string) => { resolve.run(status, at, id); },
+    // Repeating occurrences planned for this day and resolved as rest or skipped.
+    cancelledOccurrencesOn(day: string) {
+      return db.prepare(taskColumns + " WHERE t.status='cancelled' AND t.recurrence_id IS NOT NULL AND t.planned_date=?").all(day).map(parseTask);
+    },
   };
 }
 

@@ -71,7 +71,8 @@ export function usePersonal(revision: object | null, refreshTasks: () => Promise
       const subject = String(input.subject);
       const was = data?.progress[subject] ?? 0, now = result.view.progress[subject] ?? 0;
       if (result.award) celebrate(String(input.id), result.award, !!target && was < target && now >= target);
-      if (action === 'reverse' || action === 'edit') await refreshTasks();
+      // These change which tasks are open, so the task list reloads too.
+      if (['reverse', 'edit', 'pause', 'resume'].includes(action)) await refreshTasks();
       return true;
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Could not save.');

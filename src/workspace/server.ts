@@ -346,7 +346,7 @@ export async function startWorkspaceServer(options: {
       if (request.method === 'GET' && resource === '/api/personal') {
         sendJson(response, 200, store.personal.view()); return;
       }
-      const personalAction = /^\/api\/personal\/(rule|remove|reward|preferences|pin|log|redeem|reverse|edit)$/.exec(resource);
+      const personalAction = /^\/api\/personal\/(rule|remove|reward|preferences|pin|log|redeem|reverse|edit|pause|resume)$/.exec(resource);
       if (request.method === 'POST' && personalAction?.[1]) {
         sendJson(response, 200, store.personal.mutate(personalAction[1], await readJson(request, origin, 4096))); return;
       }

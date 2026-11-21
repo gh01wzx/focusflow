@@ -27,7 +27,8 @@ export async function openWorkspaceStore(path: string, clock: () => Date = () =>
     const repository = createTaskRepository(db);
     const taskTransaction: TaskTransaction = operation => inTransaction(db, () => {
       const now = clock();
-      reconcileRecurrences(repository, now, randomUUID, personal.reachedTarget);
+      const pauses = personalRepository.pauses();
+      reconcileRecurrences(repository, now, randomUUID, personal.reachedTarget, day => pauses.some(pause => pause.start <= day && day <= pause.end));
       return operation(now);
     });
     const personalRepository = createPersonalRepository(db);

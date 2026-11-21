@@ -83,6 +83,8 @@ export interface PersonalView {
   // Identity votes by identity key: occurrences completed or with logged minutes, today included.
   votes: Record<string, number>;
   preferences: PersonalPreferences;
+  // The pause that covers today or starts later, if any. Habits rest on its days.
+  pause: { start: string; end: string } | null;
 }
 
 // How a past habit occurrence ended. Minutes below the target still count as showing up (started).

@@ -1,9 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { doneToday, fullDaysBefore, habitInsight, nextUp, outcomeOf, reviewHabits } from '../src/shared/habits.ts';
+import { doneToday, fullDaysBefore, goalBonus, habitInsight, nextTier, nextUp, outcomeOf, reviewHabits, tierLevel, tiersOf } from '../src/shared/habits.ts';
 import { addDays } from '../src/shared/calendar.ts';
 import type { Outcome, ScoringRule } from '../src/shared/personal.ts';
 import type { RecurrenceRule, Task, TaskStatus } from '../src/shared/tasks.ts';
+
+test('habit tiers climb from check-in to maintain to goal, with defaults for older plans', () => {
+  assert.deepEqual(tiersOf({ target: 30, unit: 'minutes' }), { start: 2, maintain: 16, goal: 30 });
+  assert.deepEqual(tiersOf({ target: 10, unit: 'count' }), { start: 1, maintain: 6, goal: 10 });
+  assert.deepEqual(tiersOf({ target: 2, unit: 'minutes' }), { start: 2, maintain: 2, goal: 2 });
+  assert.deepEqual(tiersOf({ target: 10, unit: 'minutes', start: 5, maintain: 15 }), { start: 5, maintain: 10, goal: 10 });
+  const tiers = { start: 2, maintain: 10, goal: 30 };
+  assert.deepEqual([0, 2, 9, 10, 30].map(value => tierLevel(value, tiers)), [0, 1, 1, 2, 3]);
+  assert.deepEqual(nextTier(3, tiers), { level: 2, amount: 10, remaining: 7 });
+  assert.equal(nextTier(30, tiers), null);
+  assert.equal(goalBonus({ target: 30, rate: 100 }), 600);
+});
 
 const occurrence = (day: string, status: TaskStatus, id = 'task-' + day): Task => ({
   id, title: 'Read', plannedDate: day, status, createdAt: day + 'T00:00:00Z',

@@ -18,12 +18,22 @@ export interface ScoringRule extends HabitPlan {
   unit?: 'minutes' | 'count';
   rate: number;
   target: number;
+  // A habit's check-in and maintain amounts on the way to its target. Null uses the defaults.
+  start?: number | null;
+  maintain?: number | null;
 }
 
 // Scoring and plan details sent when a task or habit is created.
+// A habit's goal bonus: earned points with no minutes and no rate (see the log action).
+export function isGoalBonus(entry: Pick<ActivityEntry, 'kind' | 'minutes' | 'rate' | 'amount'>): boolean {
+  return entry.kind === 'earn' && entry.minutes === 0 && entry.rate === 0 && entry.amount > 0;
+}
+
 export interface PlanDraft extends HabitPlan {
   rate: number;
   target: number;
+  start?: number | null;
+  maintain?: number | null;
 }
 
 export interface Reward {

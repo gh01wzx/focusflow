@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 import { points } from '../../../src/shared/personal.ts';
 import type { ScoringRule } from '../../../src/shared/personal.ts';
 import type { Task } from '../../../src/shared/tasks.ts';
-import { cueLine, identityKey } from '../../../src/shared/habits.ts';
+import { cueLine, identityKey, nextTier, tierLevel, tiersOf } from '../../../src/shared/habits.ts';
 import type { HabitInsight, Mark } from '../../../src/shared/habits.ts';
 import type { PersonalController } from '../usePersonal.ts';
 import { spring } from './Animated.tsx';
@@ -43,19 +43,32 @@ export function HabitCard({ task, rule, insight, state, onEdit, onRest, onLogged
   const habit = task.category !== 'task';
   const met = total >= rule.target;
   const cue = cueLine(rule);
-  function open(minutes = counted ? 1 : rule.target) {
+  const amount = (value: number) => t(counted ? '{0} counts' : '{0} min', value);
+  // A habit climbs check-in, maintain and goal; a counted task works toward its target alone.
+  const tiers = tiersOf(rule);
+  const level = habit ? tierLevel(total, tiers) : met ? 3 : 0;
+  const next = habit ? nextTier(total, tiers) : met ? null : { level: 3 as const, amount: rule.target, remaining: rule.target - total };
+  const status = level === 3 ? t('Target met') : level === 2 ? t('Maintained') : level === 1 ? t('Checked in') : total ? t('Showed up') : '';
+  function open(minutes = next?.remaining ?? (counted ? 1 : tiers.start)) {
     if (state.data) setDraft({ id: crypto.randomUUID(), day: state.data.day, minutes: String(minutes), unit: rule.unit ?? 'minutes' });
+  }
+  async function log(minutes: number) {
+    if (!state.data) return false;
+    const first = total === 0;
+    const saved = await state.mutate('log', { id: draft?.id ?? crypto.randomUUID(), day: draft?.day ?? state.data.day,
+      unit: rule.unit ?? 'minutes', subject: task.id, minutes }, rule.target);
+    if (saved) onLogged(task, minutes, first);
+    return saved;
   }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!draft) return;
-    const minutes = Number(draft.minutes);
-    const first = total === 0;
-    if (await state.mutate('log', { ...draft, subject: task.id, minutes }, rule.target)) {
-      setDraft(undefined);
-      onLogged(task, minutes, first);
-    }
+    if (draft && await log(Number(draft.minutes))) setDraft(undefined);
   }
+  // One tap records the rest of the next tier, so starting is a single step.
+  const step = habit && next ? next : null;
+  const stepLabel = !step ? '' : step.level === 1 ? t('Check in · {0}', amount(step.remaining))
+    : step.level === 2 ? t('Maintain · {0} more', amount(step.remaining)) : t('Goal · {0} more', amount(step.remaining));
+  const chips = [...new Set([1, 2, 5, 10, tiers.start, tiers.maintain, rule.target])].sort((a, b) => a - b);
   return <article className={`habit-card ${met ? 'met' : ''} ${habit ? '' : 'task-counter'}`} aria-label={task.title}>
     <div className="habit-top">
       <div className="habit-heading">
@@ -67,32 +80,43 @@ export function HabitCard({ task, rule, insight, state, onEdit, onRest, onLogged
         onClick={() => onEdit(task)}><PencilIcon /></button>
       {!total && <button className="icon-button" disabled={state.busy} aria-label={t(habit ? 'Rest today {0}' : 'Cancel {0}', task.title)} title={t(habit ? 'Rest today' : 'Cancel')}
         onClick={() => onRest(task)}><MoonIcon /></button>}
-      <button className="primary" disabled={state.busy || !state.data || !!draft} onClick={() => open()}>
-        {total ? t('Log again') : t(counted ? 'Log counts' : 'Log minutes')}</button>
+      {step ? <button className="primary" disabled={state.busy || !state.data || !!draft} onClick={() => void log(step.remaining)}>{stepLabel}</button>
+        : <button className="primary" disabled={state.busy || !state.data || !!draft} onClick={() => open()}>
+          {total ? t('Log again') : t(counted ? 'Log counts' : 'Log minutes')}</button>}
     </div>
     <div className="habit-progress">
-      <span className="meter" role="progressbar" aria-label={task.title + ' ' + t(counted ? 'Counts' : 'Minutes')}
+      <span className={`meter ${habit ? 'tiered' : ''}`} role="progressbar" aria-label={task.title + ' ' + t(counted ? 'Counts' : 'Minutes')}
         aria-valuemin={0} aria-valuemax={rule.target} aria-valuenow={Math.min(total, rule.target)}>
         <motion.span initial={false} animate={{ scaleX: Math.min(1, total / rule.target) }} transition={spring} />
+        {habit && [tiers.start, tiers.maintain].filter(value => value < tiers.goal).map(value =>
+          <i key={value} className="tier-mark" style={{ left: `${value / tiers.goal * 100}%` }} />)}
       </span>
-      <span className="habit-numbers">{[t(counted ? '{0} / {1} counts' : '{0} / {1} min', total, rule.target), met ? t('Target met') : total ? t('Showed up') : '',
+      <span className="habit-numbers">{[t(counted ? '{0} / {1} counts' : '{0} / {1} min', total, rule.target), status,
         points(rule.rate) + t(counted ? ' pt/count' : ' pt/min')].filter(Boolean).join(' · ')}</span>
     </div>
-    {habit && !met && rule.starter && <p className="starter">{t("Two-minute start:")} {rule.starter}
-      <button type="button" className="chip" disabled={state.busy || !state.data || !!draft} onClick={() => open(counted ? 1 : 2)}>{t(counted ? "Log 1 count" : "Log 2 min")}</button></p>}
+    {habit && <p className="tier-line">
+      {level === 0 && rule.starter ? <>{t("Two-minute start:")} {rule.starter}</>
+        : t('Check in {0} · Maintain {1} · Goal {2}', amount(tiers.start), amount(tiers.maintain), amount(tiers.goal))}
+      {!draft && <button type="button" className="text-button" disabled={state.busy || !state.data} onClick={() => open()}>{t("Other amount")}</button>}
+    </p>}
     {rule.bundle && <p className="bundle">{t("Only while doing this:")} {rule.bundle}</p>}
     {habit && <HabitTrack insight={insight} />}
-    {draft && <form className="inline-settings log-form" onSubmit={event => void save(event)}>
-      <label>{t(counted ? "Counts" : "Minutes")} <input type="number" min="1" max="1440" step="1" value={draft.minutes} required autoFocus
-        onChange={event => setDraft({ ...draft, minutes: event.target.value })} /></label>
-      <div className="chip-row">
-        {[1, 2, 5, 10].filter(value => value !== rule.target).concat(rule.target).sort((a, b) => a - b).map(value =>
+    {/* A custom amount. The buttons keep one place at the end of the panel; Enter saves and Esc closes. */}
+    {draft && <form className="log-panel" onSubmit={event => void save(event)}
+      onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); setDraft(undefined); } }}>
+      <div className="log-fields">
+        <label>{t(counted ? "Counts" : "Minutes")} <input type="number" min="1" max="1440" step="1" value={draft.minutes} required autoFocus
+          onChange={event => setDraft({ ...draft, minutes: event.target.value })} /></label>
+        <div className="chip-row">{chips.map(value =>
           <button key={value} type="button" className={`chip ${draft.minutes === String(value) ? 'selected' : ''}`}
             onClick={() => setDraft({ ...draft, minutes: String(value) })}>{value} {t(counted ? "counts" : "min")}</button>)}
+        </div>
       </div>
       {draft.day !== state.data?.day && <p role="alert">{t("The date changed. Reopen this activity before saving.")}</p>}
-      <button className="primary" disabled={state.busy || draft.day !== state.data?.day}>{t("Save")}</button>
-      <button type="button" className="secondary-button" onClick={() => setDraft(undefined)}>{t("Cancel")}</button>
+      <div className="log-actions">
+        <button type="button" className="secondary-button" onClick={() => setDraft(undefined)}>{t("Cancel")}</button>
+        <button className="primary" disabled={state.busy || draft.day !== state.data?.day}>{t("Save")}</button>
+      </div>
     </form>}
   </article>;
 }

@@ -4,7 +4,7 @@ import type { ActivityEntry, Outcome, Reward, ScoringRule } from '../shared/pers
 import type { TaskStatus } from '../shared/tasks.ts';
 
 const entryColumns = 'id,kind,subject,title,day,logged_at AS loggedAt,minutes,rate,amount,reference,unit';
-const ruleColumns = 'subject,mode,rate,target,cue,identity,plan_time AS time,place,starter,bundle,unit';
+const ruleColumns = 'subject,mode,rate,target,cue,identity,plan_time AS time,place,starter,bundle,unit,start_amount AS start,maintain_amount AS maintain';
 const rewardColumns = 'r.id,r.title,r.cost,r.note,r.once_only AS onceOnly,r.archived';
 const activeRedemption = `p.kind='redeem' AND p.subject=r.id AND NOT EXISTS (
   SELECT 1 FROM personal_entries x WHERE x.reference=p.id AND x.kind='reverse')`;
@@ -18,9 +18,10 @@ export function createPersonalRepository(db: DatabaseSync) {
   const rewardsQuery = `SELECT ${rewardColumns}, EXISTS(SELECT 1 FROM personal_entries p WHERE ${activeRedemption}) AS used FROM personal_rewards r`;
   const ruleBySubject = db.prepare(`SELECT ${ruleColumns} FROM personal_scoring WHERE subject=?`);
   const currentRules = db.prepare(`SELECT ${ruleColumns} FROM personal_scoring WHERE subject IN (${currentSubjects})`);
-  const upsertRule = db.prepare(`INSERT INTO personal_scoring(subject,mode,rate,target,cue,identity,plan_time,place,starter,bundle,unit)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(subject) DO UPDATE SET mode=excluded.mode,rate=excluded.rate,target=excluded.target,
-    cue=excluded.cue,identity=excluded.identity,plan_time=excluded.plan_time,place=excluded.place,starter=excluded.starter,bundle=excluded.bundle,unit=excluded.unit`);
+  const upsertRule = db.prepare(`INSERT INTO personal_scoring(subject,mode,rate,target,cue,identity,plan_time,place,starter,bundle,unit,start_amount,maintain_amount)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(subject) DO UPDATE SET mode=excluded.mode,rate=excluded.rate,target=excluded.target,
+    cue=excluded.cue,identity=excluded.identity,plan_time=excluded.plan_time,place=excluded.place,starter=excluded.starter,bundle=excluded.bundle,unit=excluded.unit,
+    start_amount=excluded.start_amount,maintain_amount=excluded.maintain_amount`);
   // Reversing an earning reduces earned points. Reversing a redemption does not.
   const earnedEntry = `kind IN ('earn','edit') OR (kind='reverse' AND EXISTS (
     SELECT 1 FROM personal_entries original WHERE original.id=p.reference AND original.kind='earn'))`;
@@ -84,7 +85,7 @@ export function createPersonalRepository(db: DatabaseSync) {
     rules() { return currentRules.all() as unknown as ScoringRule[]; },
     saveRule(rule: ScoringRule) {
       upsertRule.run(rule.subject, rule.mode, rule.rate, rule.target, rule.cue, rule.identity, rule.time, rule.place,
-        rule.starter, rule.bundle, rule.unit ?? 'minutes');
+        rule.starter, rule.bundle, rule.unit ?? 'minutes', rule.start ?? null, rule.maintain ?? null);
     },
     reward(id: string) {
       const row = rewardById.get(id);

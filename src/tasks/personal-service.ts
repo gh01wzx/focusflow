@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { editSchedule } from './edit-schedule.ts';
 import { addDays, localDay, validDate } from '../shared/calendar.ts';
 import { occurrenceEnd } from '../shared/weekdays.ts';
+import { goalBonus } from '../shared/habits.ts';
 import { PLAN_LIMITS, personalDefaults } from '../shared/personal.ts';
 import { HABIT_FREQUENCIES } from '../shared/tasks.ts';
 import type { Frequency } from '../shared/tasks.ts';
@@ -40,6 +41,20 @@ function planInput(value: Record<string, unknown>): HabitPlan {
   }
   if (plan.time && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(plan.time)) throw new TaskInputError(planLabels.time);
   return plan;
+}
+
+// A habit's optional check-in and maintain amounts. Left out keeps the saved value; null or empty
+// returns to the default. They climb toward the target, so each stays at or below the next.
+function tierInput(value: Record<string, unknown>, saved: { start?: number | null; maintain?: number | null } | undefined,
+  mode: unknown, target: number): { start: number | null; maintain: number | null } {
+  if (mode !== 'minutes') return { start: null, maintain: null };
+  const read = (input: unknown, kept: number | null | undefined) => input === undefined ? kept ?? null
+    : input === null || input === '' ? null : integer(input, 1, 1440, 'Enter a whole amount from 1 to 1440.');
+  const start = read(value.start, saved?.start), maintain = read(value.maintain, saved?.maintain);
+  if ((start !== null && start > target) || (maintain !== null && maintain > target) || (start !== null && maintain !== null && start > maintain)) {
+    throw new TaskInputError('Keep the check-in at or below maintain, and maintain at or below the goal.');
+  }
+  return { start, maintain };
 }
 
 export function createPersonalService(repository: PersonalRepository, tasks: TaskRepository, transaction: TaskTransaction) {
@@ -127,9 +142,9 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
           if (!title) throw new TaskInputError('Enter a task title with 1 to 300 characters.');
           if (schedule) tasks.renamePlan(schedule.id, title); else if (task) tasks.renameTask(task.id, title);
         }
+        const target = mode === 'minutes' ? integer(value.target, 1, 1440, 'Enter a target from 1 to 1440.') : 0;
         repository.saveRule({ subject, mode, unit, rate: integer(value.rate, 0, 100000, 'Enter a valid point value.'),
-          target: mode === 'minutes' ? integer(value.target, 1, 1440, 'Enter a target from 1 to 1440.') : 0,
-          ...planInput(value) });
+          target, ...tierInput(value, previous, mode, target), ...planInput(value) });
       } else if (action === 'reward') {
         const id = operationId(value.id), previous = repository.reward(id);
         const title = string(value.title, 160, 'Keep the reward name within 160 characters.');
@@ -161,9 +176,18 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
           }
           if ((value.unit ?? 'minutes') !== (rule.unit ?? 'minutes')) throw new TaskInputError('The recording unit changed. Reopen this activity.');
           const minutes = integer(value.minutes, 1, 1440, 'Enter a whole amount from 1 to 1440.');
+          const before = repository.minutes(task.id);
           award = minutes * rule.rate;
           record(now, { id, kind: 'earn', subject: task.id, title: task.title, minutes,
             rate: rule.rate, unit: rule.unit ?? 'minutes', amount: award, reference: null });
+          // Reaching a habit's goal earns a small bonus once. It is saved as its own entry with no
+          // minutes and no rate, so Points history shows it apart and it can be undone on its own.
+          const bonus = goalBonus(rule);
+          if (task.category === 'habit' && bonus > 0 && before < rule.target && before + minutes >= rule.target) {
+            record(now, { id: randomUUID(), kind: 'earn', subject: task.id, title: task.title, minutes: 0, rate: 0,
+              amount: bonus, reference: null });
+            award += bonus;
+          }
         } else if (action === 'redeem') {
           const reward = repository.reward(operationId(value.subject));
           if (!reward || reward.archived || (reward.onceOnly && reward.used)) throw new TaskInputError('This reward is unavailable.');
@@ -222,10 +246,10 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
       if (unit !== 'minutes' && unit !== 'count') throw new TaskInputError('Choose counts or minutes.');
       const timed = mode === 'minutes';
       const plan = value.plan === undefined ? {} : fields(value.plan);
+      const target = !timed ? 0 : plan.target === undefined ? 5 : integer(plan.target, 1, 1440, 'Enter a target from 1 to 1440.');
       repository.saveRule({ subject, mode, unit,
         rate: plan.rate === undefined ? (timed ? 100 : 500) : integer(plan.rate, 0, 100000, 'Enter a valid point value.'),
-        target: !timed ? 0 : plan.target === undefined ? 5 : integer(plan.target, 1, 1440, 'Enter a target from 1 to 1440.'),
-        ...planInput(plan) });
+        target, ...tierInput(plan, undefined, mode, target), ...planInput(plan) });
     },
     reachedTarget(task: NonNullable<ReturnType<TaskRepository['findTask']>>) {
       const rule = taskRule(task);

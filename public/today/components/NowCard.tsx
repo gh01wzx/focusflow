@@ -5,7 +5,7 @@ import type { PointerEvent } from 'react';
 import { motion } from 'motion/react';
 import type { ScoringRule } from '../../../src/shared/personal.ts';
 import type { Task } from '../../../src/shared/tasks.ts';
-import { cueLine } from '../../../src/shared/habits.ts';
+import { cueLine, nextTier, tiersOf } from '../../../src/shared/habits.ts';
 import { spring } from './Animated.tsx';
 import { PlayIcon } from './Icons.tsx';
 import type { Timer } from '../local-state.ts';
@@ -112,7 +112,7 @@ function TimerCarousel({ items, rules, progress, busy, onTimer }: NowProps) {
   </section>;
 }
 
-function RunningCard({ task, timer, rules, busy, onTimer, onComplete, onLog }: NowProps & { task: Task; timer: Timer }) {
+function RunningCard({ task, timer, rules, progress, busy, onTimer, onComplete, onLog }: NowProps & { task: Task; timer: Timer }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { setNow(Date.now()); }, [timer.startedAt]);
   useEffect(() => {
@@ -123,8 +123,11 @@ function RunningCard({ task, timer, rules, busy, onTimer, onComplete, onLog }: N
   const elapsed = Math.max(0, Math.floor((now - timer.startedAt) / 1000));
   const counted = rule?.mode === 'minutes' && rule.unit === 'count';
   const minutesHabit = rule?.mode === 'minutes' && !counted;
-  // The ring fills over two minutes, or over the daily target. Time keeps counting after that.
-  const goal = minutesHabit ? Math.max(START_SECONDS, rule.target * 60) : START_SECONDS;
+  // The ring fills over two minutes, or up to a habit's next tier (the target for a task). Time
+  // keeps counting after that.
+  const logged = progress[task.id] ?? 0;
+  const step = minutesHabit && isHabit(task) ? nextTier(logged, tiersOf(rule)) : null;
+  const goal = minutesHabit ? Math.max(START_SECONDS, (step ? step.remaining : Math.max(0, rule.target - logged)) * 60) : START_SECONDS;
   const loggedMinutes = Math.min(1440, Math.max(1, Math.round(elapsed / 60)));
   const cue = cueLine(rule);
   const cancel = () => onTimer(null);

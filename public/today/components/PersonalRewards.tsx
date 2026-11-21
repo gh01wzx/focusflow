@@ -1,6 +1,6 @@
 import { t } from '../../workspace/locale.ts';
 import { useMemo, useState } from 'react';
-import { points } from '../../../src/shared/personal.ts';
+import { isGoalBonus, points } from '../../../src/shared/personal.ts';
 import type { ActivityEntry, Reward } from '../../../src/shared/personal.ts';
 import type { PersonalController } from '../usePersonal.ts';
 import { PAGE, ShowMore } from './ShowMore.tsx';
@@ -99,7 +99,7 @@ export function ActivityHistory({ state }: { state: PersonalController }) {
       const original = entry.kind === 'earn' || entry.kind === 'redeem';
       return <li key={entry.id} className="reward-row">
         <div className="reward-info"><strong>{entry.title}</strong><p>{[entry.day,
-          t(entry.kind === 'reverse' ? 'Undone' : entry.kind === 'edit' ? 'Corrected' : entry.kind === 'redeem' ? 'Redeemed' : 'Earned'),
+          t(entry.kind === 'reverse' ? 'Undone' : entry.kind === 'edit' ? 'Corrected' : entry.kind === 'redeem' ? 'Redeemed' : isGoalBonus(entry) ? 'Goal bonus' : 'Earned'),
           t('{0} points', (entry.amount > 0 ? '+' : '') + points(entry.amount)), entry.minutes ? entry.minutes + ' ' + t(entry.unit === 'count' ? 'counts' : 'min') : ''].filter(Boolean).join(' · ')}</p></div>
         {original && !undone && (undoing === entry.id ? <div className="confirm-actions" role="group" aria-label={t("Undo {0}?", entry.title)}>
           <span>{entry.kind === 'redeem' ? t('Refund these points?') : t('Remove these points?')}</span>

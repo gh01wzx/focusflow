@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 27;
+export const SCHEMA_VERSION = 28;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -257,4 +257,8 @@ export const MIGRATIONS = [
     ALTER TABLE next_task_exceptions RENAME TO task_exceptions;
     CREATE VIEW visible_tasks AS SELECT t.* FROM tasks t WHERE NOT EXISTS
       (SELECT 1 FROM task_exceptions x WHERE x.task_id=t.id AND x.removed=1);` },
+  // A habit's check-in and maintain amounts on the way to its target. Null keeps the defaults,
+  // so existing plans need no change.
+  { version: 28, sql: `ALTER TABLE personal_scoring ADD COLUMN start_amount INTEGER CHECK(start_amount IS NULL OR start_amount BETWEEN 1 AND 1440);
+    ALTER TABLE personal_scoring ADD COLUMN maintain_amount INTEGER CHECK(maintain_amount IS NULL OR maintain_amount BETWEEN 1 AND 1440);` },
 ] as const;

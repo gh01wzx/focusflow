@@ -70,9 +70,10 @@ export function doneToday(task: Task, today: string, schedules: RecurrenceRule[]
 export function todayProgress(view: TaskView, rules: Map<string, ScoringRule>, minutes: Record<string, number>,
   completedToday: Task[]): { habits: Progress; tasks: Progress } {
   const habitsDue = view.due.filter(isHabit);
+  // A timed habit counts once it is checked in; see tiersOf.
   const timedDone = habitsDue.filter(task => {
     const rule = rules.get(task.recurrenceId!);
-    return rule?.mode === 'minutes' && (minutes[task.id] ?? 0) >= rule.target;
+    return rule?.mode === 'minutes' && (minutes[task.id] ?? 0) >= tiersOf(rule).start;
   }).length;
   const routinesDone = completedToday.filter(isHabit).length;
   const tasksDone = completedToday.filter(task => !isHabit(task)).length;
@@ -119,6 +120,34 @@ export function outcomeOf(status: TaskStatus, minutes: number): Outcome | null {
 export const HABIT_LIMIT = 3;
 export const GRADUATE_DAYS = 66;
 export const TARGET_STEPS = [2, 5, 10, 15, 20, 30, 45, 60, 90, 120];
+
+// A timed or counted habit climbs three tiers each day: check in (the two-minute version, easy
+// even on a busy day), maintain (enough to keep the habit alive) and goal. Showing up is the
+// check-in, so the day's habit ring closes there and the goal earns a small bonus.
+export interface Tiers { start: number; maintain: number; goal: number }
+export type TierLevel = 0 | 1 | 2 | 3;
+export const GOAL_BONUS = 0.2;
+export function tiersOf(rule: Pick<ScoringRule, 'target' | 'unit' | 'start' | 'maintain'>): Tiers {
+  const goal = Math.max(1, rule.target);
+  const start = Math.min(goal, Math.max(1, rule.start ?? (rule.unit === 'count' ? 1 : 2)));
+  const maintain = Math.min(goal, Math.max(start, rule.maintain ?? Math.round((start + goal) / 2)));
+  return { start, maintain, goal };
+}
+// 0 not yet, 1 checked in, 2 maintained, 3 goal met.
+export function tierLevel(amount: number, tiers: Tiers): TierLevel {
+  return amount >= tiers.goal ? 3 : amount >= tiers.maintain ? 2 : amount >= tiers.start ? 1 : 0;
+}
+// The next tier to reach and how much more it needs, or null once the goal is met.
+export function nextTier(amount: number, tiers: Tiers): { level: 1 | 2 | 3; amount: number; remaining: number } | null {
+  for (const [level, value] of [[1, tiers.start], [2, tiers.maintain], [3, tiers.goal]] as const) {
+    if (amount < value) return { level, amount: value, remaining: value - amount };
+  }
+  return null;
+}
+// The points bonus for reaching the goal: a fifth of the goal's points, in whole points.
+export function goalBonus(rule: Pick<ScoringRule, 'target' | 'rate'>): number {
+  return Math.round(rule.target * rule.rate * GOAL_BONUS / 100) * 100;
+}
 const STEADY = 0.85, HARD = 0.5;
 
 export type Suggestion = { kind: 'new' } | { kind: 'keep' } | { kind: 'steady' } | { kind: 'stack' }

@@ -7,7 +7,7 @@ import { emptyPlan, points } from '../../../src/shared/personal.ts';
 import type { HabitPlan, ScoringRule } from '../../../src/shared/personal.ts';
 import type { Frequency, RecurrenceRule, Task, TaskDraft, Weekday } from '../../../src/shared/tasks.ts';
 import { WEEKDAYS } from '../../../src/shared/weekdays.ts';
-import { HABIT_LIMIT, cueLine } from '../../../src/shared/habits.ts';
+import { HABIT_LIMIT, cueLine, tiersOf } from '../../../src/shared/habits.ts';
 import { dateText, frequencyLabels } from '../view-options.ts';
 import { WeekdayPicker } from './WeekdayPicker.tsx';
 import { CloseIcon, PencilIcon } from './Icons.tsx';
@@ -17,7 +17,7 @@ type Kind = 'once' | 'repeat' | 'checkoff';
 // "After I" field, for example when stacking a new habit after a steady one.
 export type SheetRequest = { mode: 'create'; id: string; guided?: boolean; title?: string; cue?: string }
   | { mode: 'edit'; id: string; task: Task | undefined; series: RecurrenceRule | undefined; effective: string; rule: ScoringRule | undefined };
-export interface PlanUpdate extends HabitPlan { category: 'task' | 'habit'; mode: 'minutes' | 'complete'; unit?: 'minutes' | 'count'; rate: number; target: number; schedule?: { frequency: Frequency; weekdays: Weekday[] | null; date: string; previous: string }; title?: string }
+export interface PlanUpdate extends HabitPlan { category: 'task' | 'habit'; mode: 'minutes' | 'complete'; unit?: 'minutes' | 'count'; rate: number; target: number; schedule?: { frequency: Frequency; weekdays: Weekday[] | null; date: string; previous: string }; title?: string; start?: number | null; maintain?: number | null }
 
 interface SheetProps {
   request: SheetRequest | null;
@@ -107,6 +107,9 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
   const [donePoints, setDonePoints] = useState(rule?.mode === 'complete' ? String(rule.rate / 100) : '5');
   const [minutePoints, setMinutePoints] = useState(rule ? String(rule.rate / 100) : '1');
   const [target, setTarget] = useState(rule?.mode === 'minutes' ? String(rule.target) : '1');
+  // A habit's check-in and maintain amounts. Empty uses the defaults shown as placeholders.
+  const [start, setStart] = useState(rule?.start ? String(rule.start) : '');
+  const [maintain, setMaintain] = useState(rule?.maintain ? String(rule.maintain) : '');
   const [plan, setPlan] = useState<HabitPlan>(request.mode === 'create' && request.cue ? { ...emptyPlan, cue: request.cue } : planOf(rule));
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -117,6 +120,8 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
   // so saving a cue or time never changes how the habit is recorded.
   const checkOff = !!series && rule?.mode === 'complete';
   const counted = repeating && !checkOff;
+  const tiered = counted && category === 'habit';
+  const defaults = tiersOf({ target: Number(target) || 1, unit, start: null, maintain: null });
   const pointsText = counted ? minutePoints : donePoints;
   const field = (key: keyof HabitPlan) => (event: ChangeEvent<HTMLInputElement>) =>
     setPlan(current => ({ ...current, [key]: event.target.value }));
@@ -145,12 +150,13 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
     const shown: HabitPlan = category === 'habit' ? plan : { ...emptyPlan, time: plan.time, place: plan.place };
     const rate = Math.round(Number(pointsText) * 100);
     const minutes = counted ? Number(target) : 0;
+    const tierAmounts = tiered ? { start: start ? Number(start) : null, maintain: maintain ? Number(maintain) : null } : {};
     const failure = editing
       ? await onSavePlan(series?.id ?? task!.id, { ...shown, category,
           ...(changedSchedule ? { schedule: { date, frequency, weekdays: days, previous: JSON.stringify([series.frequency, series.weekdays, series.nextDate]) } } : {}),
-          ...(renamed ? { title: title.trim() } : {}), mode: counted ? 'minutes' : 'complete', unit, rate, target: minutes })
+          ...(renamed ? { title: title.trim() } : {}), ...tierAmounts, mode: counted ? 'minutes' : 'complete', unit, rate, target: minutes })
       : await onCreate({ category, title, plannedDate: date, frequency: repeating ? frequency : 'none', mode: repeating ? 'minutes' : 'complete', unit,
-        ...(repeating && frequency === 'weekly' ? { weekdays } : {}), plan: { ...shown, rate, target: minutes } });
+        ...(repeating && frequency === 'weekly' ? { weekdays } : {}), plan: { ...shown, ...tierAmounts, rate, target: minutes } });
     setSaving(false);
     if (failure) setError(failure); else onClose();
   }
@@ -243,6 +249,15 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
               <input type="number" min="1" max="1440" step="1" required value={target} disabled={saving}
                 onChange={event => setTarget(event.target.value)} /></label>
           </div>}
+          {tiered && <><div className="field-pair">
+            <label className="field">{t(unit === 'count' ? "Check-in in counts" : "Check-in in minutes")}
+              <input type="number" min="1" max="1440" step="1" value={start} placeholder={String(defaults.start)} disabled={saving}
+                onChange={event => setStart(event.target.value)} /></label>
+            <label className="field">{t(unit === 'count' ? "Maintain in counts" : "Maintain in minutes")}
+              <input type="number" min="1" max="1440" step="1" value={maintain} placeholder={String(defaults.maintain)} disabled={saving}
+                onChange={event => setMaintain(event.target.value)} /></label>
+          </div>
+          <p className="group-note">{t("Each day starts with the check-in, an easy version even on a busy day. Then maintain, then the goal. Leave a field empty for its default.")}</p></>}
         </section>
         {!editing && category === 'habit' && habits >= HABIT_LIMIT && <p className="soft-note">{t("You are already building {0} habits. New habits stick better one at a time, so you might add this one when another feels easy.", habits)}</p>}
       </>}

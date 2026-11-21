@@ -20,6 +20,7 @@ import { createPlanApprovalService } from '../plans/approval.ts';
 import { createPublicationRepository } from '../publication/repository.ts';
 import { createLinkedWorkRepository } from '../sync/repository.ts';
 import { createExecutionRepository } from '../execution/repository.ts';
+import { createSomeday, createSomedayRepository } from '../tasks/someday.ts';
 
 export async function openWorkspaceStore(path: string, clock: () => Date = () => new Date()) {
   const db = await openDatabase(path);
@@ -36,8 +37,10 @@ export async function openWorkspaceStore(path: string, clock: () => Date = () =>
     const projectTransaction: ProjectTransaction = operation => inTransaction(db, () => operation(clock()));
     const projectRepository = createProjectRepository(db);
     const planDrafts = createPlanRepository(db);
+    const tasks = createTaskService(repository, taskTransaction, randomUUID, personal.complete, personal.createRule, personal.reopen);
     return {
-      tasks: createTaskService(repository, taskTransaction, randomUUID, personal.complete, personal.createRule, personal.reopen),
+      tasks,
+      someday: createSomeday(createSomedayRepository(db), tasks.add, randomUUID, clock),
       personal,
       interfaceSettings() {
         const row = db.prepare("SELECT value FROM personal_preferences WHERE key='interface'").get();

@@ -50,7 +50,8 @@ export function createTaskService(repository: TaskRepository, transaction: TaskT
       repository.rescheduleTask(id, plannedDate);
       return repository.findTask(id);
     }),
-    add: (input: unknown): Task => transaction(now => {
+    // afterAdd runs in the same transaction, for example to remove the Someday idea it came from.
+    add: (input: unknown, afterAdd: (task: Task) => void = () => {}): Task => transaction(now => {
       const { title, plannedDate } = taskInput(input);
       const task: Task = {
         id: nextId(), title, plannedDate, status: 'pending',
@@ -58,6 +59,7 @@ export function createTaskService(repository: TaskRepository, transaction: TaskT
       };
       repository.insertTask(task);
       onCreate(task.id, false, input);
+      afterAdd(task);
       return task;
     }),
     addRecurrence: (input: unknown): RecurrenceRule => transaction(now => {

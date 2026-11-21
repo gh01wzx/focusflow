@@ -343,6 +343,14 @@ export async function startWorkspaceServer(options: {
         const input = request.method === 'GET' ? undefined : await readJson(request, origin, 4096);
         sendJson(response, 200, await dispatchCareRoute(careRoute, input, care)); return;
       }
+      // Ideas without a date: list, add, plan as a task, or remove.
+      const someday = /^\/api\/someday(?:\/([a-f0-9-]{36})\/(schedule|remove))?$/.exec(resource);
+      if (someday && (request.method === 'GET' ? !someday[1] : request.method === 'POST')) {
+        const input = request.method === 'POST' ? await readJson(request, origin, 2048) : undefined;
+        sendJson(response, 200, !someday[1] ? (request.method === 'GET' ? store.someday.list() : store.someday.add(input))
+          : someday[2] === 'schedule' ? store.someday.schedule(someday[1], input) : store.someday.remove(someday[1]));
+        return;
+      }
       if (request.method === 'GET' && resource === '/api/personal') {
         sendJson(response, 200, store.personal.view()); return;
       }

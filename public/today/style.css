@@ -433,6 +433,13 @@ html[data-size="large"] { zoom: 1.125; }
 .pause-form .group-note { margin: 0; }
 .pause-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; margin-bottom: 12px; padding: 12px 16px;
   background: linear-gradient(135deg, rgba(88, 86, 214, .1), rgba(52, 199, 89, .08)), var(--glass); }
+/* Someday: ideas without a date, planned when they fit. */
+.someday { max-width: 780px; }
+.someday-row { align-items: center; }
+.someday-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.someday-pick { display: grid; gap: 8px; margin-top: 8px; }
+.someday-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.someday-note p { margin: 0; }
 .pause-banner p { margin: 0; color: var(--text-secondary); font-size: 13px; }
 .pause-banner strong { color: var(--text); font-size: 14px; }
 

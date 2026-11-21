@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 29;
+export const SCHEMA_VERSION = 30;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -265,5 +265,9 @@ export const MIGRATIONS = [
   { version: 29, sql: `CREATE TABLE habit_pauses (
     id TEXT PRIMARY KEY, start_date TEXT NOT NULL, end_date TEXT NOT NULL, created_at TEXT NOT NULL,
     CHECK(start_date <= end_date)
+  );` },
+  // Ideas without a date, planned later from the Someday list.
+  { version: 30, sql: `CREATE TABLE someday_items (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL CHECK(length(title) BETWEEN 1 AND 300), created_at TEXT NOT NULL
   );` },
 ] as const;

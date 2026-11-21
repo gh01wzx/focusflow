@@ -43,6 +43,9 @@ interface ReviewProps {
   // These close the review and open the task window.
   onEditPlan(review: HabitReview): void;
   onStack(review: HabitReview): void;
+  // Ideas waiting in Someday, a good moment to plan one or two.
+  someday: number;
+  onOpenSomeday(): void;
   onFinish(): void;
   onClose(): void;
 }
@@ -80,7 +83,7 @@ function advice(review: HabitReview): string {
   }
 }
 
-function ReviewBody({ today, reviews, votes, busy, onTarget, onGraduate, onEditPlan, onStack, onFinish, onClose }: ReviewProps) {
+function ReviewBody({ today, reviews, votes, busy, onTarget, onGraduate, onEditPlan, onStack, someday, onOpenSomeday, onFinish, onClose }: ReviewProps) {
   const [error, setError] = useState('');
   // Suggestions taken this week stay taken, so a changed habit does not suggest another step
   // before you have tried the new one for a week.
@@ -163,6 +166,10 @@ function ReviewBody({ today, reviews, votes, busy, onTarget, onGraduate, onEditP
           })}</AnimatePresence>
         </ul>}
       </section>
+      {someday > 0 && <section className="sheet-group someday-note">
+        <p>{t("{0} ideas wait in Someday. Plan one or two for this week.", someday)}</p>
+        <button type="button" className="quiet-button" disabled={busy} onClick={onOpenSomeday}>{t("Open Someday")}</button>
+      </section>}
     </div>
     <footer className="sheet-footer">
       {error && <p role="alert" className="error">{t(error)}</p>}

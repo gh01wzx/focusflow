@@ -19,6 +19,10 @@ Type in **Add a task for today** and press Enter for a quick task. **New task** 
 
 Only the title is required. The summary at the bottom shows the whole plan. If you already build three habits, the New habit window shows a gentle note. One-off tasks show title, date, time, place and completion points. Repeated activity can be logged several times on its scheduled day, including beyond the goal: a goal of three stretches can show 10/3, with points for all ten. Each task counts once in its category progress when its goal is met; a habit counts once it is checked in.
 
+### Someday
+
+**Someday** in the sidebar holds ideas without a date, so Today stays clear. Type an idea and press Enter. When one fits, choose **Today** or **Pick a date**: it becomes a one-off task on that date and leaves the list. The weekly review shows how many ideas wait there.
+
 ### Timer cards
 
 The cards at the top hold today's timed habits that have not reached their goal yet, such as reading or meditation. Swipe, drag or use the arrows to move between them. Planned times that have arrived come first, then habits without a time, then later times; a habit you already started today moves to the end. **Start 2 minutes** is the way in: the timer keeps counting quietly for as long as you go, nothing interrupts you at two minutes, and it keeps running while you switch views. **Stop** adds the elapsed minutes to that habit, and **Cancel timer** discards it. To record without the timer, use **Log minutes** on the habit in the list.

@@ -13,7 +13,7 @@ import type { HabitReview } from '../../src/shared/habits.ts';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
 import { useTodayController } from './useTodayController.ts';
-import { canReopen, labels, tabText } from './view-options.ts';
+import { canReopen, dateText, labels, tabText } from './view-options.ts';
 import { TaskRow } from './components/TaskRow.tsx';
 import { HabitCard } from './components/HabitCard.tsx';
 import { TaskSheet } from './components/TaskSheet.tsx';
@@ -27,9 +27,10 @@ import { Celebration } from './components/Celebration.tsx';
 import type { Moment } from './components/Celebration.tsx';
 import { WeeklyReview, WeekPrompt, weekOf } from './components/WeeklyReview.tsx';
 import { ListItem } from './components/Animated.tsx';
-import { CalendarIcon, CheckIcon, GiftIcon, HistoryIcon, PlusIcon, SparkIcon, SunIcon } from './components/Icons.tsx';
+import { CalendarIcon, CheckIcon, GiftIcon, HistoryIcon, InboxIcon, PlusIcon, SparkIcon, SunIcon } from './components/Icons.tsx';
 import { FoldCard } from './components/FoldCard.tsx';
 import { PauseBanner } from './components/PauseControl.tsx';
+import { SomedayList, useSomeday } from './components/SomedayList.tsx';
 import { readClosed, readFolded, readReviewed, readTimer, writeClosed, writeFolded, writeReviewed, writeTimer } from './local-state.ts';
 import type { Timer } from './local-state.ts';
 import { reportInterfaceReady } from '../../src/client/build.ts';
@@ -39,7 +40,11 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const { view, tab, setTab, busy, error, message, undo, refresh } = state;
   const settings = useContext(InterfaceContext)?.settings ?? defaultInterface;
   const personal = usePersonal(view, refresh, settings);
-  const [rewards, setRewards] = useState(false);
+  const someday = useSomeday((title, date) => { state.announce(t('Planned “{0}” for {1}.', title, dateText(date))); void refresh(); });
+  // Rewards and Someday replace the task views while open.
+  const [panel, setPanel] = useState<'rewards' | 'someday' | null>(null);
+  const rewards = panel === 'rewards';
+  const setRewards = (open: boolean) => setPanel(open ? 'rewards' : null);
   const [sheet, setSheet] = useState<SheetRequest | null>(null);
   const [timer, setTimerState] = useState<Timer | null>(readTimer);
   const [closing, setClosing] = useState(false);
@@ -240,8 +245,8 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
           {(['due', 'upcoming', 'history'] as const).map(key => (
             <button
               key={key}
-              className={`nav-item ${!rewards && tab === key ? 'active' : ''}`}
-              aria-current={!rewards && tab === key ? 'page' : undefined}
+              className={`nav-item ${!panel && tab === key ? 'active' : ''}`}
+              aria-current={!panel && tab === key ? 'page' : undefined}
               disabled={saving}
               onClick={() => { setRewards(false); setTab(key); }}
             >
@@ -250,6 +255,11 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               <span className="count">{view?.[key].length ?? '-'}</span>
             </button>
           ))}
+          <button className={`nav-item ${panel === 'someday' ? 'active' : ''}`} aria-current={panel === 'someday' ? 'page' : undefined}
+            disabled={saving} onClick={() => setPanel('someday')}>
+            <span className="nav-symbol" aria-hidden="true"><InboxIcon /></span>{t("Someday")}
+            <span className="count">{someday.items.length}</span>
+          </button>
           <button className={`nav-item ${rewards ? 'active' : ''}`} aria-current={rewards ? 'page' : undefined}
             disabled={saving} onClick={() => setRewards(true)}>
             <span className="nav-symbol" aria-hidden="true"><GiftIcon /></span>{t("Rewards")}
@@ -264,9 +274,9 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
                 weekday: 'long', month: 'long', day: 'numeric',
               }).format(new Date(view.today + 'T12:00:00')) : t('Personal tasks')}
             </p>
-            <h1>{rewards ? t('Rewards') : t(labels[tab])}</h1>
+            <h1>{rewards ? t('Rewards') : panel === 'someday' ? t('Someday') : t(labels[tab])}</h1>
           </div>
-          {!rewards && <div className="header-actions">
+          {!panel && <div className="header-actions">
             <button className="secondary-button new-button" disabled={!view || saving}
               onClick={() => setSheet({ mode: 'create', id: crypto.randomUUID() })}><PlusIcon />{t("New task")}</button>
             <button className="primary" disabled={!view || saving}
@@ -276,7 +286,8 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
         {personal.error && <div className="error" role="alert">{t(personal.error)}
           <button disabled={saving} onClick={() => void personal.refresh()}>{t("Refresh points")}</button>
         </div>}
-        {rewards ? <RewardShop state={personal} /> : <div className={tab === 'due' ? 'personal-grid' : 'personal-single'}>
+        {rewards ? <RewardShop state={personal} /> : panel === 'someday' ? <SomedayList state={someday} today={today} disabled={saving} />
+          : <div className={tab === 'due' ? 'personal-grid' : 'personal-single'}>
           <div className="today-lists">
             {error && (
               <div className="error" role="alert">
@@ -359,6 +370,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
         {/* Before the task window, so the review closes before a window it opens takes focus. */}
         {view && data && <WeeklyReview open={reviewing} today={view.today} reviews={reviews} votes={data.votes} busy={saving}
           onTarget={setTarget} onGraduate={review => state.graduate(review.id, review.title)} onEditPlan={editPlan} onStack={stack}
+          someday={someday.items.length} onOpenSomeday={() => { setReviewing(false); setPanel('someday'); }}
           onFinish={() => finishReview(true)} onClose={() => setReviewing(false)} />}
         <TaskSheet request={sheet} today={today} busy={saving} anchors={anchors} identities={data?.identities ?? []} habits={view?.recurrences.filter(isHabit).length ?? 0}
           reward={pinned && data ? { title: pinned.title, remaining: pinned.cost - data.balance } : null}

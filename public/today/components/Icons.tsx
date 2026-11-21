@@ -38,6 +38,10 @@ export function GiftIcon() {
     <path d="M5.5 12.5v6A1.5 1.5 0 0 0 7 20h10a1.5 1.5 0 0 0 1.5-1.5v-6M12 8.5V20" />
     <path d="M12 8.5C10.6 5.2 7.2 4.7 7.2 6.7c0 1.2 1.3 1.8 4.8 1.8Zm0 0c1.4-3.3 4.8-3.8 4.8-1.8 0 1.2-1.3 1.8-4.8 1.8Z" /></svg>;
 }
+export function InboxIcon() {
+  return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13.5 6.4 6.6A1.5 1.5 0 0 1 7.8 5.5h8.4a1.5 1.5 0 0 1 1.4 1.1l2.4 6.9V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18v-4.5Z" />
+    <path d="M4 13.5h4.5a3.5 3.5 0 0 0 7 0H20" /></svg>;
+}
 // A resolved row that was not completed: cancelled, rested or missed.
 export function DashIcon() {
   return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 12h9" /></svg>;

@@ -676,6 +676,10 @@ html[data-motion="reduced"] *, html[data-motion="reduced"] *::before, html[data-
 }
 .settings-dialog .sound-settings { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--separator); border-radius: var(--radius); }
 .settings-dialog .sound-settings legend { padding: 0 4px; font-weight: 600; }
+.care-settings { margin-top: 14px; }
+.care-settings p { margin: 0; }
+.care-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.care-message { color: var(--green-text); font-size: 13px; overflow-wrap: anywhere; }
 .settings-dialog .sound-settings label { display: flex; align-items: center; gap: 8px; }
 .settings-dialog .sound-settings input[type="checkbox"] { width: auto; min-height: 0; }
 .settings-dialog .sound-settings input[type="range"] { flex: 1; min-height: 0; }

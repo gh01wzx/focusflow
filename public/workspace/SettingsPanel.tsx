@@ -3,6 +3,7 @@ import { useContext, useState } from 'react';
 import type { InterfaceSettings } from '../../src/shared/interface.ts';
 import { ProjectDialog } from '../projects/components/ProjectDialog.tsx';
 import { InterfaceContext } from './interface-context.ts';
+import { DataSettings } from './DataSettings.tsx';
 
 export function SettingsPanel({ disabled }: { disabled: boolean }) {
   const context = useContext(InterfaceContext);
@@ -51,6 +52,7 @@ export function SettingsPanel({ disabled }: { disabled: boolean }) {
         <button className="primary" disabled={busy}>{t("Save settings")}</button>
       </form>}
       {error && <p role="alert">{t(error)}</p>}
+      {!readError && <DataSettings />}
     </ProjectDialog>}
   </>;
 }

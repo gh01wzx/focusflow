@@ -6,6 +6,7 @@ import { createPersonalService } from '../tasks/personal-service.ts';
 import { randomUUID } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { createSnapshot } from '../database/backup.ts';
+import { exportPointRows, exportTables, exportTaskRows } from '../database/export.ts';
 import { openDatabase, inTransaction } from '../database/connection.ts';
 import { createTaskRepository } from '../tasks/repository.ts';
 import { reconcileRecurrences } from '../tasks/recurrence.ts';
@@ -60,9 +61,21 @@ export async function openWorkspaceStore(path: string, clock: () => Date = () =>
       projectSettings: createProjectSettings(db),
       projectTransaction,
       planApproval: createPlanApprovalService(planDrafts, createPlanApprovalRepository(db), projectRepository, projectTransaction, randomUUID),
-      snapshot() {
+      snapshot(name?: string) {
         taskTransaction(() => {});
-        return createSnapshot(db, join(dirname(path), 'backups'));
+        return createSnapshot(db, join(dirname(path), 'backups'), undefined, name);
+      },
+      backupDirectory: join(dirname(path), 'backups'),
+      exportTables: () => exportTables(db),
+      exportTaskRows: () => exportTaskRows(db),
+      exportPointRows: () => exportPointRows(db),
+      // Backup folder and reminder choices, kept with the data so they follow its profile.
+      careSettings(): unknown {
+        const row = db.prepare("SELECT value FROM personal_preferences WHERE key='care'").get();
+        return row ? JSON.parse(String(row.value)) : null;
+      },
+      saveCareSettings(value: unknown) {
+        db.prepare("INSERT INTO personal_preferences(key,value) VALUES('care',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(value));
       },
       close: () => db.close(),
     };

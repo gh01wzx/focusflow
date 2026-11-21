@@ -93,7 +93,15 @@ async function startDesktop(): Promise<void> {
         deepseek: createCompatibleService(createProviderCredential(join(profileDirectory, 'ai'), crypto, 'deepseek-api'), 'deepseek'),
       };
       service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), workspaceLabel: profile.workspaceLabel,
-        github, ai, dsh, compatible, namedApis, onShutdown: traceShutdown, onInterfaceReady: confirmReady, appVersion: app.getVersion() });
+        github, ai, dsh, compatible, namedApis, onShutdown: traceShutdown, onInterfaceReady: confirmReady, appVersion: app.getVersion(),
+        desktop: {
+          async chooseFolder() {
+            const options = { title: 'FocusFlow backups', properties: ['openDirectory', 'createDirectory'] as ('openDirectory' | 'createDirectory')[] };
+            const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
+            return result.canceled ? null : result.filePaths[0] ?? null;
+          },
+          reveal: path => shell.showItemInFolder(path),
+        } });
       // Saved API keys only need decrypting, so those connections are usable at once. The Codex and
       // DeepSeek Harness checks each start a separate runtime process, so they wait until the first
       // screen has settled and run one at a time instead of competing with it.

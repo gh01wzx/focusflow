@@ -35,6 +35,9 @@ import { listenLocal } from '../http/local-server.ts';
 import type { LocalServer } from '../http/local-server.ts';
 import { HttpError, readJson, secureRequest, sendJson } from '../http/request.ts';
 import { openWorkspaceStore } from './store.ts';
+import { CareInputError, createDataCare } from './care.ts';
+import type { DesktopHooks } from './care.ts';
+import { dispatchCareRoute, matchCareRoute } from './care-routes.ts';
 import { matchTaskRoute, dispatchTaskRoute } from '../tasks/routes.ts';
 import { TaskInputError } from '../tasks/validation.ts';
 import { createWorkspaceService } from '../execution/workspaces.ts';
@@ -64,8 +67,12 @@ export async function startWorkspaceServer(options: {
   onShutdown?: (stage: ShutdownStage) => void;
   onInterfaceReady?: () => void;
   appVersion?: string;
+  desktop?: DesktopHooks;
 }): Promise<LocalServer> {
   const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock);
+  // Daily backups and exports sit beside the data folder of this profile.
+  const care = createDataCare(store, join(options.dataDirectory, '..', 'exports'), options.desktop, options.clock);
+  care.schedule();
   const trace = (stage: ShutdownStage) => { options.onShutdown?.(stage); };
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
   const workspaces = createWorkspaceService(store.execution, store.projectRepository, join(options.dataDirectory, '..', 'coding-workspaces'));
@@ -331,6 +338,11 @@ export async function startWorkspaceServer(options: {
         sendJson(response, 200, await dispatchGitHubRoute(githubRoute, input, options.github));
         return;
       }
+      const careRoute = matchCareRoute(request.method, resource);
+      if (careRoute) {
+        const input = request.method === 'GET' ? undefined : await readJson(request, origin, 4096);
+        sendJson(response, 200, await dispatchCareRoute(careRoute, input, care)); return;
+      }
       if (request.method === 'GET' && resource === '/api/personal') {
         sendJson(response, 200, store.personal.view()); return;
       }
@@ -360,9 +372,9 @@ export async function startWorkspaceServer(options: {
         response.end();
         return;
       }
-      const known = error instanceof HttpError || error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof ProjectNotFoundError || error instanceof PlanInputError || error instanceof PublicationError || error instanceof LinkedWorkError || error instanceof ExecutionFailure;
+      const known = error instanceof HttpError || error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof ProjectNotFoundError || error instanceof PlanInputError || error instanceof PublicationError || error instanceof LinkedWorkError || error instanceof ExecutionFailure || error instanceof CareInputError;
       const status = error instanceof HttpError ? error.status : error instanceof ProjectNotFoundError ? 404
-        : error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof PlanInputError || error instanceof PublicationError || error instanceof LinkedWorkError || error instanceof ExecutionFailure ? 400 : 500;
+        : error instanceof TaskInputError || error instanceof ProjectInputError || error instanceof PlanInputError || error instanceof PublicationError || error instanceof LinkedWorkError || error instanceof ExecutionFailure || error instanceof CareInputError ? 400 : 500;
       sendJson(response, status, {
         error: known ? error.message : 'Could not save local data. Check disk space and try again.',
       });
@@ -377,6 +389,7 @@ export async function startWorkspaceServer(options: {
     Object.values(options.namedApis ?? {}).forEach(api => api.close());
     approvals.close();
     const results = await Promise.allSettled([
+      care.close(),
       coding.close(),
       previews.close(),
       delivery.close(),

@@ -52,7 +52,7 @@ The selected profile also keeps `coding-workspaces\TICKET_ID`, run records, prev
 
 ## Backup and recovery
 
-Migrations take a verified snapshot of recognised existing data before changing its schema. Backups are stored beside the database in `data\backups`. Append migrations without changing already-applied SQL.
+Migrations take a verified snapshot of recognised existing data before changing its schema. FocusFlow also makes one verified `daily-` snapshot each local day, a few seconds after opening or hourly while it stays open, and keeps the newest 30. Backups are stored beside the database in `data\backups`; a folder chosen in **Settings > Backups and export** receives a copy of each daily snapshot. Exports go to `exports` beside the `data` folder. Append migrations without changing already-applied SQL.
 
 Close the app and retain the original database and any WAL/SHM sidecars. Keep a snapshot and its matching `.db.json` manifest together. Restore to a **new** destination:
 

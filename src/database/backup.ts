@@ -1,6 +1,6 @@
 import { DatabaseSync, backup } from 'node:sqlite';
 import { constants } from 'node:fs';
-import { access, copyFile, mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { access, copyFile, mkdir, readdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 
@@ -27,9 +27,9 @@ async function digest(path: string): Promise<string> {
   return createHash('sha256').update(await readFile(path)).digest('hex');
 }
 
-export async function createSnapshot(source: DatabaseSync, directory: string, targetSchemaVersion?: number): Promise<Snapshot> {
+export async function createSnapshot(source: DatabaseSync, directory: string, targetSchemaVersion?: number, label?: string): Promise<Snapshot> {
   await mkdir(directory, { recursive: true });
-  const prefix = targetSchemaVersion === undefined ? 'snapshot' : `before-migration-to-${targetSchemaVersion}`;
+  const prefix = label ?? (targetSchemaVersion === undefined ? 'snapshot' : `before-migration-to-${targetSchemaVersion}`);
   const name = `${prefix}-${Date.now()}-${randomUUID()}.db`;
   const path = join(directory, name);
   await backup(source, path);
@@ -44,6 +44,22 @@ export async function createSnapshot(source: DatabaseSync, directory: string, ta
     ...(targetSchemaVersion === undefined ? {} : { targetSchemaVersion }),
   }, null, 2) + '\n', { flag: 'wx' });
   return { name, path, manifestPath, schemaVersion: version, sha256 };
+}
+
+// Snapshot files whose names start with this prefix, oldest first. Each name continues with its
+// creation time, so names sort in time order.
+export async function snapshotsNamed(directory: string, prefix: string): Promise<string[]> {
+  const names = await readdir(directory).catch(() => [] as string[]);
+  return names.filter(name => name.startsWith(prefix) && name.endsWith('.db')).sort();
+}
+
+// Keeps the newest snapshots with this prefix and removes older ones with their manifests.
+export async function pruneSnapshots(directory: string, prefix: string, keep: number): Promise<void> {
+  const names = await snapshotsNamed(directory, prefix);
+  for (const name of names.slice(0, Math.max(0, names.length - keep))) {
+    await rm(join(directory, name), { force: true });
+    await rm(join(directory, name + '.json'), { force: true });
+  }
 }
 
 export async function restoreSnapshot(source: string, destination: string): Promise<void> {

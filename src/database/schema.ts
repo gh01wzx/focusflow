@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 30;
+export const SCHEMA_VERSION = 31;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -270,4 +270,12 @@ export const MIGRATIONS = [
   { version: 30, sql: `CREATE TABLE someday_items (
     id TEXT PRIMARY KEY, title TEXT NOT NULL CHECK(length(title) BETWEEN 1 AND 300), created_at TEXT NOT NULL
   );` },
+  // Quarterly goals, and the goal each task or habit plan works toward.
+  { version: 31, sql: `CREATE TABLE personal_goals (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL CHECK(length(title) BETWEEN 1 AND 200),
+    quarter TEXT NOT NULL CHECK(quarter GLOB '[0-9][0-9][0-9][0-9]-Q[1-4]'),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','done','dropped')),
+    created_at TEXT NOT NULL, reviewed_at TEXT
+  );
+  ALTER TABLE personal_scoring ADD COLUMN goal_id TEXT REFERENCES personal_goals(id);` },
 ] as const;

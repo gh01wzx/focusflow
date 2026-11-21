@@ -21,6 +21,8 @@ import { createPublicationRepository } from '../publication/repository.ts';
 import { createLinkedWorkRepository } from '../sync/repository.ts';
 import { createExecutionRepository } from '../execution/repository.ts';
 import { createSomeday, createSomedayRepository } from '../tasks/someday.ts';
+import { createGoalRepository, createGoals } from '../tasks/goals.ts';
+import { localDay } from '../shared/calendar.ts';
 
 export async function openWorkspaceStore(path: string, clock: () => Date = () => new Date()) {
   const db = await openDatabase(path);
@@ -41,6 +43,7 @@ export async function openWorkspaceStore(path: string, clock: () => Date = () =>
     return {
       tasks,
       someday: createSomeday(createSomedayRepository(db), tasks.add, randomUUID, clock),
+      goals: createGoals(createGoalRepository(db), randomUUID, clock, localDay),
       personal,
       interfaceSettings() {
         const row = db.prepare("SELECT value FROM personal_preferences WHERE key='interface'").get();

@@ -17,7 +17,7 @@ type Kind = 'once' | 'repeat' | 'checkoff';
 // "After I" field, for example when stacking a new habit after a steady one.
 export type SheetRequest = { mode: 'create'; id: string; guided?: boolean; title?: string; cue?: string }
   | { mode: 'edit'; id: string; task: Task | undefined; series: RecurrenceRule | undefined; effective: string; rule: ScoringRule | undefined };
-export interface PlanUpdate extends HabitPlan { category: 'task' | 'habit'; mode: 'minutes' | 'complete'; unit?: 'minutes' | 'count'; rate: number; target: number; schedule?: { frequency: Frequency; weekdays: Weekday[] | null; date: string; previous: string }; title?: string; start?: number | null; maintain?: number | null }
+export interface PlanUpdate extends HabitPlan { category: 'task' | 'habit'; mode: 'minutes' | 'complete'; unit?: 'minutes' | 'count'; rate: number; target: number; schedule?: { frequency: Frequency; weekdays: Weekday[] | null; date: string; previous: string }; title?: string; start?: number | null; maintain?: number | null; goalId?: string | null }
 
 interface SheetProps {
   request: SheetRequest | null;
@@ -29,6 +29,8 @@ interface SheetProps {
   identities: string[];
   // Repeating habits already scheduled, for a gentle note when adding more than a few.
   habits: number;
+  // Open quarterly goals a plan can work toward.
+  goals: { id: string; title: string }[];
   // Each returns an error message, or an empty string after saving.
   onCreate(draft: TaskDraft): Promise<string>;
   onRemove(id: string, scope: 'plan' | 'occurrence'): Promise<string>;
@@ -80,7 +82,7 @@ function planOf(rule: ScoringRule | undefined): HabitPlan {
   return { cue: rule.cue, identity: rule.identity, time: rule.time, place: rule.place, starter: rule.starter, bundle: rule.bundle };
 }
 
-function SheetForm({ request, today, busy, reward, anchors, identities, habits, onCreate, onSavePlan, onRemove, onClose }: SheetProps & { request: SheetRequest }) {
+function SheetForm({ request, today, busy, reward, anchors, identities, habits, goals, onCreate, onSavePlan, onRemove, onClose }: SheetProps & { request: SheetRequest }) {
   const editing = request.mode === 'edit' ? request : null;
   const guided = request.mode === 'create' && !!request.guided;
   const rule = editing?.rule;
@@ -110,6 +112,8 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
   // A habit's check-in and maintain amounts. Empty uses the defaults shown as placeholders.
   const [start, setStart] = useState(rule?.start ? String(rule.start) : '');
   const [maintain, setMaintain] = useState(rule?.maintain ? String(rule.maintain) : '');
+  // A link to a goal that has since closed is not offered again.
+  const [goalId, setGoalId] = useState(rule?.goalId && goals.some(goal => goal.id === rule.goalId) ? rule.goalId : '');
   const [plan, setPlan] = useState<HabitPlan>(request.mode === 'create' && request.cue ? { ...emptyPlan, cue: request.cue } : planOf(rule));
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -154,9 +158,9 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
     const failure = editing
       ? await onSavePlan(series?.id ?? task!.id, { ...shown, category,
           ...(changedSchedule ? { schedule: { date, frequency, weekdays: days, previous: JSON.stringify([series.frequency, series.weekdays, series.nextDate]) } } : {}),
-          ...(renamed ? { title: title.trim() } : {}), ...tierAmounts, mode: counted ? 'minutes' : 'complete', unit, rate, target: minutes })
+          ...(renamed ? { title: title.trim() } : {}), ...tierAmounts, goalId: goalId || null, mode: counted ? 'minutes' : 'complete', unit, rate, target: minutes })
       : await onCreate({ category, title, plannedDate: date, frequency: repeating ? frequency : 'none', mode: repeating ? 'minutes' : 'complete', unit,
-        ...(repeating && frequency === 'weekly' ? { weekdays } : {}), plan: { ...shown, ...tierAmounts, rate, target: minutes } });
+        ...(repeating && frequency === 'weekly' ? { weekdays } : {}), plan: { ...shown, ...tierAmounts, goalId: goalId || null, rate, target: minutes } });
     setSaving(false);
     if (failure) setError(failure); else onClose();
   }
@@ -233,6 +237,13 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
               onChange={event => { const value = event.target.value; setLegacyWeekly(value === 'legacy'); setFrequency(value === 'legacy' ? 'weekly' : value as Frequency); }}>
               {series?.frequency === 'weekly' && series.weekdays === null && <option value="legacy">{t('Every 7 days from the first date (existing schedule)')}</option>}
               {(category === 'habit' ? HABIT_FREQUENCIES : FREQUENCIES).map(item => <option key={item} value={item}>{t(frequencyLabels[item])}</option>)}
+            </select>
+          </div>}
+          {goals.length > 0 && <div className="field-row">
+            <label htmlFor="sheet-goal">{t("Goal")}</label>
+            <select id="sheet-goal" value={goalId} disabled={saving} onChange={event => setGoalId(event.target.value)}>
+              <option value="">{t("No goal")}</option>
+              {goals.map(goal => <option key={goal.id} value={goal.id}>{goal.title}</option>)}
             </select>
           </div>}
           {monthly && Number(date.slice(8, 10)) > 28 && <p className="group-note">{t("In months without this day, it falls on the last day of the month.")}</p>}

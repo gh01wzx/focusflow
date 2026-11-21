@@ -343,6 +343,13 @@ export async function startWorkspaceServer(options: {
         const input = request.method === 'GET' ? undefined : await readJson(request, origin, 4096);
         sendJson(response, 200, await dispatchCareRoute(careRoute, input, care)); return;
       }
+      // Quarterly goals: list, add, and close or carry on at the quarterly review.
+      const goal = /^\/api\/goals(?:\/([a-f0-9-]{36})\/(done|drop|carry))?$/.exec(resource);
+      if (goal && (request.method === 'GET' ? !goal[1] : request.method === 'POST')) {
+        const input = request.method === 'POST' ? await readJson(request, origin, 2048) : undefined;
+        sendJson(response, 200, !goal[1] ? (request.method === 'GET' ? store.goals.view() : store.goals.add(input)) : store.goals.act(goal[1], goal[2]!));
+        return;
+      }
       // Ideas without a date: list, add, plan as a task, or remove.
       const someday = /^\/api\/someday(?:\/([a-f0-9-]{36})\/(schedule|remove))?$/.exec(resource);
       if (someday && (request.method === 'GET' ? !someday[1] : request.method === 'POST')) {

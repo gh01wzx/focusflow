@@ -57,6 +57,14 @@ function tierInput(value: Record<string, unknown>, saved: { start?: number | nul
   return { start, maintain };
 }
 
+// The goal a plan works toward. Left out keeps the saved goal; null or empty clears it.
+function goalInput(value: unknown, saved: string | null | undefined, active: (id: string) => boolean): string | null {
+  if (value === undefined) return saved ?? null;
+  if (value === null || value === '') return null;
+  if (typeof value !== 'string' || !active(value)) throw new TaskInputError('Choose a current goal.');
+  return value;
+}
+
 export function createPersonalService(repository: PersonalRepository, tasks: TaskRepository, transaction: TaskTransaction) {
   const taskRule = (task: { id: string; recurrenceId: string | null }) => repository.rule(task.recurrenceId ?? task.id);
   const preferences = (): PersonalPreferences => {
@@ -150,7 +158,8 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
         }
         const target = mode === 'minutes' ? integer(value.target, 1, 1440, 'Enter a target from 1 to 1440.') : 0;
         repository.saveRule({ subject, mode, unit, rate: integer(value.rate, 0, 100000, 'Enter a valid point value.'),
-          target, ...tierInput(value, previous, mode, target), ...planInput(value) });
+          target, ...tierInput(value, previous, mode, target), goalId: goalInput(value.goalId, previous?.goalId, repository.activeGoal),
+          ...planInput(value) });
       } else if (action === 'reward') {
         const id = operationId(value.id), previous = repository.reward(id);
         const title = string(value.title, 160, 'Keep the reward name within 160 characters.');
@@ -272,7 +281,7 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
       const target = !timed ? 0 : plan.target === undefined ? 5 : integer(plan.target, 1, 1440, 'Enter a target from 1 to 1440.');
       repository.saveRule({ subject, mode, unit,
         rate: plan.rate === undefined ? (timed ? 100 : 500) : integer(plan.rate, 0, 100000, 'Enter a valid point value.'),
-        target, ...tierInput(plan, undefined, mode, target), ...planInput(plan) });
+        target, ...tierInput(plan, undefined, mode, target), goalId: goalInput(plan.goalId, null, repository.activeGoal), ...planInput(plan) });
     },
     reachedTarget(task: NonNullable<ReturnType<TaskRepository['findTask']>>) {
       const rule = taskRule(task);

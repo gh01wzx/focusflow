@@ -23,6 +23,10 @@ Only the title is required. The summary at the bottom shows the whole plan. If y
 
 **Someday** in the sidebar holds ideas without a date, so Today stays clear. Type an idea and press Enter. When one fits, choose **Today** or **Pick a date**: it becomes a one-off task on that date and leaves the list. The weekly review shows how many ideas wait there.
 
+### Goals
+
+**Goals** in the sidebar holds one to three goals per quarter. Link a task or habit to a goal with **Goal** in its editor; each goal lists what is linked and how often it was completed or checked in during the quarter. When a new quarter begins, Today shows a prompt while last quarter's goals are still open: **Mark done**, **Carry on this quarter** or **Let it go** for each.
+
 ### Timer cards
 
 The cards at the top hold today's timed habits that have not reached their goal yet, such as reading or meditation. Swipe, drag or use the arrows to move between them. Planned times that have arrived come first, then habits without a time, then later times; a habit you already started today moves to the end. **Start 2 minutes** is the way in: the timer keeps counting quietly for as long as you go, nothing interrupts you at two minutes, and it keeps running while you switch views. **Stop** adds the elapsed minutes to that habit, and **Cancel timer** discards it. To record without the timer, use **Log minutes** on the habit in the list.

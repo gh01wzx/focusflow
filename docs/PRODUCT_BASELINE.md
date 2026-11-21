@@ -56,7 +56,7 @@ The target is a useful local tool for the owner, not a distributed app. Formal i
 
 Each platform launcher builds the source when it changed since the last successful build and opens the fixed personal profile. Named review workspaces are separate and start empty. Existing personal data retains verified migration snapshots and separate-path recovery; these remain necessary for personal use.
 
-The owner requested implementation first and unified manual acceptance later. Do not run test suites or live model trials for this batch. Keep source, Issues/PRs and concise usage/architecture docs readable, and distinguish source delivery from verified behavior.
+The owner requested implementation first and unified manual acceptance later. Local test suites may run (owner decision, 2026-11-22); live model trials stay off. Keep source, Issues/PRs and concise usage/architecture docs readable, and distinguish source delivery from verified behavior.
 
 ## MVP acceptance
 

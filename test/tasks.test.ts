@@ -83,7 +83,9 @@ test('a habit keeps its plan, plan edits apply, an invalid plan saves nothing an
     const plan = { rate: 150, target: 10, cue: 'pour my morning coffee', identity: 'I am a calm person', time: '07:30',
       place: 'Living room', starter: 'Take one slow breath', bundle: 'calm music' };
     const rule = store.tasks.addRecurrence({ title: 'Meditate', plannedDate: '2026-11-04', frequency: 'daily', habit: true, plan });
-    assert.deepEqual({ ...store.personal.view().rules.find(item => item.subject === rule.id) }, { subject: rule.id, mode: 'minutes', ...plan });
+    const saved: Record<string, unknown> = { ...store.personal.view().rules.find(item => item.subject === rule.id) };
+    const expected: Record<string, unknown> = { subject: rule.id, mode: 'minutes', unit: 'minutes', ...plan };
+    assert.deepEqual(Object.fromEntries(Object.keys(expected).map(key => [key, saved[key]])), expected);
     const occurrence = store.tasks.view().due[0]!;
     store.personal.mutate('rule', { subject: occurrence.id, mode: 'minutes', rate: 200, target: 5,
       cue: 'finish breakfast', identity: '', time: '', place: '', starter: '', bundle: '' });

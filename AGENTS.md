@@ -9,7 +9,7 @@
 ## Work with the owner
 
 - Discuss the work in Chinese. Use simple English in source, comments, docs, Issues, commits and PRs. Maintain English and Simplified Chinese interface text. Preserve user-entered text; escape non-English test fixtures.
-- Work through the owner-authorized implementation batch in dependency order, with self-review and one implementation PR at a time. The owner will perform unified local acceptance after implementation. Do not run automated tests or live model trials for this batch; record them as not run and retain failures already observed. Merge completed code within the batch authorization. New account scopes, live-model spending, paid services, release and deployment still need their own authorization.
+- Work through the owner-authorized implementation batch in dependency order, with self-review and one implementation PR at a time. The owner will perform unified local acceptance after implementation. Run the local test suites (`npm run typecheck`, `npm run test:source`) when a change needs them, as authorized by the owner on 2026-11-22; record what ran and retain failures observed. Live model trials stay off unless separately authorized. Merge completed code within the batch authorization. New account scopes, live-model spending, paid services, release and deployment still need their own authorization.
 - A coding task is complete only after its linked PR is observed merged.
 - Use the Issue number as the task ID: [ID] Plain-English outcome for Issue/PR titles, ID-short-outcome for branches, and Closes #ID in the PR. GitHub's separate PR number is only a platform reference. Apply this from task 21 onward.
 - Keep lasting rules here. Keep task status, approvals and development history in GitHub rather than adding a chronological log to this file.
@@ -27,13 +27,13 @@
 ## CI cost and notifications
 
 - The owner requires no paid CI usage. Automatic workflows run only in public repositories on standard GitHub-hosted Windows/Linux runners. The manual-only Mac source check may use a standard GitHub-hosted macOS runner, which is free for public repositories. Keep persistent artifact uploads and caches disabled. Paid runners, storage and external services require explicit owner approval.
-- Automated verification is manual-only during owner-led local acceptance. Keep the existing workflow definitions and failure history, but do not trigger test, packaging or installer runs for this batch. Personal email notification settings and billing budgets are separate account controls.
+- Automated verification is manual-only during owner-led local acceptance. Keep the existing workflow definitions and failure history, but do not trigger hosted test, packaging or installer runs for this batch. Local test runs are allowed. Personal email notification settings and billing budgets are separate account controls.
 
 ## Code and data
 
 - Keep components, state coordination, HTTP, task rules and SQL separate. Follow [Architecture](docs/ARCHITECTURE.md) and dependency checks; add abstractions only for current needs.
 - Use strict TypeScript for first-party app, browser, integration and test code. Generated JavaScript belongs only in ignored build output.
-- For this implementation batch, write and inspect code without running tests. Each platform has one source launcher that builds and opens the local app for owner acceptance. Do not claim compilation, tests or live integration passed without executing them.
+- Run the local test suites for changes that need them; do not run them against the everyday profile or a running app's build output. Each platform has one source launcher that builds and opens the local app for owner acceptance. Do not claim compilation, tests or live integration passed without executing them.
 - Tests use disposable directories. Ordinary tests never use a live model or authenticated GitHub writes. Review instructions must identify the build and data profile.
 - Never commit databases, credentials, personal configuration, execution logs or installer output. Installed user data stays outside source/install directories.
 - Preserve existing weekly schedules and applied database migrations. New schema changes append migrations and retain verified backup/recovery protection.

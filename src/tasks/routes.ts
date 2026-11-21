@@ -5,7 +5,7 @@ type TaskApi = ReturnType<typeof createTaskService> & { snapshot(): Promise<Snap
 
 type TaskRoute =
   | { kind: 'view' | 'add' | 'addRecurrence' | 'backup' | 'focus' }
-  | { kind: 'resolve' | 'reopen' | 'reschedule' | 'stop'; id: string };
+  | { kind: 'resolve' | 'reopen' | 'reschedule' | 'stop' | 'resume'; id: string };
 
 export function matchTaskRoute(method: string | undefined, path: string): TaskRoute | undefined {
   if (method === 'GET' && path === '/api/tasks') return { kind: 'view' };
@@ -20,8 +20,8 @@ export function matchTaskRoute(method: string | undefined, path: string): TaskRo
   if (resolve?.[1]) return { kind: 'resolve', id: resolve[1] };
   const reopen = /^\/api\/tasks\/([a-f0-9-]{36})\/reopen$/.exec(path);
   if (reopen?.[1]) return { kind: 'reopen', id: reopen[1] };
-  const stop = /^\/api\/recurrences\/([a-f0-9-]{36})\/stop$/.exec(path);
-  if (stop?.[1]) return { kind: 'stop', id: stop[1] };
+  const stop = /^\/api\/recurrences\/([a-f0-9-]{36})\/(stop|resume)$/.exec(path);
+  if (stop?.[1]) return { kind: stop[2] === 'resume' ? 'resume' : 'stop', id: stop[1] };
   return undefined;
 }
 
@@ -37,6 +37,10 @@ export async function dispatchTaskRoute(
       const rule = store.stopRecurrence(route.id);
       return rule ? { status: 200, body: { rule, view: store.view() } }
         : { status: 404, body: { error: 'Repeating task not found' } };
+    }
+    case 'resume': {
+      const rule = store.resumeRecurrence(route.id);
+      return rule ? { status: 200, body: { rule, view: store.view() } } : { status: 404, body: { error: 'Repeating task not found' } };
     }
     case 'resolve': {
       const status = typeof input === 'object' && input !== null && 'status' in input ? input.status : undefined;

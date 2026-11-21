@@ -1,4 +1,11 @@
 import type { PersonalView } from '../shared/personal.ts';
+import { parseHabitHistory } from '../shared/history.ts';
+
+export async function readHabitHistory() {
+  const response = await fetch('/api/habits/history', { cache: 'no-store' });
+  if (!response.ok) throw new Error('Could not read habit history.');
+  return parseHabitHistory(await response.json());
+}
 
 export async function readPersonal(action?: string, input?: unknown): Promise<{ view: PersonalView; award: number }> {
   const response = await fetch('/api/personal' + (action ? '/' + action : ''), action ? {

@@ -116,6 +116,8 @@ export function useTodayController() {
       change(() => client.reschedule(id, plannedDate), t('Moved to {0}.', dateText(plannedDate)), { inline }),
     setFocus: (day: string, taskIds: string[], inline = false) =>
       change(() => client.setFocus(day, taskIds), day === view?.today ? 'Focus updated.' : "Tomorrow's focus saved.", { inline }),
+    // From the long-term history: a graduated or stopped habit starts again today.
+    resume: (id: string, title: string) => change(() => client.resumeRecurrence(id), t('Started “{0}” again.', title), { inline: true }),
     // From the weekly review: a steady habit leaves Today and keeps its history.
     graduate: (id: string, title: string) =>
       change(() => client.stopRecurrence(id), t('Graduated “{0}”. Its history stays.', title), { inline: true }),

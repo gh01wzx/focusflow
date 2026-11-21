@@ -198,6 +198,29 @@ test('a flexible weekly habit completes its period with enough check-in days, on
   } finally { store.close(); }
 });
 
+test('long-term history marks each day by tier, and a stopped habit can start again', async t => {
+  const { path } = await fixture(t);
+  let now = new Date(2026, 10, 19, 9);
+  const store = await openWorkspaceStore(path, () => now);
+  try {
+    const walk = store.tasks.addRecurrence({ title: 'Walk', plannedDate: '2026-11-19', frequency: 'daily', category: 'habit', mode: 'minutes',
+      plan: { target: 30, start: 5, maintain: 15 } });
+    const log = (day: string, minutes: number) => {
+      const task = store.tasks.view().due.find(item => item.recurrenceId === walk.id)!;
+      store.personal.mutate('log', { id: crypto.randomUUID(), day, subject: task.id, minutes, unit: 'minutes' });
+    };
+    log('2026-11-19', 3);
+    now = new Date(2026, 10, 20, 9); log('2026-11-20', 16);
+    now = new Date(2026, 10, 22, 9);
+    const marks = store.personal.history().habits.find(habit => habit.id === walk.id)!.days;
+    assert.deepEqual([marks['2026-11-19'], marks['2026-11-20'], marks['2026-11-21']], ['low', 'maintain', 'missed']);
+    store.tasks.stopRecurrence(walk.id);
+    assert.ok(store.personal.history().habits.find(habit => habit.id === walk.id)?.stoppedAt);
+    assert.equal(store.tasks.resumeRecurrence(walk.id)?.stoppedAt, null);
+    assert.ok(store.tasks.view().due.some(task => task.recurrenceId === walk.id && task.plannedDate === '2026-11-22'));
+  } finally { store.close(); }
+});
+
 test('invalid recurrence definitions leave no rules or occurrences', async t => {
   const { path } = await fixture(t);
   const store = await openWorkspaceStore(path, () => new Date(2026, 10, 4));

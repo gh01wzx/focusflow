@@ -434,6 +434,21 @@ html[data-size="large"] { zoom: 1.125; }
 .pause-form .group-note { margin: 0; }
 .pause-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; margin-bottom: 12px; padding: 12px 16px;
   background: linear-gradient(135deg, rgba(88, 86, 214, .1), rgba(52, 199, 89, .08)), var(--glass); }
+/* Long-term history: a column per week, a square per day, shaded by the tier reached. */
+.heatmap-list { display: grid; gap: 14px; margin: 0; padding: 4px 18px 10px; list-style: none; }
+.heatmap-list strong { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; }
+.heatmap-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-bottom: 6px; }
+.heatmap-heading strong { margin: 0; }
+.heatmap { display: grid; grid-template-rows: repeat(7, 10px); grid-auto-flow: column; grid-auto-columns: 10px; gap: 3px; overflow-x: auto; padding-bottom: 2px; }
+.heatmap i, .heatmap-legend i { display: block; width: 10px; height: 10px; border-radius: 3px; background: var(--fill); }
+.heatmap i[data-mark=low], .heatmap-legend i[data-mark=low] { background: rgba(52, 199, 89, .22); }
+.heatmap i[data-mark=check], .heatmap-legend i[data-mark=check] { background: rgba(52, 199, 89, .45); }
+.heatmap i[data-mark=maintain], .heatmap-legend i[data-mark=maintain] { background: rgba(52, 199, 89, .72); }
+.heatmap i[data-mark=goal], .heatmap-legend i[data-mark=goal] { background: #23a44b; }
+.heatmap i[data-mark=rest], .heatmap-legend i[data-mark=rest] { background: rgba(88, 86, 214, .22); }
+.heatmap i[data-mark=missed], .heatmap-legend i[data-mark=missed] { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(255, 59, 48, .55); }
+.heatmap-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0 18px 12px; color: var(--muted); font-size: 12px; }
+.heatmap-legend span { display: inline-flex; align-items: center; gap: 5px; }
 /* Goals: a few per quarter, with the tasks and habits that move them forward. */
 .goals { display: grid; gap: 4px; max-width: 780px; }
 .goal-list { display: grid; gap: 0; margin: 0; padding: 0 0 6px; list-style: none; }

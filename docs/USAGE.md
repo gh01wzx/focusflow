@@ -37,6 +37,8 @@ Tick the square to complete a task and use the circle to check in a habit. A tim
 
 Each habit you finish today gets a short, quiet moment that grows as the day fills: a fine ripple from where you tapped and a small note at the top with your progress. When every habit is done, a ring closes in the middle of the screen, with a soft chord if sound is on, and shows how many days in a row you have done them all. Click it or wait a few seconds. With reduced motion on, only the notes and the finished ring appear.
 
+**History** starts with **Habits over six months**: a square per day for each habit, shaded by the tier reached, with rest days and misses marked. **Graduated and stopped habits** keeps their history; **Start again** brings one back from today.
+
 After you complete or cancel a task, choose **Undo** next to the message. **History**, **Habits completed today** and **Tasks completed today** offer **Reopen** for one-off tasks, and for a repeating occurrence while its period is current. Reopening a completed task returns the points it earned. History shows the latest 200 resolved tasks; older records stay saved.
 
 ### Focus

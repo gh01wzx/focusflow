@@ -168,6 +168,22 @@ export function createPersonalRepository(db: DatabaseSync) {
     preferences() {
       return storedPreferences.get()?.value;
     },
+    // Amount logged per habit schedule and day, and each occurrence's status, from a day on.
+    dailyAmounts(from: string) {
+      return db.prepare("SELECT t.recurrence_id AS habit, p.day, SUM(p.minutes) AS amount FROM personal_entries p JOIN tasks t ON t.id=p.subject WHERE t.recurrence_id IS NOT NULL AND p.day>=? AND p.kind IN ('earn','edit','reverse') GROUP BY habit, p.day")
+        .all(from).map(row => ({ habit: String(row.habit), day: String(row.day), amount: Number(row.amount) }));
+    },
+    occurrenceStatuses(from: string) {
+      return db.prepare('SELECT recurrence_id AS habit, planned_date AS day, status FROM visible_tasks WHERE recurrence_id IS NOT NULL AND planned_date>=?')
+        .all(from).map(row => ({ habit: String(row.habit), day: String(row.day), status: String(row.status) }));
+    },
+    // Habit schedules that are not deleted, stopped ones included, with their scoring.
+    habitSchedules() {
+      return db.prepare("SELECT r.id, r.title, r.stopped_at AS stoppedAt, s.mode, s.target, s.unit, s.start_amount AS start, s.maintain_amount AS maintain FROM recurrence_rules r LEFT JOIN personal_scoring s ON s.subject=r.id WHERE r.category='habit' AND r.removed=0 ORDER BY r.stopped_at IS NOT NULL, r.created_at")
+        .all().map(row => ({ id: String(row.id), title: String(row.title), stoppedAt: row.stoppedAt === null ? null : String(row.stoppedAt),
+          mode: row.mode === 'minutes' ? 'minutes' as const : 'complete' as const, target: Number(row.target ?? 0), unit: row.unit === 'count' ? 'count' as const : 'minutes' as const,
+          start: row.start === null ? null : Number(row.start), maintain: row.maintain === null ? null : Number(row.maintain) }));
+    },
     // Paused stretches, as local start and end days.
     pauses() {
       return db.prepare('SELECT id,start_date AS start,end_date AS end,created_at AS createdAt FROM habit_pauses ORDER BY start_date').all()

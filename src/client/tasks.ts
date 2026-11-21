@@ -27,6 +27,7 @@ export function createTaskClient(transport: typeof fetch = fetch) {
     reopen: (id: string) => request(`/api/tasks/${encodeURIComponent(id)}/reopen`, {}),
     reschedule: (id: string, plannedDate: string) => request(`/api/tasks/${encodeURIComponent(id)}/reschedule`, { plannedDate }),
     setFocus: (day: string, taskIds: string[]) => request('/api/focus', { day, taskIds }),
+    resumeRecurrence: (id: string) => request(`/api/recurrences/${encodeURIComponent(id)}/resume`, {}),
     stopRecurrence: (id: string) => request(`/api/recurrences/${encodeURIComponent(id)}/stop`, {}),
   };
 }

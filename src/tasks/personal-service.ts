@@ -2,7 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { editSchedule } from './edit-schedule.ts';
 import { addDays, localDay, validDate } from '../shared/calendar.ts';
 import { occurrenceEnd } from '../shared/weekdays.ts';
-import { goalBonus, tiersOf } from '../shared/habits.ts';
+import { goalBonus, tierLevel, tiersOf } from '../shared/habits.ts';
+import { HISTORY_WEEKS } from '../shared/history.ts';
+import type { DayMark, HabitHistoryView } from '../shared/history.ts';
 import { PLAN_LIMITS, personalDefaults } from '../shared/personal.ts';
 import { HABIT_FREQUENCIES } from '../shared/tasks.ts';
 import type { Frequency } from '../shared/tasks.ts';
@@ -282,7 +284,32 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
     if (credit) record(now, { id: randomUUID(), kind: 'reverse', subject: credit.subject, title: credit.title,
       minutes: 0, rate: credit.rate, amount: -credit.amount, reference: credit.id }, credit.day);
   }
-  return { preferences, view: () => transaction(view), mutate, complete, reopen,
+  // About half a year of marks per habit. A day takes its occurrence's outcome and then the tier its
+  // logged amount reached; a day with a log below the check-in still shows that you started.
+  function history(): HabitHistoryView {
+    return transaction(now => {
+      const today = localDay(now);
+      const from = addDays(today, -(HISTORY_WEEKS * 7 - 1));
+      const habits = repository.habitSchedules().map(schedule => ({ id: schedule.id, title: schedule.title, stoppedAt: schedule.stoppedAt,
+        days: {} as Record<string, DayMark>, schedule }));
+      const byId = new Map(habits.map(habit => [habit.id, habit]));
+      for (const { habit, day, status } of repository.occurrenceStatuses(from)) {
+        const entry = byId.get(habit);
+        if (!entry || day > today) continue;
+        if (status === 'cancelled') entry.days[day] = 'rest';
+        else if (status === 'missed') entry.days[day] = 'missed';
+        else if (status === 'completed' && entry.schedule.mode === 'complete') entry.days[day] = 'goal';
+      }
+      for (const { habit, day, amount } of repository.dailyAmounts(from)) {
+        const entry = byId.get(habit);
+        if (!entry || amount <= 0) continue;
+        const level = entry.schedule.mode === 'minutes' ? tierLevel(amount, tiersOf(entry.schedule)) : 3;
+        entry.days[day] = (['low', 'check', 'maintain', 'goal'] as const)[level];
+      }
+      return { from, today, habits: habits.map(habit => ({ id: habit.id, title: habit.title, stoppedAt: habit.stoppedAt, days: habit.days })) };
+    });
+  }
+  return { preferences, view: () => transaction(view), history, mutate, complete, reopen,
     // Runs inside the task transaction, so an invalid plan also discards the new task.
     createRule(subject: string, repeating: boolean, input: unknown) {
       const value = fields(input);

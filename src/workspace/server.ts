@@ -358,6 +358,9 @@ export async function startWorkspaceServer(options: {
           : someday[2] === 'schedule' ? store.someday.schedule(someday[1], input) : store.someday.remove(someday[1]));
         return;
       }
+      if (request.method === 'GET' && resource === '/api/habits/history') {
+        sendJson(response, 200, store.personal.history()); return;
+      }
       if (request.method === 'GET' && resource === '/api/personal') {
         sendJson(response, 200, store.personal.view()); return;
       }

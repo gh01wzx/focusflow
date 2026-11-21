@@ -92,6 +92,17 @@ export function createTaskService(repository: TaskRepository, transaction: TaskT
       onCreate(rule.id, true, input);
       return rule;
     }),
+    // A graduated or stopped schedule starts again today, or on its next chosen weekday.
+    resumeRecurrence: (id: string): RecurrenceRule | undefined => transaction(now => {
+      const rule = repository.findRule(id);
+      if (!rule) return undefined;
+      if (!rule.stoppedAt) return rule;
+      const today = localDay(now);
+      const next = rule.weekdays === null ? today : firstSelectedDate(today, rule.weekdays);
+      if (next === null) throw new TaskInputError('No scheduled date remains in the supported range.');
+      repository.resumeRule(id, next);
+      return repository.findRule(id);
+    }),
     stopRecurrence: (id: string): RecurrenceRule | undefined => transaction(now => {
       const rule = repository.findRule(id);
       if (!rule) return undefined;

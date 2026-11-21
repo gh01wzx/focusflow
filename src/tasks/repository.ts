@@ -122,6 +122,10 @@ export function createTaskRepository(db: DatabaseSync) {
     expireTask: (id: string, at: string) => { expire.run(at, id); },
     advanceRule: (id: string, date: string | null) => { advance.run(date, id); },
     stopRule: (id: string, at: string) => { stop.run(at, id); },
+    // A stopped schedule starts again from this date.
+    resumeRule: (id: string, nextDate: string) => {
+      db.prepare('UPDATE recurrence_rules SET stopped_at=NULL,next_date=? WHERE id=? AND removed=0').run(nextDate, id);
+    },
     cancelFutureTasks: (id: string, today: string, at: string) => { cancelFuture.run(at, id, today); },
     reopenTask: (id: string) => {
       db.prepare("UPDATE tasks SET status='pending',resolved_at=NULL WHERE id=? AND status='completed'").run(id);

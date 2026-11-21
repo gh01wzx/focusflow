@@ -32,6 +32,7 @@ import { FoldCard } from './components/FoldCard.tsx';
 import { PauseBanner } from './components/PauseControl.tsx';
 import { SomedayList, useSomeday } from './components/SomedayList.tsx';
 import { GoalsView, useGoals } from './components/GoalsView.tsx';
+import { HabitHistory } from './components/HabitHistory.tsx';
 import { readClosed, readFolded, readReviewed, readTimer, writeClosed, writeFolded, writeReviewed, writeTimer } from './local-state.ts';
 import type { Timer } from './local-state.ts';
 import { reportInterfaceReady } from '../../src/client/build.ts';
@@ -345,6 +346,8 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               {undo && view?.history.some(task => task.id === undo.id && canReopen(task, view)) && <button className="text-button" disabled={saving} onClick={() => void state.reopen(undo.id)}
                 aria-label={t(undo.status === 'completed' ? "Undo completing {0}" : "Undo resting or cancelling {0}", undo.title)}>{t("Undo")}</button>}
             </div>
+            {tab === 'history' && view && pointsReady && <HabitHistory isFolded={isFolded} toggle={toggleCard} reduced={reduced} busy={saving}
+              onResume={state.resume} />}
             {/* Groups move as one when the content above them changes, so their rows never slide on their own. */}
             {view && pointsReady && groups.map(group => {
               const focus = group.key === 'focus', others = tab === 'due' && group.key === 'tasks';

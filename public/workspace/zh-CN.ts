@@ -1124,4 +1124,13 @@ export const chinese: Record<string, string> = {
   "Each seven-day period from the start date needs this many days with a check-in, on any days.": "从开始日期起，每 7 天为一个周期，周期内打卡满这么多天就算完成，哪天都行。",
   "Choose 1 to 7 days a week.": "请选择每周 1 到 7 天。",
   "A flexible habit repeats weekly on any days, 1 to 7 days a week.": "灵活习惯按周重复、哪天都行，每周 1 到 7 天。",
+  "Goal met": "达成目标",
+  "Started": "开始了",
+  "{0}: the last six months": "{0}：最近六个月",
+  "Habits over six months": "习惯长期记录",
+  "Graduated and stopped habits": "已毕业和已停止的习惯",
+  "Stopped {0}": "停止于 {0}",
+  "Start again": "重新开始",
+  "Started “{0}” again.": "已重新开始“{0}”。",
+  "Could not read habit history.": "无法读取习惯记录。",
 };

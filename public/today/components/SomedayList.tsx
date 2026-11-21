@@ -1,6 +1,6 @@
 import { t } from '../../workspace/locale.ts';
 import { useEffect, useRef, useState } from 'react';
-import { addDays } from '../../../src/shared/calendar.ts';
+import { addDays, localDay } from '../../../src/shared/calendar.ts';
 import { addSomeday, readSomeday, removeSomeday, scheduleSomeday } from '../../../src/client/someday.ts';
 import type { SomedayItem } from '../../../src/shared/someday.ts';
 import { dateText } from '../view-options.ts';
@@ -59,7 +59,7 @@ export function SomedayList({ state, today, disabled }: { state: SomedayControll
         <div className="task someday-row">
           <div className="task-content">
             <span className="task-title">{item.title}</span>
-            <div className="task-meta">{t("Noted {0}", dateText(item.createdAt.slice(0, 10)))}</div>
+            <div className="task-meta">{t("Noted {0}", dateText(localDay(new Date(item.createdAt))))}</div>
             {picking?.id === item.id && <form className="someday-pick" onSubmit={event => {
               event.preventDefault(); void state.schedule(item, picking.date).then(() => setPicking(null));
             }} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); setPicking(null); } }}>

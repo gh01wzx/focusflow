@@ -246,7 +246,7 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
             <select id="sheet-repeat" value={legacyWeekly ? 'legacy' : flexible ? 'flexible' : frequency} disabled={saving}
               onChange={event => { const value = event.target.value; setLegacyWeekly(value === 'legacy'); setFlexible(value === 'flexible');
                 setFrequency(value === 'legacy' || value === 'flexible' ? 'weekly' : value as Frequency); }}>
-              {series?.frequency === 'weekly' && series.weekdays === null && <option value="legacy">{t('Every 7 days from the first date (existing schedule)')}</option>}
+              {anyDays && !rule?.timesPerWeek && <option value="legacy">{t('Every 7 days from the first date (existing schedule)')}</option>}
               {(category === 'habit' ? HABIT_FREQUENCIES : FREQUENCIES).map(item => <option key={item} value={item}>{t(frequencyLabels[item])}</option>)}
               {category === 'habit' && counted && <option value="flexible">{t("Some days a week, any days")}</option>}
             </select>

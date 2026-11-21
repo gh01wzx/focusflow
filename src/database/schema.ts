@@ -1,5 +1,5 @@
 export const APPLICATION_ID = 0x46464c57;
-export const SCHEMA_VERSION = 32;
+export const SCHEMA_VERSION = 33;
 // Schema 1 is an explicit synthetic prior product schema, not a historic release.
 export const MIGRATIONS = [
   { version: 1, sql: `PRAGMA application_id=${APPLICATION_ID};
@@ -280,4 +280,9 @@ export const MIGRATIONS = [
   ALTER TABLE personal_scoring ADD COLUMN goal_id TEXT REFERENCES personal_goals(id);` },
   // A flexible weekly habit: a number of days in each seven-day period, any days.
   { version: 32, sql: 'ALTER TABLE personal_scoring ADD COLUMN times_per_week INTEGER CHECK(times_per_week IS NULL OR times_per_week BETWEEN 1 AND 7);' },
+  // Years of logs stay quick to read: by day for weeks and long-term history, by time for the
+  // newest entries, and by reference for corrections and undos.
+  { version: 33, sql: `CREATE INDEX personal_entries_day ON personal_entries(day);
+    CREATE INDEX personal_entries_logged ON personal_entries(logged_at);
+    CREATE INDEX personal_entries_reference ON personal_entries(reference);` },
 ] as const;

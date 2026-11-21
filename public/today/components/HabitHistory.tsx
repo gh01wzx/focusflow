@@ -1,6 +1,6 @@
 import { t } from '../../workspace/locale.ts';
 import { useEffect, useState } from 'react';
-import { addDays } from '../../../src/shared/calendar.ts';
+import { addDays, localDay } from '../../../src/shared/calendar.ts';
 import { readHabitHistory } from '../../../src/client/personal.ts';
 import type { DayMark, HabitHistory as Habit, HabitHistoryView } from '../../../src/shared/history.ts';
 import { dateText } from '../view-options.ts';
@@ -50,7 +50,7 @@ export function HabitHistory({ isFolded, toggle, reduced, busy, onResume }: {
       reduced={reduced} onToggle={() => toggle('history:stopped', true)}>
       <ul className="heatmap-list">{stopped.map(habit => <li key={habit.id}>
         <div className="heatmap-heading"><strong>{habit.title}</strong>
-          <span className="task-meta">{t("Stopped {0}", dateText(habit.stoppedAt!.slice(0, 10)))}</span>
+          <span className="task-meta">{t("Stopped {0}", dateText(localDay(new Date(habit.stoppedAt!))))}</span>
           <button type="button" className="quiet-button" disabled={busy} onClick={async () => {
             if (!await onResume(habit.id, habit.title)) await load();
           }}>{t("Start again")}</button></div>

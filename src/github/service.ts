@@ -215,7 +215,8 @@ export function createGitHubService(vault: GitHubVault, transport: typeof fetch 
     disconnect: (projectId: string) => {
       const pending = queue.then(async () => {
         // Serialize deletion after any in-flight token write so disconnect wins.
-        await load();
+        // Credentials that cannot be opened cannot keep their links; remove them so a fresh authorization can start.
+        try { await load(); } catch { await vault.clear(); saved = null; }
         if (saved) {
           const disconnected: StoredGitHub = { clientId: '', token: '', account: '', expiresAt: null, repositories: saved.repositories };
           await vault.write(disconnected);

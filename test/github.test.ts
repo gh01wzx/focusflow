@@ -149,9 +149,10 @@ test('GitHub App device authorization lists, previews and explicitly links witho
     : ['https://github.com/login/device/code', 'https://github.com/login/oauth/access_token'].includes(call.path)));
   const restarted = createGitHubService(f.vault, async () => { throw new Error('Status must stay local'); }, () => 10000);
   assert.equal((await restarted.status(projectId)).repository?.id, 7);
-  await f.service.disconnect(projectId);
-  assert.equal(f.read(), null);
-  assert.equal((await f.service.status(projectId)).repository, null);
+  const disconnected = await f.service.disconnect(projectId);
+  assert.equal(disconnected.connected, false);
+  assert.equal(f.read()?.token, '', 'Disconnect removes the credential.');
+  assert.equal(f.read()?.repositories[projectId]?.id, 7, 'Disconnect keeps the project link for reconnection.');
   await f.service.close();
 });
 
@@ -211,7 +212,7 @@ test('disconnect waits for an in-flight authorization write and removes the fina
   await writing;
   const disconnect = f.service.disconnect(projectId);
   release(); await polling; await disconnect;
-  assert.equal(f.read(), null);
+  assert.equal(f.read()?.token, '');
   assert.equal((await f.service.status(projectId)).connected, false);
   await f.service.close();
 });

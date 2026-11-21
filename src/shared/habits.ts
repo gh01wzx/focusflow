@@ -144,6 +144,10 @@ export function nextTier(amount: number, tiers: Tiers): { level: 1 | 2 | 3; amou
   }
   return null;
 }
+// Days in a flexible habit's period, from its first day, whose amount reaches the check-in.
+export function weekSessions(days: Record<string, number>, from: string, start: number): number {
+  return Object.entries(days).filter(([day, amount]) => day >= from && amount >= start).length;
+}
 // The points bonus for reaching the goal: a fifth of the goal's points, in whole points.
 export function goalBonus(rule: Pick<ScoringRule, 'target' | 'rate'>): number {
   return Math.round(rule.target * rule.rate * GOAL_BONUS / 100) * 100;

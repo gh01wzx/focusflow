@@ -15,7 +15,9 @@ export function editSchedule(tasks: TaskRepository, rule: RecurrenceRule, input:
   if (date > addDays(today, SCHEDULE_LEAD_DAYS)) throw new TaskInputError('Choose an effective date within four weeks.');
   if (!FREQUENCIES.includes(frequency as Frequency)) throw new TaskInputError('Choose how often it repeats.');
   const legacy = frequency === 'weekly' && weekdays === null && rule.frequency === 'weekly' && rule.weekdays === null;
-  if (frequency === 'weekly' && !legacy && !validWeekdays(weekdays)) throw new TaskInputError('Choose one or more different weekdays.');
+  // A flexible weekly habit keeps seven-day periods on any days.
+  const flexible = frequency === 'weekly' && weekdays === null && (input as Record<string, unknown>).flexible === true;
+  if (frequency === 'weekly' && !legacy && !flexible && !validWeekdays(weekdays)) throw new TaskInputError('Choose one or more different weekdays.');
   if (previous !== JSON.stringify([rule.frequency, rule.weekdays, rule.nextDate])) throw new TaskInputError('The schedule changed. Reopen the plan and try again.');
   const days = frequency === 'weekly' && validWeekdays(weekdays) ? WEEKDAYS.filter(day => weekdays.includes(day.value)).map(day => day.value) : null;
   tasks.clearUnstarted(rule.id, date);

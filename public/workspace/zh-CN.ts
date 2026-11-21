@@ -1115,4 +1115,13 @@ export const chinese: Record<string, string> = {
   "Could not read goals.": "无法读取目标。",
   "Name the goal in 1 to 200 characters.": "请用 1 到 200 个字符写下目标。",
   "Choose a current goal.": "请选择一个进行中的目标。",
+  "{0} of {1} days this week": "本周 {0}/{1} 天",
+  "This week is done. Extra days still earn points.": "本周已完成，多做的日子仍然有积分。",
+  "Any day counts once it is checked in.": "哪天打卡都算一天。",
+  "{0} days a week, from ": "每周 {0} 天，从",
+  "Some days a week, any days": "每周几天，哪天都行",
+  "Days a week": "每周天数",
+  "Each seven-day period from the start date needs this many days with a check-in, on any days.": "从开始日期起，每 7 天为一个周期，周期内打卡满这么多天就算完成，哪天都行。",
+  "Choose 1 to 7 days a week.": "请选择每周 1 到 7 天。",
+  "A flexible habit repeats weekly on any days, 1 to 7 days a week.": "灵活习惯按周重复、哪天都行，每周 1 到 7 天。",
 };

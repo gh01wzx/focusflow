@@ -62,6 +62,8 @@ export interface TaskDraft {
   plannedDate: string;
   frequency: 'none' | Frequency;
   weekdays?: Weekday[];
+  // A flexible weekly habit: seven-day periods on any days, with plan.timesPerWeek.
+  flexible?: boolean;
   /** Legacy clients use this flag for minute tracking. */
   habit?: boolean;
   mode?: 'minutes' | 'complete';

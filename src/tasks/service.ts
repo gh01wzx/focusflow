@@ -71,6 +71,13 @@ export function createTaskService(repository: TaskRepository, transaction: TaskT
         throw new TaskInputError('Choose a valid activity category.');
       }
       if (category === 'habit' && !HABIT_FREQUENCIES.includes(frequency)) throw new TaskInputError('Habits repeat daily or weekly.');
+      if (value.flexible === true) {
+        const plan = value.plan && typeof value.plan === 'object' ? value.plan as Record<string, unknown> : {};
+        const times = plan.timesPerWeek;
+        if (category !== 'habit' || value.mode !== 'minutes' || weekdays !== null || typeof times !== 'number' || !Number.isInteger(times) || times < 1 || times > 7) {
+          throw new TaskInputError('A flexible habit repeats weekly on any days, 1 to 7 days a week.');
+        }
+      }
       const firstDate = weekdays === null ? plannedDate : firstSelectedDate(plannedDate, weekdays);
       if (firstDate === null) throw new TaskInputError('No selected weekday remains in the supported date range.');
       const rule: RecurrenceRule = {

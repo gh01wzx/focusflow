@@ -179,6 +179,25 @@ test('paused days turn habit occurrences into rest days and resuming brings toda
   } finally { store.close(); }
 });
 
+test('a flexible weekly habit completes its period with enough check-in days, on any days', async t => {
+  const { path } = await fixture(t);
+  let now = new Date(2026, 10, 22, 9);
+  const store = await openWorkspaceStore(path, () => now);
+  try {
+    const gym = store.tasks.addRecurrence({ title: 'Gym', plannedDate: '2026-11-22', frequency: 'weekly', flexible: true, category: 'habit',
+      mode: 'minutes', plan: { target: 30, start: 10, timesPerWeek: 2 } });
+    const week = store.tasks.view().due.find(task => task.recurrenceId === gym.id)!;
+    const log = (day: string, minutes: number) => store.personal.mutate('log', { id: crypto.randomUUID(), day, subject: week.id, minutes, unit: 'minutes' });
+    log('2026-11-22', 4);
+    now = new Date(2026, 10, 24, 9); log('2026-11-24', 10);
+    now = new Date(2026, 10, 28, 9); log('2026-11-28', 12);
+    now = new Date(2026, 10, 29, 9);
+    assert.equal(store.tasks.view().history.find(task => task.id === week.id)?.status, 'completed');
+    assert.throws(() => store.tasks.addRecurrence({ title: 'Bad', plannedDate: '2026-11-29', frequency: 'weekly', flexible: true,
+      category: 'task', mode: 'minutes', plan: { timesPerWeek: 2 } }));
+  } finally { store.close(); }
+});
+
 test('invalid recurrence definitions leave no rules or occurrences', async t => {
   const { path } = await fixture(t);
   const store = await openWorkspaceStore(path, () => new Date(2026, 10, 4));

@@ -8,7 +8,7 @@ import { ActivityHistory, RewardShop } from './components/PersonalRewards.tsx';
 import type { ScoringRule } from '../../src/shared/personal.ts';
 import { isHabit, FOCUS_LIMIT, HISTORY_LIMIT } from '../../src/shared/tasks.ts';
 import type { RecurrenceRule, Task } from '../../src/shared/tasks.ts';
-import { doneToday, fullDaysBefore, habitInsight, identityKey, nextUp, reviewHabits, todayProgress } from '../../src/shared/habits.ts';
+import { doneToday, fullDaysBefore, habitInsight, identityKey, nextUp, reviewHabits, tiersOf, todayProgress, weekSessions } from '../../src/shared/habits.ts';
 import type { HabitReview } from '../../src/shared/habits.ts';
 import { WorkspaceShell } from '../workspace/WorkspaceShell.tsx';
 import type { WorkspaceProps } from '../workspace/WorkspaceShell.tsx';
@@ -88,7 +88,27 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   const rules = useMemo(() => new Map<string, ScoringRule>(data?.rules.map(rule => [rule.subject, rule])), [data]);
   const ruleFor = (task: Task) => rules.get(task.recurrenceId ?? task.id);
   const completedToday = useMemo(() => view?.history.filter(task => doneToday(task, view.today, view.recurrences)) ?? [], [view]);
-  const progress = view ? todayProgress(view, rules, data?.progress ?? {}, completedToday) : null;
+  // Amounts toward today's tiers. A flexible weekly habit counts today alone, and shows its goal as met
+  // once the week has enough days; others count their whole occurrence.
+  const flexible = useMemo(() => {
+    const result = new Map<string, { done: number; times: number }>();
+    for (const task of view?.due ?? []) {
+      const rule = task.recurrenceId ? rules.get(task.recurrenceId) : undefined;
+      if (!rule?.timesPerWeek || !data) continue;
+      result.set(task.id, { done: weekSessions(data.week.minutes[task.recurrenceId!] ?? {}, task.plannedDate, tiersOf(rule).start), times: rule.timesPerWeek });
+    }
+    return result;
+  }, [view, data, rules]);
+  const amounts = useMemo(() => {
+    const result = { ...data?.progress };
+    for (const [id, week] of flexible) {
+      const task = view?.due.find(item => item.id === id), rule = task?.recurrenceId ? rules.get(task.recurrenceId) : undefined;
+      const today = data?.week.minutes[task?.recurrenceId ?? '']?.[data.day] ?? 0;
+      result[id] = week.done >= week.times && rule ? Math.max(today, rule.target) : today;
+    }
+    return result;
+  }, [data, flexible, view, rules]);
+  const progress = view ? todayProgress(view, rules, amounts, completedToday) : null;
   // Each habit's past occurrences, grouped once per view instead of scanning all history for every row.
   const historyByHabit = useMemo(() => {
     const groups = new Map<string, Task[]>();
@@ -127,7 +147,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   ];
   const text = tabText[tab];
   // The swipeable timer cards: today's timed habits still below their target.
-  const timers = (view && data ? nextUp(view.due, rules, data.progress, minute) : []).filter(task => { const rule = ruleFor(task); return rule?.mode === 'minutes' && rule.unit !== 'count'; });
+  const timers = (view && data ? nextUp(view.due, rules, amounts, minute) : []).filter(task => { const rule = ruleFor(task); return rule?.mode === 'minutes' && rule.unit !== 'count'; });
   const anchors = useMemo(() => [...new Set((data?.rules ?? []).map(rule => rule.cue).filter(Boolean))], [data]);
   const reviews = useMemo(() => view && data ? reviewHabits(view.today, view.recurrences, rules, data.recent) : [], [view, data, rules]);
   const week = today ? weekOf(today) : '';
@@ -164,7 +184,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   }
   async function log(task: Task, minutes: number) {
     if (!data) return false;
-    const first = (data.progress[task.id] ?? 0) === 0;
+    const first = (amounts[task.id] ?? 0) === 0;
     const saved = await personal.mutate('log', { id: crypto.randomUUID(), day: data.day, subject: task.id, minutes, unit: ruleFor(task)?.unit }, ruleFor(task)?.target);
     if (saved) logged(task, minutes, first);
     return saved;
@@ -217,7 +237,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   }
 
   function insight(task: Task) {
-    const rule = ruleFor(task), minutes = data?.progress[task.id] ?? 0;
+    const rule = ruleFor(task), minutes = amounts[task.id] ?? 0;
     const minutesByDay = data?.week.minutes[task.recurrenceId ?? ''] ?? {};
     return habitInsight(task, historyByHabit.get(task.recurrenceId ?? '') ?? [], { done: rule?.mode === 'minutes' ? minutes >= rule.target : false, started: minutes > 0 },
       day => (minutesByDay[day] ?? 0) > 0);
@@ -225,7 +245,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
   function row(task: Task) {
     const rule = ruleFor(task);
     if (tab === 'due' && rule?.mode === 'minutes') {
-      return <ListItem key={task.id} className="habit-item"><HabitCard task={task} rule={rule} insight={insight(task)} state={personal}
+      return <ListItem key={task.id} className="habit-item"><HabitCard task={task} rule={rule} insight={insight(task)} state={personal} logged={amounts[task.id] ?? 0} week={flexible.get(task.id)}
         onEdit={edit} onRest={rest} onLogged={logged} /></ListItem>;
     }
     return <ListItem key={task.id} className="row-item">
@@ -315,7 +335,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               onOpen={() => setReviewing(true)} onDismiss={() => finishReview(false)} />}
             {tab === 'due' && view && minute >= EVENING && closedDay !== today && <EveningPrompt busy={saving}
               onOpen={() => setClosing(true)} onDismiss={() => closeDay(false)} />}
-            {tab === 'due' && view && data && <NowCard items={timers} due={view.due} rules={rules} progress={data.progress} busy={saving}
+            {tab === 'due' && view && data && <NowCard items={timers} due={view.due} rules={rules} progress={amounts} busy={saving}
               timer={timer} onTimer={setTimer}
               onComplete={complete} onLog={log} />}
             <div className="feedback-row">
@@ -391,7 +411,7 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
           onClose={() => setSheet(null)} />
         <Celebration moment={moment} sound={{ on: settings.sound, volume: settings.volume }} onEnd={() => setMoment(null)}
           reduced={reduced} />
-        {view && <CloseDaySheet open={closing} view={view} rules={rules} minutes={data?.progress ?? {}} busy={saving} insightFor={insight}
+        {view && <CloseDaySheet open={closing} view={view} rules={rules} minutes={amounts} busy={saving} insightFor={insight}
           onCancel={task => state.settle(task.id, 'cancelled', true)}
           onMove={(task, date) => state.reschedule(task.id, date, true)}
           onFocus={(day, ids) => state.setFocus(day, ids, true)}

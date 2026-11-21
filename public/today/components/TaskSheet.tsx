@@ -17,7 +17,7 @@ type Kind = 'once' | 'repeat' | 'checkoff';
 // "After I" field, for example when stacking a new habit after a steady one.
 export type SheetRequest = { mode: 'create'; id: string; guided?: boolean; title?: string; cue?: string }
   | { mode: 'edit'; id: string; task: Task | undefined; series: RecurrenceRule | undefined; effective: string; rule: ScoringRule | undefined };
-export interface PlanUpdate extends HabitPlan { category: 'task' | 'habit'; mode: 'minutes' | 'complete'; unit?: 'minutes' | 'count'; rate: number; target: number; schedule?: { frequency: Frequency; weekdays: Weekday[] | null; date: string; previous: string }; title?: string; start?: number | null; maintain?: number | null; goalId?: string | null }
+export interface PlanUpdate extends HabitPlan { category: 'task' | 'habit'; mode: 'minutes' | 'complete'; unit?: 'minutes' | 'count'; rate: number; target: number; schedule?: { frequency: Frequency; weekdays: Weekday[] | null; date: string; previous: string; flexible?: boolean }; title?: string; start?: number | null; maintain?: number | null; goalId?: string | null; timesPerWeek?: number | null }
 
 interface SheetProps {
   request: SheetRequest | null;
@@ -129,11 +129,16 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
   const pointsText = counted ? minutePoints : donePoints;
   const field = (key: keyof HabitPlan) => (event: ChangeEvent<HTMLInputElement>) =>
     setPlan(current => ({ ...current, [key]: event.target.value }));
-  const [legacyWeekly, setLegacyWeekly] = useState(series?.frequency === 'weekly' && series.weekdays === null);
-  const days = frequency === 'weekly' && !legacyWeekly ? weekdays : null;
+  // Seven-day periods without weekdays are either a flexible habit (some days a week, any days) or
+  // an older schedule that repeats every seven days.
+  const anyDays = series?.frequency === 'weekly' && series.weekdays === null;
+  const [legacyWeekly, setLegacyWeekly] = useState(anyDays && !rule?.timesPerWeek);
+  const [flexible, setFlexible] = useState(anyDays && !!rule?.timesPerWeek);
+  const [times, setTimes] = useState(rule?.timesPerWeek ? String(rule.timesPerWeek) : '3');
+  const days = frequency === 'weekly' && !legacyWeekly && !flexible ? weekdays : null;
   const changedSchedule = series && (date !== initialDate || frequency !== series.frequency ||
     JSON.stringify(days) !== JSON.stringify(series.weekdays));
-  const basicsMissing = ((!editing || !!series) && (!date || (repeating && date < today))) || !title.trim() || (!!days && !days.length);
+  const basicsMissing = ((!editing || !!series) && (!date || (repeating && date < today))) || !title.trim() || (!!days && !days.length) || (flexible && !(Number(times) >= 1 && Number(times) <= 7));
   const blocked = saving || busy || basicsMissing;
   const shownStep = (index: number) => !guided || step === index;
 
@@ -157,10 +162,12 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
     const tierAmounts = tiered ? { start: start ? Number(start) : null, maintain: maintain ? Number(maintain) : null } : {};
     const failure = editing
       ? await onSavePlan(series?.id ?? task!.id, { ...shown, category,
-          ...(changedSchedule ? { schedule: { date, frequency, weekdays: days, previous: JSON.stringify([series.frequency, series.weekdays, series.nextDate]) } } : {}),
+          ...(changedSchedule ? { schedule: { date, frequency, weekdays: days, previous: JSON.stringify([series.frequency, series.weekdays, series.nextDate]), ...(flexible ? { flexible: true } : {}) } } : {}),
+          ...(tiered ? { timesPerWeek: flexible ? Number(times) : null } : {}),
           ...(renamed ? { title: title.trim() } : {}), ...tierAmounts, goalId: goalId || null, mode: counted ? 'minutes' : 'complete', unit, rate, target: minutes })
       : await onCreate({ category, title, plannedDate: date, frequency: repeating ? frequency : 'none', mode: repeating ? 'minutes' : 'complete', unit,
-        ...(repeating && frequency === 'weekly' ? { weekdays } : {}), plan: { ...shown, ...tierAmounts, goalId: goalId || null, rate, target: minutes } });
+        ...(repeating && frequency === 'weekly' ? flexible ? { flexible: true } : { weekdays } : {}),
+        plan: { ...shown, ...tierAmounts, goalId: goalId || null, ...(flexible ? { timesPerWeek: Number(times) } : {}), rate, target: minutes } });
     setSaving(false);
     if (failure) setError(failure); else onClose();
   }
@@ -170,6 +177,7 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
   const monthly = repeating && monthsBetween(frequency) !== null;
   const schedule = !repeating ? formattedDate
       : frequency !== 'weekly' ? t(scheduleFrom[frequency]) + formattedDate
+        : flexible ? t('{0} days a week, from ', times) + formattedDate
         : legacyWeekly ? t('Every 7 days from the first date (existing schedule)') + ' ' + formattedDate
         : (weekdays.length ? WEEKDAYS.filter(day => weekdays.includes(day.value)).map(day => t(day.label)).join(', ') : t('Choose weekdays')) + t(' from ') + formattedDate;
   const scoreText = counted ? points(Math.round(Number(minutePoints) * 100)) + t(unit === 'count' ? ' pt/count' : ' pt/min') : '+' + points(Math.round(Number(donePoints) * 100)) + t(' points');
@@ -210,6 +218,8 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
                   // Repeating task is chosen again.
                   if (item.value === 'checkoff' && !HABIT_FREQUENCIES.includes(frequency)) { setSetAside(frequency); setFrequency('daily'); }
                   else if (item.value === 'repeat' && setAside) { if (frequency === 'daily') setFrequency(setAside); setSetAside(null); }
+                  // Only habits repeat on any days of the week.
+                  if (item.value !== 'checkoff') setFlexible(false);
                 }} />{t(item.label)}
             </label>;
           })}
@@ -233,12 +243,20 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
           </div>}
           {repeating && <div className="field-row">
             <label htmlFor="sheet-repeat">{t("Repeat")}</label>
-            <select id="sheet-repeat" value={legacyWeekly ? 'legacy' : frequency} disabled={saving}
-              onChange={event => { const value = event.target.value; setLegacyWeekly(value === 'legacy'); setFrequency(value === 'legacy' ? 'weekly' : value as Frequency); }}>
+            <select id="sheet-repeat" value={legacyWeekly ? 'legacy' : flexible ? 'flexible' : frequency} disabled={saving}
+              onChange={event => { const value = event.target.value; setLegacyWeekly(value === 'legacy'); setFlexible(value === 'flexible');
+                setFrequency(value === 'legacy' || value === 'flexible' ? 'weekly' : value as Frequency); }}>
               {series?.frequency === 'weekly' && series.weekdays === null && <option value="legacy">{t('Every 7 days from the first date (existing schedule)')}</option>}
               {(category === 'habit' ? HABIT_FREQUENCIES : FREQUENCIES).map(item => <option key={item} value={item}>{t(frequencyLabels[item])}</option>)}
+              {category === 'habit' && counted && <option value="flexible">{t("Some days a week, any days")}</option>}
             </select>
           </div>}
+          {flexible && <div className="field-row">
+            <label htmlFor="sheet-times">{t("Days a week")}</label>
+            <input id="sheet-times" type="number" min="1" max="7" step="1" required value={times} disabled={saving}
+              onChange={event => setTimes(event.target.value)} />
+          </div>}
+          {flexible && <p className="group-note">{t("Each seven-day period from the start date needs this many days with a check-in, on any days.")}</p>}
           {goals.length > 0 && <div className="field-row">
             <label htmlFor="sheet-goal">{t("Goal")}</label>
             <select id="sheet-goal" value={goalId} disabled={saving} onChange={event => setGoalId(event.target.value)}>
@@ -247,7 +265,7 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
             </select>
           </div>}
           {monthly && Number(date.slice(8, 10)) > 28 && <p className="group-note">{t("In months without this day, it falls on the last day of the month.")}</p>}
-          {repeating && frequency === 'weekly' && !legacyWeekly && <WeekdayPicker selected={weekdays} disabled={saving} onChange={setWeekdays} />}
+          {repeating && frequency === 'weekly' && !legacyWeekly && !flexible && <WeekdayPicker selected={weekdays} disabled={saving} onChange={setWeekdays} />}
           {series && <p className="group-note">{t("The new schedule starts on this date, up to four weeks ahead. Until then the current schedule continues. Recorded activity keeps its original dates.")}</p>}
           {checkOff && <p className="group-note">{t("Checked off once each time it comes up. This plan keeps that way of recording.")}</p>}
           {counted && <div className="field-pair">

@@ -335,6 +335,7 @@ html[data-size="large"] { zoom: 1.125; }
 .meter { position: relative; flex: 1; display: block; height: 8px; overflow: hidden; border-radius: 999px; background: var(--fill-strong); }
 /* Check-in and maintain marks on a habit's way to its goal. */
 .meter .tier-mark { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(255, 255, 255, .9); }
+.week-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 8px 0 0; color: var(--muted); font-size: 12.5px; }
 .tier-line { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; margin: 6px 0 0; color: var(--text-secondary); font-size: 12.5px; }
 .tier-line .text-button { padding: 2px 6px; font-size: 12.5px; }
 .meter > span { display: block; width: 100%; height: 100%; border-radius: inherit; transform-origin: left; background: linear-gradient(90deg, #6e6ce6, #a3a1f5); }

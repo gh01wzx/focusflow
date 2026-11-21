@@ -31,13 +31,15 @@ export function VoteCount({ votes }: { votes: number }) {
   return votes > 0 ? <span className="votes">{' · ' + votes + (votes === 1 ? ' vote' : ' votes')}</span> : null;
 }
 
-export function HabitCard({ task, rule, insight, state, onEdit, onRest, onLogged }: {
+export function HabitCard({ task, rule, insight, state, logged, week, onEdit, onRest, onLogged }: {
   task: Task; rule: ScoringRule; insight: HabitInsight; state: PersonalController;
+  // The amount toward today's tiers; a flexible weekly habit also shows its days this week.
+  logged: number; week?: { done: number; times: number } | undefined;
   // first: this log is the first today, so it also casts a vote.
   onEdit(task: Task): void; onRest(task: Task): void; onLogged(task: Task, minutes: number, first: boolean): void;
 }) {
   const [draft, setDraft] = useState<{ id: string; day: string; minutes: string; unit: 'minutes' | 'count' }>();
-  const total = state.data?.progress[task.id] ?? 0;
+  const total = logged;
   const votes = rule.identity ? state.data?.votes[identityKey(rule.identity)] ?? 0 : 0;
   const counted = rule.unit === 'count';
   const habit = task.category !== 'task';
@@ -78,7 +80,7 @@ export function HabitCard({ task, rule, insight, state, onEdit, onRest, onLogged
       </div>
       <button className="icon-button" disabled={state.busy} aria-label={t("Edit plan for {0}", task.title)} title={t("Edit plan")}
         onClick={() => onEdit(task)}><PencilIcon /></button>
-      {!total && <button className="icon-button" disabled={state.busy} aria-label={t(habit ? 'Rest today {0}' : 'Cancel {0}', task.title)} title={t(habit ? 'Rest today' : 'Cancel')}
+      {!total && !week && <button className="icon-button" disabled={state.busy} aria-label={t(habit ? 'Rest today {0}' : 'Cancel {0}', task.title)} title={t(habit ? 'Rest today' : 'Cancel')}
         onClick={() => onRest(task)}><MoonIcon /></button>}
       {step ? <button className="primary" disabled={state.busy || !state.data || !!draft} onClick={() => void log(step.remaining)}>{stepLabel}</button>
         : <button className="primary" disabled={state.busy || !state.data || !!draft} onClick={() => open()}>
@@ -94,6 +96,8 @@ export function HabitCard({ task, rule, insight, state, onEdit, onRest, onLogged
       <span className="habit-numbers">{[t(counted ? '{0} / {1} counts' : '{0} / {1} min', total, rule.target), status,
         points(rule.rate) + t(counted ? ' pt/count' : ' pt/min')].filter(Boolean).join(' · ')}</span>
     </div>
+    {week && <p className="week-line"><span className="consistency">{t("{0} of {1} days this week", Math.min(week.done, week.times), week.times)}</span>
+      {week.done >= week.times ? t("This week is done. Extra days still earn points.") : t("Any day counts once it is checked in.")}</p>}
     {habit && <p className="tier-line">
       {level === 0 && rule.starter ? <>{t("Two-minute start:")} {rule.starter}</>
         : t('Check in {0} · Maintain {1} · Goal {2}', amount(tiers.start), amount(tiers.maintain), amount(tiers.goal))}

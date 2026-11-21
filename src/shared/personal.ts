@@ -23,6 +23,8 @@ export interface ScoringRule extends HabitPlan {
   maintain?: number | null;
   // The quarterly goal this plan works toward, if any.
   goalId?: string | null;
+  // Days a week for a flexible weekly habit; each day with a check-in counts once.
+  timesPerWeek?: number | null;
 }
 
 // A habit's goal bonus: earned points with no minutes and no rate (see the log action).
@@ -37,6 +39,7 @@ export interface PlanDraft extends HabitPlan {
   start?: number | null;
   maintain?: number | null;
   goalId?: string | null;
+  timesPerWeek?: number | null;
 }
 
 export interface Reward {

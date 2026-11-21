@@ -14,6 +14,8 @@ export function recurrenceInput(input: unknown, today: string): {
   if (task.plannedDate < today) throw new TaskInputError('Choose today or a future first date for a repeating task.');
   const weekdays = (input as Record<string, unknown>).weekdays;
   if (frequency === 'weekly') {
+    // A flexible weekly habit keeps seven-day periods from its first date, on any days.
+    if ((input as Record<string, unknown>).flexible === true && (weekdays === undefined || weekdays === null)) return { ...task, frequency: 'weekly', weekdays: null };
     if (!validWeekdays(weekdays)) throw new TaskInputError('Choose one or more different weekdays.');
     return { ...task, frequency: 'weekly', weekdays: WEEKDAYS.filter(day => weekdays.includes(day.value)).map(day => day.value) };
   }

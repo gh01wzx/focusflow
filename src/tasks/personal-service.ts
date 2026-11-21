@@ -2,11 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { editSchedule } from './edit-schedule.ts';
 import { addDays, localDay, validDate } from '../shared/calendar.ts';
 import { occurrenceEnd } from '../shared/weekdays.ts';
-import { goalBonus } from '../shared/habits.ts';
+import { goalBonus, tiersOf } from '../shared/habits.ts';
 import { PLAN_LIMITS, personalDefaults } from '../shared/personal.ts';
 import { HABIT_FREQUENCIES } from '../shared/tasks.ts';
 import type { Frequency } from '../shared/tasks.ts';
-import type { ActivityEntry, HabitPlan, PersonalPreferences, PersonalView } from '../shared/personal.ts';
+import type { ActivityEntry, HabitPlan, PersonalPreferences, PersonalView, ScoringRule } from '../shared/personal.ts';
 import type { PersonalRepository } from './personal-repository.ts';
 import type { TaskRepository } from './repository.ts';
 import type { TaskTransaction } from './service.ts';
@@ -65,6 +65,13 @@ function goalInput(value: unknown, saved: string | null | undefined, active: (id
   return value;
 }
 
+// Days a week for a flexible weekly habit. Left out keeps the saved value; null clears it.
+function timesInput(value: unknown, saved: number | null | undefined): number | null {
+  if (value === undefined) return saved ?? null;
+  if (value === null || value === '') return null;
+  return integer(value, 1, 7, 'Choose 1 to 7 days a week.');
+}
+
 export function createPersonalService(repository: PersonalRepository, tasks: TaskRepository, transaction: TaskTransaction) {
   const taskRule = (task: { id: string; recurrenceId: string | null }) => repository.rule(task.recurrenceId ?? task.id);
   const preferences = (): PersonalPreferences => {
@@ -106,9 +113,12 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
     if (end !== null && newDay >= end) throw new TaskInputError('Choose a date when this habit was scheduled.');
     return target.id;
   }
+  // A target is met by the amount logged, or for a flexible weekly habit by days with a check-in.
+  const met = (subject: string, rule: ScoringRule) => rule.timesPerWeek
+    ? repository.sessions(subject, tiersOf(rule).start) >= rule.timesPerWeek : repository.minutes(subject) >= rule.target;
   function adjustHistory(id: string) {
     const task = tasks.findTask(id), rule = task && taskRule(task);
-    if (rule?.mode === 'minutes') tasks.adjustDurationHistory(id, repository.minutes(id) >= rule.target);
+    if (rule?.mode === 'minutes') tasks.adjustDurationHistory(id, met(id, rule));
   }
   function mutate(action: string, input: unknown) {
     return transaction(now => {
@@ -141,6 +151,12 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
         const planned = value.schedule && typeof value.schedule === 'object' ? (value.schedule as Record<string, unknown>).frequency : schedule?.frequency;
         if (category === 'habit' && !HABIT_FREQUENCIES.includes(planned as Frequency)) throw new TaskInputError('Habits repeat daily or weekly.');
         const previous = repository.rule(subject);
+        const times = timesInput(value.timesPerWeek, previous?.timesPerWeek);
+        if (times !== null) {
+          const change = value.schedule && typeof value.schedule === 'object' ? value.schedule as Record<string, unknown> : null;
+          const anyDays = change ? change.frequency === 'weekly' && change.weekdays === null : schedule?.frequency === 'weekly' && schedule.weekdays === null;
+          if (!anyDays || mode !== 'minutes' || category !== 'habit') throw new TaskInputError('A flexible habit repeats weekly on any days, 1 to 7 days a week.');
+        }
         if (previous && (previous.mode !== mode || (previous.unit ?? 'minutes') !== unit) && ((task && repository.hasActivity(task.id))
           || tasks.listPendingOccurrences().some(item => item.recurrenceId === subject && repository.hasActivity(item.id)))) {
           throw new TaskInputError('Wait for the next scheduled occurrence before changing how this habit is logged.');
@@ -158,7 +174,7 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
         }
         const target = mode === 'minutes' ? integer(value.target, 1, 1440, 'Enter a target from 1 to 1440.') : 0;
         repository.saveRule({ subject, mode, unit, rate: integer(value.rate, 0, 100000, 'Enter a valid point value.'),
-          target, ...tierInput(value, previous, mode, target), goalId: goalInput(value.goalId, previous?.goalId, repository.activeGoal),
+          target, ...tierInput(value, previous, mode, target), goalId: goalInput(value.goalId, previous?.goalId, repository.activeGoal), timesPerWeek: times,
           ...planInput(value) });
       } else if (action === 'reward') {
         const id = operationId(value.id), previous = repository.reward(id);
@@ -208,7 +224,8 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
           }
           if ((value.unit ?? 'minutes') !== (rule.unit ?? 'minutes')) throw new TaskInputError('The recording unit changed. Reopen this activity.');
           const minutes = integer(value.minutes, 1, 1440, 'Enter a whole amount from 1 to 1440.');
-          const before = repository.minutes(task.id);
+          // A flexible weekly habit reaches its goal day by day.
+          const before = rule.timesPerWeek ? repository.minutesOn(task.id, day) : repository.minutes(task.id);
           award = minutes * rule.rate;
           record(now, { id, kind: 'earn', subject: task.id, title: task.title, minutes,
             rate: rule.rate, unit: rule.unit ?? 'minutes', amount: award, reference: null });
@@ -281,11 +298,12 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
       const target = !timed ? 0 : plan.target === undefined ? 5 : integer(plan.target, 1, 1440, 'Enter a target from 1 to 1440.');
       repository.saveRule({ subject, mode, unit,
         rate: plan.rate === undefined ? (timed ? 100 : 500) : integer(plan.rate, 0, 100000, 'Enter a valid point value.'),
-        target, ...tierInput(plan, undefined, mode, target), goalId: goalInput(plan.goalId, null, repository.activeGoal), ...planInput(plan) });
+        target, ...tierInput(plan, undefined, mode, target), goalId: goalInput(plan.goalId, null, repository.activeGoal),
+        timesPerWeek: plan.timesPerWeek === undefined || plan.timesPerWeek === null ? null : integer(plan.timesPerWeek, 1, 7, 'Choose 1 to 7 days a week.'), ...planInput(plan) });
     },
     reachedTarget(task: NonNullable<ReturnType<TaskRepository['findTask']>>) {
       const rule = taskRule(task);
-      return rule?.mode === 'minutes' && repository.minutes(task.id) >= rule.target;
+      return rule?.mode === 'minutes' && met(task.id, rule);
     },
   };
 }

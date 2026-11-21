@@ -358,6 +358,18 @@ export async function startWorkspaceServer(options: {
           : someday[2] === 'schedule' ? store.someday.schedule(someday[1], input) : store.someday.remove(someday[1]));
         return;
       }
+      // Reminders: the interface checks each minute and writes the text in the chosen language;
+      // the desktop app shows it from the tray.
+      if (request.method === 'GET' && resource === '/api/reminders') {
+        sendJson(response, 200, { enabled: care.reminders(), ...store.personal.reminders() }); return;
+      }
+      if (request.method === 'POST' && resource === '/api/reminders/show') {
+        const input = await readJson(request, origin, 1024);
+        const { title, body } = input && typeof input === 'object' ? input as Record<string, unknown> : {};
+        if (typeof title !== 'string' || typeof body !== 'string' || !title.trim() || title.length > 200 || body.length > 300) throw new HttpError(400, 'Invalid reminder.');
+        options.desktop?.notify?.(title, body);
+        sendJson(response, 200, { shown: !!options.desktop?.notify }); return;
+      }
       if (request.method === 'GET' && resource === '/api/habits/history') {
         sendJson(response, 200, store.personal.history()); return;
       }

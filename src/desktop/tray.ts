@@ -1,4 +1,4 @@
-import { Menu, nativeImage, Tray } from 'electron';
+import { Menu, nativeImage, Notification, Tray } from 'electron';
 import type { BrowserWindow } from 'electron';
 import { TRAY_ICON, TRAY_TEMPLATE } from './tray-icon.ts';
 
@@ -51,5 +51,17 @@ export function keepInTray(window: BrowserWindow, options: { origin: string; tit
       tray.displayBalloon({ title: 'FocusFlow', content: text.still });
     }
   });
-  return { show, destroy: () => { if (!tray.isDestroyed()) tray.destroy(); } };
+  // Reminders: a tray balloon on Windows, which needs no installed shortcut, and a system
+  // notification on a Mac. Clicking either opens the window.
+  tray.on('balloon-click', show);
+  const notify = (title: string, body: string) => {
+    if (tray.isDestroyed()) return;
+    if (process.platform === 'win32') tray.displayBalloon({ title, content: body });
+    else if (Notification.isSupported()) {
+      const note = new Notification({ title, body });
+      note.on('click', show);
+      note.show();
+    }
+  };
+  return { show, notify, destroy: () => { if (!tray.isDestroyed()) tray.destroy(); } };
 }

@@ -7,6 +7,7 @@ import { TodayApp } from '../today/TodayApp.tsx';
 import { ProjectsApp } from '../projects/ProjectsApp.tsx';
 import { InterfaceContext } from './interface-context.ts';
 import type { Workspace } from './WorkspaceShell.tsx';
+import { useReminders } from './useReminders.ts';
 
 function apply(settings: InterfaceSettings) {
   document.documentElement.dataset.motion = settings.reducedMotion ? 'reduced' : 'system';
@@ -18,6 +19,7 @@ export function WorkspaceApp() {
   const [settings, setSettings] = useState(defaultInterface);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [readError, setReadError] = useState(false);
+  useReminders();
   useEffect(() => {
     let active = true;
     void interfaceSettings().then(value => {

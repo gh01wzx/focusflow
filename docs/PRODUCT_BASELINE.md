@@ -64,4 +64,4 @@ The owner requested implementation first and unified manual acceptance later. Do
 - A manual project can be planned, advanced and completed through the action center.
 - Tracker improves itself through approved planning, Issue creation, user-started coding, PR review/revision and observed merge synchronization. Reopening the same personal profile retains tasks; no formal update or distribution step is required.
 
-Mobile/cloud sync, Tracker accounts, multiple users, unattended execution/merge/deploy, advanced statistics, complex calendars/reminders and unlimited nesting are out of scope.
+Mobile/cloud sync, Tracker accounts, multiple users, unattended execution/merge/deploy, advanced statistics, complex calendars and unlimited nesting are out of scope. Simple habit reminders from the tray are in scope (owner decision, 2026-11-22): at a habit's planned time until it is checked in, and one evening note for habits still open.

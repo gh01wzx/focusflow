@@ -309,7 +309,26 @@ export function createPersonalService(repository: PersonalRepository, tasks: Tas
       return { from, today, habits: habits.map(habit => ({ id: habit.id, title: habit.title, stoppedAt: habit.stoppedAt, days: habit.days })) };
     });
   }
-  return { preferences, view: () => transaction(view), history, mutate, complete, reopen,
+  // Today's habits for reminders. A habit stays open until today's check-in, or for a flexible
+  // weekly habit until its week is done.
+  function reminders() {
+    return transaction(now => {
+      const day = localDay(now);
+      const paused = repository.pauses().some(pause => pause.start <= day && day <= pause.end);
+      const habits = tasks.listPendingOccurrences().filter(task => task.category === 'habit' && task.plannedDate <= day).map(task => {
+        const rule = taskRule(task);
+        let open = true;
+        if (rule?.mode === 'minutes') {
+          const start = tiersOf(rule).start;
+          open = rule.timesPerWeek ? repository.sessions(task.id, start) < rule.timesPerWeek && repository.minutesOn(task.id, day) < start
+            : repository.minutes(task.id) < start;
+        }
+        return { id: task.id, title: task.title, time: rule?.time ?? '', starter: rule?.starter ?? '', open };
+      });
+      return { today: day, paused, habits };
+    });
+  }
+  return { preferences, view: () => transaction(view), history, reminders, mutate, complete, reopen,
     // Runs inside the task transaction, so an invalid plan also discards the new task.
     createRule(subject: string, repeating: boolean, input: unknown) {
       const value = fields(input);

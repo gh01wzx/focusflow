@@ -63,6 +63,10 @@ From the editor, delete a single task, one occurrence, or the whole repeating pl
 
 The panel beside Today shows a pink habit ring and a green task ring, today's points, the last seven days, your balance and progress toward a pinned reward. **Rewards** lets you add and price your own rewards; the balance carries forward and pays for redemptions. **Archive** asks for confirmation and removes a reward from the shop while keeping its history. In **History > Points history**, **Correct log** adjusts an amount or moves it to another scheduled date at the original rate, and supported entries can be undone after confirming. Open **Settings > Sound and motion** for sounds, volume and reduced motion.
 
+### Start and reminders
+
+In **Settings > Start and reminders**, turn on **Start FocusFlow in the tray when I sign in to Windows** so it is always ready; it starts quietly and the tray icon opens it. **Remind me of habits at their planned time** shows a note from the tray at a habit's planned time while it is not checked in, and one at 8 PM for habits still open; click it to open FocusFlow. Paused habits stay quiet. Reminders come from the running app, so they need it in the tray.
+
 ### Backups and export
 
 FocusFlow backs up your data once a day and keeps the last 30 days beside it. In **Settings > Backups and export**, choose **Back up now**, or choose a backup folder that a cloud drive such as OneDrive syncs, so a copy also lives off this computer. **Export JSON** saves everything; **Export CSV** saves your tasks and your points log as tables for a spreadsheet. The desktop app opens the folder with the exported files. To restore a backup, follow the recovery steps in the development guide.

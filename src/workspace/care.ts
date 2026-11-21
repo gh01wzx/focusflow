@@ -17,6 +17,7 @@ export interface DesktopHooks {
   chooseFolder?(): Promise<string | null>;
   reveal?(path: string): void;
   loginItem?: { get(): boolean; set(on: boolean): void };
+  notify?(title: string, body: string): void;
 }
 
 export interface CareStore {

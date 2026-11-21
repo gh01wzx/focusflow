@@ -1,6 +1,6 @@
 import { t } from './locale.ts';
 import { useEffect, useState } from 'react';
-import { backupNow, chooseBackupFolder, clearBackupFolder, exportData, readCare } from '../../src/client/care.ts';
+import { backupNow, chooseBackupFolder, clearBackupFolder, exportData, readCare, saveStartup } from '../../src/client/care.ts';
 import type { CareStatus } from '../../src/shared/care.ts';
 
 // Backups and export take effect at once, apart from the settings saved with the form above.
@@ -28,7 +28,15 @@ export function DataSettings() {
   }
   const last = status?.lastBackup ? new Intl.DateTimeFormat(document.documentElement.lang, { dateStyle: 'medium', timeStyle: 'short' })
     .format(new Date(status.lastBackup)) : '';
-  return <fieldset className="sound-settings care-settings" disabled={busy || !status}>
+  return <><fieldset className="sound-settings care-settings" disabled={busy || !status}>
+    <legend>{t("Start and reminders")}</legend>
+    {status && status.loginItem !== null && <label><input type="checkbox" checked={!!status?.loginItem}
+      onChange={event => void run(() => saveStartup({ loginItem: event.target.checked }))} />{t("Start FocusFlow in the tray when I sign in to Windows")}</label>}
+    <label><input type="checkbox" checked={!!status?.reminders}
+      onChange={event => void run(() => saveStartup({ reminders: event.target.checked }))} />{t("Remind me of habits at their planned time")}</label>
+    <p className="group-note">{t("A reminder comes at a habit's planned time until it is checked in, and at 8 PM for habits still open. Paused habits stay quiet.")}</p>
+  </fieldset>
+  <fieldset className="sound-settings care-settings" disabled={busy || !status}>
     <legend>{t("Backups and export")}</legend>
     <p className="group-note">{t("FocusFlow keeps a daily backup of the last 30 days beside your data.")}{' '}
       {last ? t("Last backup: {0}.", last) : t("The first backup is made a few seconds after opening.")}</p>
@@ -50,5 +58,5 @@ export function DataSettings() {
     </div>
     {message && <p role="status" className="care-message">{message}</p>}
     {error && <p role="alert">{t(error)}</p>}
-  </fieldset>;
+  </fieldset></>;
 }

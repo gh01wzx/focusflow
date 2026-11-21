@@ -79,6 +79,7 @@ async function startDesktop(): Promise<void> {
       let confirmReady!: () => void;
       const ready = new Promise<void>(resolve => { confirmReady = resolve; });
       const ai = createAiService(createAiRuntime(dataRoot, true, profileDirectory));
+      const loginArgs = app.isPackaged ? ['--background'] : [app.getAppPath(), '--personal', '--background'];
       const crypto: CredentialCrypto = {
         available: async () => (process.platform === 'win32' || process.platform === 'darwin') && await safeStorage.isAsyncEncryptionAvailable(),
         encrypt: value => safeStorage.encryptStringAsync(value),
@@ -101,6 +102,13 @@ async function startDesktop(): Promise<void> {
             return result.canceled ? null : result.filePaths[0] ?? null;
           },
           reveal: path => shell.showItemInFolder(path),
+          notify: (title, body) => tray?.notify(title, body),
+          // Starting at login opens the everyday profile quietly in the tray. Windows only, because a
+          // Mac source run cannot pass these arguments to its login item.
+          ...(process.platform === 'win32' && !profile.workspaceLabel && !process.env.FOCUSFLOW_TEST_PROFILE ? { loginItem: {
+            get: () => app.getLoginItemSettings({ path: process.execPath, args: loginArgs }).openAtLogin,
+            set: (on: boolean) => app.setLoginItemSettings({ openAtLogin: on, path: process.execPath, args: loginArgs }),
+          } } : {}),
         } });
       // Saved API keys only need decrypting, so those connections are usable at once. The Codex and
       // DeepSeek Harness checks each start a separate runtime process, so they wait until the first
@@ -156,7 +164,8 @@ async function startDesktop(): Promise<void> {
       app.on('activate', () => tray?.show());
       await awaitInterfaceReady(() => window!.loadURL(origin), ready);
       interfaceReady = true;
-      window?.show();
+      // A start at login stays in the tray until the icon is clicked.
+      if (!process.argv.includes('--background')) window?.show();
       if (profile.workspaceLabel && process.env.FOCUSFLOW_PREVIEW_READY === '1') console.log('FocusFlow review window ready');
     }
   } catch (error: unknown) {

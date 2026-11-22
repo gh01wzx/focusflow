@@ -26,7 +26,7 @@ import type { ExecutionRepository } from './repository.ts';
 import type { ApprovalBroker } from './approvals.ts';
 import { ExecutionFailure,git } from './git.ts';
 
-export function processState(pid:number|null):'stopped'|'alive'|'unknown' {
+function processState(pid:number|null):'stopped'|'alive'|'unknown' {
   if(pid===null)return'stopped';
   try{process.kill(pid,0);return'alive';}catch(error){return error&&typeof error==='object'&&'code'in error&&error.code==='ESRCH'?'stopped':'unknown';}
 }

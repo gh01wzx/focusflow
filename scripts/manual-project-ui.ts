@@ -5,7 +5,7 @@ import type { TaskView } from '../src/shared/tasks.ts';
 import { openTicket, closeTicket, setTicketStatus } from './project-edit-ui.ts';
 import { addPersonalTask } from './task-window-ui.ts';
 
-export const MANUAL_PROOF_PROJECT = 'Complete a reading exercise';
+const MANUAL_PROOF_PROJECT = 'Complete a reading exercise';
 const titles = ['Read the sample paragraph', 'Write a one-line summary', 'Review the summary'];
 const personalTitle = 'Personal task stays separate';
 const projectView = (page: Page) => page.evaluate(async () => (await fetch('/api/projects')).json()) as Promise<ProjectView>;

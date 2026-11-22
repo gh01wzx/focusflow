@@ -146,7 +146,7 @@ export function GitHubConnection({ projectId, onRepository }: { projectId: strin
         </details>
         <div className="github-disconnect">
           <button type="button" className="secondary-button github-disconnect-button" onClick={() => void act('disconnect')}>{t("Disconnect this profile")}</button>
-          <p className="github-hint">{t("Removes saved GitHub access and repository links in this profile. Project tasks stay. Revoke remote authorization separately in GitHub App settings.")}</p>
+          <p className="github-hint">{t("Removes saved GitHub access in this profile. Repository links and project tasks stay for when you reconnect. Revoke remote authorization separately in GitHub App settings.")}</p>
         </div>
       </fieldset>}
     </div>

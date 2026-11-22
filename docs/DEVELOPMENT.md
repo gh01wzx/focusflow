@@ -29,7 +29,7 @@ Use the [task template](../.github/ISSUE_TEMPLATE/task.md) and [PR template](../
 | `npm run build` | Always rebuild the ignored `dist` directory |
 | `npm run diagnose:desktop` | Try the built desktop runtime once without opening task data |
 | `npm run ai:install` | Install the pinned Codex runtime before first use |
-| `npm test` / `npm run test:source` | Run compiled tests or source tests when authorized |
+| `npm test` / `npm run test:source` | Run compiled tests or source tests in disposable folders, never against everyday data or a running app's build |
 | `npm run codex:write-trial -- --sandbox-only` | Check a disposable Windows write using the existing trial setup without a model |
 
 Use [Codex commands](CODEX.md) for runtime diagnostics and [GitHub connection](GITHUB_CONNECTION.md) for authorization. GitHub verification workflows are manual-only. With owner authorization, select **Desktop checks > mac-source** to open a fresh review workspace on a standard public macOS runner. It records native window readiness, the selected database and preview shutdown. Tests use disposable storage, simulated providers and no personal data. Record build checks, hosted results, Windows owner acceptance and live provider evidence separately.

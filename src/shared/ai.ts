@@ -37,7 +37,7 @@ export const apiEndpoints = {
 export type NamedApi = keyof typeof apiEndpoints;
 export type ApiProvider = NamedApi | 'compatible';
 export type AiProvider = 'codex' | 'dsh' | ApiProvider;
-export function isAiProvider(value: unknown): value is AiProvider {
+function isAiProvider(value: unknown): value is AiProvider {
   return value === 'codex' || value === 'dsh' || value === 'compatible' ||
     (typeof value === 'string' && Object.hasOwn(apiEndpoints, value));
 }

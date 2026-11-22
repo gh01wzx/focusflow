@@ -5,7 +5,7 @@ import type { Page } from 'playwright-core';
 import type { ProjectView, TicketStatus } from '../src/shared/projects.ts';
 import { openTicket, closeTicket, setTicketStatus, exerciseProjectEdits } from './project-edit-ui.ts';
 
-export const PROJECT_SMOKE_TITLE = 'Plan \u9879\u76ee <img src=x onerror=alert(1)>';
+const PROJECT_SMOKE_TITLE = 'Plan \u9879\u76ee <img src=x onerror=alert(1)>';
 
 export async function exerciseProjectUI(page: Page, actionScreenshot?: string, editScreenshot?: string): Promise<ProjectView> {
   await page.getByRole('navigation', { name: 'Workspaces', exact: true })

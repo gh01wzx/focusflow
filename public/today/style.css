@@ -63,7 +63,6 @@
   --border: var(--separator);
   --border-strong: var(--separator-strong);
   --primary: var(--accent);
-  --primary-hover: var(--accent-hover);
   --primary-soft: var(--accent-soft);
   --primary-border: rgba(88, 86, 214, .32);
   --primary-text: var(--accent-text);
@@ -80,7 +79,6 @@
   --info-soft: var(--blue-soft);
   --info-border: rgba(0, 122, 255, .3);
   --shadow: var(--shadow-sm);
-  --shadow-raised: var(--shadow-lg);
   font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;

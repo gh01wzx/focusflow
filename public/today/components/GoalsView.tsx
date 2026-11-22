@@ -39,7 +39,7 @@ export function useGoals() {
 }
 export type GoalsController = ReturnType<typeof useGoals>;
 
-export const quarterName = (quarter: string) => t('Q{1} {0}', quarter.slice(0, 4), quarter.slice(6));
+const quarterName = (quarter: string) => t('Q{1} {0}', quarter.slice(0, 4), quarter.slice(6));
 
 function GoalCard({ goal, busy, actions, onAct }: { goal: Goal; busy: boolean; actions: GoalAction[]; onAct(action: GoalAction): void }) {
   const labels: Record<GoalAction, string> = { done: 'Mark done', carry: 'Carry on this quarter', drop: 'Let it go' };

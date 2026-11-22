@@ -1,7 +1,7 @@
 import type { AiModelSelection } from './ai.ts';
 import { executionRecord } from './execution.ts';
 
-export const CODING_STAGES=['starting','coding','permission','cancelling','ready','publishing','review','stopped','failed','interrupted','uncertain','merged'] as const;
+const CODING_STAGES=['starting','coding','permission','cancelling','ready','publishing','review','stopped','failed','interrupted','uncertain','merged'] as const;
 export type CodingStage=typeof CODING_STAGES[number];
 export interface CodingCommand { command:string;exitCode:number|null;output:string;source:'runtime';at:string }
 export interface ProviderPatch {

@@ -118,15 +118,15 @@ export function outcomeOf(status: TaskStatus, minutes: number): Outcome | null {
 // making the habit easier, and about 66 days (the median in Lally et al. 2010) suggests it may be
 // automatic enough to graduate. More than three habits at once gets a gentle note.
 export const HABIT_LIMIT = 3;
-export const GRADUATE_DAYS = 66;
-export const TARGET_STEPS = [2, 5, 10, 15, 20, 30, 45, 60, 90, 120];
+const GRADUATE_DAYS = 66;
+const TARGET_STEPS = [2, 5, 10, 15, 20, 30, 45, 60, 90, 120];
 
 // A timed or counted habit climbs three tiers each day: check in (the two-minute version, easy
 // even on a busy day), maintain (enough to keep the habit alive) and goal. Showing up is the
 // check-in, so the day's habit ring closes there and the goal earns a small bonus.
 export interface Tiers { start: number; maintain: number; goal: number }
 export type TierLevel = 0 | 1 | 2 | 3;
-export const GOAL_BONUS = 0.2;
+const GOAL_BONUS = 0.2;
 export function tiersOf(rule: Pick<ScoringRule, 'target' | 'unit' | 'start' | 'maintain'>): Tiers {
   const goal = Math.max(1, rule.target);
   const start = Math.min(goal, Math.max(1, rule.start ?? (rule.unit === 'count' ? 1 : 2)));

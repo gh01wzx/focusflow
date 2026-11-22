@@ -24,7 +24,7 @@ Closing the window keeps FocusFlow running in the Windows notification area or t
 
 Everyday data stays outside the checkout, in `~/Library/Application Support/FocusFlow/desktop` on Mac and `%LOCALAPPDATA%\FocusFlow\desktop` on Windows. New profiles start empty.
 
-Personal opens on **Today**. Add a one-off task or a repeating habit, track points and redeem your own rewards. In **Projects**, the Action center lists tickets to review, work in progress and the next eligible ticket. Open a project for its milestones and status board.
+Personal opens on **Today**. Add a one-off task, a repeating task or a habit, track points and redeem your own rewards. Keep undated ideas in **Someday** and set up to three **Goals** each quarter. FocusFlow backs up your data once a day and can export it as JSON or CSV. In **Projects**, the Action center lists tickets to review, work in progress and the next eligible ticket. Open a project for its milestones and status board.
 
 To try a change with separate data, run `./Start-FocusFlow.command --review my-review` on Mac or `.\Start-FocusFlow.cmd --review my-review` on Windows. A new review workspace starts empty. Opening the same name with the same database format retains its changes.
 

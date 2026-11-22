@@ -8,7 +8,7 @@ import { localDay } from '../shared/calendar.ts';
 import type { CareStatus } from '../shared/care.ts';
 
 // Daily backups kept beside the data, and in the chosen folder.
-export const DAILY_BACKUPS = 30;
+const DAILY_BACKUPS = 30;
 const PREFIX = 'daily-';
 const FOLDER_ERROR = 'The backup folder could not be reached. The backup is still saved with your data.';
 

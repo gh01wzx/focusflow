@@ -1,5 +1,12 @@
 import type { Frequency, Task, TaskView } from '../../src/shared/tasks.ts';
+import type { HabitPlan } from '../../src/shared/personal.ts';
 import { occurrenceEnd } from '../../src/shared/weekdays.ts';
+import { cueLine } from '../../src/shared/habits.ts';
+import { t } from '../workspace/locale.ts';
+
+// The cue in the chosen language. Chinese shows the moment as written, such as "after a shower".
+export const afterCue = (cue: string) => t('After I {0}', cue);
+export const cueText = (plan: Pick<HabitPlan, 'cue' | 'time' | 'place'> | undefined) => cueLine(plan, afterCue);
 
 export type Tab = 'due' | 'upcoming' | 'history';
 // Mirrors the server rule: a repeating occurrence can be reopened only during its period.

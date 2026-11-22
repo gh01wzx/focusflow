@@ -19,9 +19,11 @@ export interface HabitInsight {
 export interface Progress { done: number; total: number }
 
 // "After I pour coffee · 07:30 · Kitchen": the cue, time and place that make a habit obvious.
-export function cueLine(plan: Pick<HabitPlan, 'cue' | 'time' | 'place'> | undefined): string {
+// The interface passes `after` to write the cue in the chosen language.
+export function cueLine(plan: Pick<HabitPlan, 'cue' | 'time' | 'place'> | undefined,
+  after: (cue: string) => string = cue => 'After I ' + cue): string {
   if (!plan) return '';
-  return [plan.cue && 'After I ' + plan.cue, plan.time, plan.place].filter(Boolean).join(' · ');
+  return [plan.cue && after(plan.cue), plan.time, plan.place].filter(Boolean).join(' · ');
 }
 
 // A cancelled occurrence is a rest day. Minutes logged on a missed timed habit still count as showing up.

@@ -1,126 +1,173 @@
 import { t } from '../../workspace/locale.ts';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { points } from '../../../src/shared/personal.ts';
 import type { ScoringRule } from '../../../src/shared/personal.ts';
 import type { Task } from '../../../src/shared/tasks.ts';
-import { cueLine, identityKey, nextTier, tierLevel, tiersOf } from '../../../src/shared/habits.ts';
-import type { HabitInsight, Mark } from '../../../src/shared/habits.ts';
+import { identityKey, nextTier, tierLevel, tiersOf } from '../../../src/shared/habits.ts';
+import type { HabitInsight, Mark, TierLevel } from '../../../src/shared/habits.ts';
 import type { PersonalController } from '../usePersonal.ts';
+import { afterCue, cueText } from '../view-options.ts';
 import { spring } from './Animated.tsx';
-import { MoonIcon, PencilIcon } from './Icons.tsx';
+import { CheckIcon, MoonIcon, PencilIcon } from './Icons.tsx';
 
 const markText: Record<Mark, string> = { done: 'done', started: 'showed up', missed: 'missed', rest: 'rest day', open: 'not yet' };
 
 // A habit tracker row. Consistency and the chain forgive one miss; two misses in a row end the chain.
-export function HabitTrack({ insight }: { insight: HabitInsight }) {
+export function HabitTrack({ insight, nudge = true }: { insight: HabitInsight; nudge?: boolean }) {
   const { shown, total } = insight.consistency;
   return <div className="habit-track">
-    <span className="dots" role="img" aria-label={t('Recent: ') + insight.marks.map(mark => markText[mark]).join(', ')}>
+    <span className="dots" role="img" aria-label={t('Recent: ') + insight.marks.map(mark => t(markText[mark])).join(', ')}>
       {insight.marks.map((mark, index) => <i key={index} data-mark={mark} />)}
     </span>
     {total > 0 && <span className="consistency" title={t("Shown up among the latest scheduled days, not counting rest days")}>{shown}/{total}</span>}
     {insight.chain > 1 && <span className="streak" title={t("One miss is forgiven. Two misses in a row end the chain.")}>{t("Chain")} {insight.chain}</span>}
-    {insight.missedLast && <span className="nudge">{t("Missed last time. Never miss twice; two minutes counts.")}</span>}
+    {nudge && insight.missedLast && <span className="nudge">{t("Missed last time. Never miss twice; two minutes counts.")}</span>}
   </div>;
 }
 
 // "· 23 votes" after an identity: every day done or started so far, across habits with that identity.
 export function VoteCount({ votes }: { votes: number }) {
-  return votes > 0 ? <span className="votes">{' · ' + votes + (votes === 1 ? ' vote' : ' votes')}</span> : null;
+  return votes > 0 ? <span className="votes">{' · ' + t(votes === 1 ? '{0} vote' : '{0} votes', votes)}</span> : null;
 }
 
+// The short line shown when a step is finished, before the next step appears.
+const cheers: Record<1 | 2 | 3, string> = { 1: 'Checked in. Showing up is what counts.', 2: 'Maintained. The habit stays alive.', 3: 'Goal reached. Well done.' };
+const CHEER_MS = 1600;
+
+// The current step as a ring: it fills toward this step only and closes with a check when the step is done.
+function StepRing({ fill, label, done, title }: { fill: number; label: string; done: boolean; title: string }) {
+  return <span className={`step-ring ${done ? 'done' : ''}`} role="img" aria-label={title}>
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <circle className="track" cx="24" cy="24" r="20" />
+      <motion.circle className="fill" cx="24" cy="24" r="20" initial={false}
+        animate={{ pathLength: done ? 1 : Math.max(0, Math.min(1, fill)) }} transition={spring} />
+    </svg>
+    <AnimatePresence initial={false} mode="popLayout">
+      {done ? <motion.span key="check" className="ring-check" aria-hidden="true" initial={{ scale: 0 }} animate={{ scale: 1 }}
+          exit={{ scale: 0 }} transition={{ type: 'spring', stiffness: 520, damping: 16 }}><CheckIcon /></motion.span>
+        : <motion.span key="label" className="ring-label" aria-hidden="true" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>{label}</motion.span>}
+    </AnimatePresence>
+  </span>;
+}
+
+// A timed or counted habit shows one step at a time: the two-minute version, then maintain, then the
+// goal. Each step closes its ring with a short note before the next one appears. A counted task has
+// its target as its only step. Details stay folded under the habit until it is clicked.
 export function HabitCard({ task, rule, insight, state, logged, week, onEdit, onRest, onLogged }: {
   task: Task; rule: ScoringRule; insight: HabitInsight; state: PersonalController;
-  // The amount toward today's tiers; a flexible weekly habit also shows its days this week.
+  // The amount toward today's steps; a flexible weekly habit also shows its days this week.
   logged: number; week?: { done: number; times: number } | undefined;
   // first: this log is the first today, so it also casts a vote.
   onEdit(task: Task): void; onRest(task: Task): void; onLogged(task: Task, minutes: number, first: boolean): void;
 }) {
-  const [draft, setDraft] = useState<{ id: string; day: string; minutes: string; unit: 'minutes' | 'count' }>();
+  const [draft, setDraft] = useState<{ id: string; day: string; amount: string }>();
+  const [details, setDetails] = useState(false);
   const total = logged;
   const votes = rule.identity ? state.data?.votes[identityKey(rule.identity)] ?? 0 : 0;
   const counted = rule.unit === 'count';
   const habit = task.category !== 'task';
-  const met = total >= rule.target;
-  const cue = cueLine(rule);
   const amount = (value: number) => t(counted ? '{0} counts' : '{0} min', value);
-  // A habit climbs check-in, maintain and goal; a counted task works toward its target alone.
   const tiers = tiersOf(rule);
-  const level = habit ? tierLevel(total, tiers) : met ? 3 : 0;
-  const next = habit ? nextTier(total, tiers) : met ? null : { level: 3 as const, amount: rule.target, remaining: rule.target - total };
-  const status = level === 3 ? t('Target met') : level === 2 ? t('Maintained') : level === 1 ? t('Checked in') : total ? t('Showed up') : '';
-  function open(minutes = next?.remaining ?? (counted ? 1 : tiers.start)) {
-    if (state.data) setDraft({ id: crypto.randomUUID(), day: state.data.day, minutes: String(minutes), unit: rule.unit ?? 'minutes' });
+  const level: TierLevel = habit ? tierLevel(total, tiers) : total >= rule.target ? 3 : 0;
+  const weekDone = !!week && week.done >= week.times;
+
+  // A step finished by a log here gets its moment; opening the app or undoing never does.
+  const [cheer, setCheer] = useState<1 | 2 | 3 | null>(null);
+  const shownLevel = useRef(level);
+  useEffect(() => {
+    const before = shownLevel.current;
+    shownLevel.current = level;
+    if (level <= before) { setCheer(null); return; }
+    setCheer(level as 1 | 2 | 3);
+    const id = setTimeout(() => setCheer(null), CHEER_MS);
+    return () => clearTimeout(id);
+  }, [level]);
+
+  const stepGoal = !habit ? rule.target : level === 0 ? tiers.start : level === 1 ? tiers.maintain : tiers.goal;
+  const stepFrom = !habit || level === 0 ? 0 : level === 1 ? tiers.start : tiers.maintain;
+  const finished = level === 3 || cheer !== null;
+  const next = habit ? nextTier(total, tiers) : total < rule.target ? { remaining: rule.target - total } : null;
+  const startLine = [rule.cue && afterCue(rule.cue), rule.starter || t('Start with {0}', amount(tiers.start))].filter(Boolean).join(' → ');
+  const stepLine = cheer ? t(habit ? cheers[cheer] : 'Target reached.')
+    : level === 3 ? (weekDone ? t("This week is done. Extra days still earn points.") : t('Done today · {0}', amount(total)))
+    : !habit ? t('Goal: {0}', amount(rule.target))
+    : level === 0 ? startLine : level === 1 ? t('Keep going to {0}', amount(tiers.maintain)) : t('Go for the goal: {0}', amount(tiers.goal));
+
+  function open() {
+    if (state.data) setDraft({ id: crypto.randomUUID(), day: state.data.day, amount: String(next?.remaining ?? (counted ? 1 : tiers.start)) });
   }
-  async function log(minutes: number) {
-    if (!state.data) return false;
+  async function log(value: number) {
+    if (!state.data || !draft || !(value >= 1 && value <= 1440)) return;
     const first = total === 0;
-    const saved = await state.mutate('log', { id: draft?.id ?? crypto.randomUUID(), day: draft?.day ?? state.data.day,
-      unit: rule.unit ?? 'minutes', subject: task.id, minutes }, rule.target);
-    if (saved) onLogged(task, minutes, first);
-    return saved;
+    const saved = await state.mutate('log', { id: draft.id, day: draft.day, unit: rule.unit ?? 'minutes', subject: task.id, minutes: value }, rule.target);
+    if (saved) { setDraft(undefined); onLogged(task, value, first); }
   }
-  async function save(event: FormEvent<HTMLFormElement>) {
+  function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (draft && await log(Number(draft.minutes))) setDraft(undefined);
+    void log(Number(draft?.amount));
   }
-  // One tap records the rest of the next tier, so starting is a single step.
-  const step = habit && next ? next : null;
-  const stepLabel = !step ? '' : step.level === 1 ? t('Check in · {0}', amount(step.remaining))
-    : step.level === 2 ? t('Maintain · {0} more', amount(step.remaining)) : t('Goal · {0} more', amount(step.remaining));
-  const chips = [...new Set([1, 2, 5, 10, tiers.start, tiers.maintain, rule.target])].sort((a, b) => a - b);
-  return <article className={`habit-card ${met ? 'met' : ''} ${habit ? '' : 'task-counter'}`} aria-label={task.title}>
+  const quick = [...new Set([next?.remaining ?? 0, ...(counted ? [1, 5, 10] : [5, 10, 15])])].filter(value => value > 0);
+  const badge = week ? <span className="consistency">{t("{0} of {1} days this week", Math.min(week.done, week.times), week.times)}</span>
+    : habit && insight.missedLast && !total ? <span className="nudge">{t("Never miss twice")}</span>
+    : habit && insight.chain > 1 ? <span className="streak">{t("Chain {0}", insight.chain)}</span> : null;
+  const where = cueText(rule);
+  const busy = state.busy || !state.data;
+
+  return <article className={`habit-card ${level === 3 ? 'met' : ''} ${habit ? '' : 'task-counter'}`} aria-label={task.title}>
     <div className="habit-top">
-      <div className="habit-heading">
-        <strong className="task-title">{task.title}</strong>
-        {rule.identity && <p className="identity"><span>{t("Vote for")} </span>{rule.identity}<VoteCount votes={votes} /></p>}
-        {cue && <p className="cue">{cue}</p>}
-      </div>
-      <button className="icon-button" disabled={state.busy} aria-label={t("Edit plan for {0}", task.title)} title={t("Edit plan")}
-        onClick={() => onEdit(task)}><PencilIcon /></button>
-      {!total && !week && <button className="icon-button" disabled={state.busy} aria-label={t(habit ? 'Rest today {0}' : 'Cancel {0}', task.title)} title={t(habit ? 'Rest today' : 'Cancel')}
-        onClick={() => onRest(task)}><MoonIcon /></button>}
-      {step ? <button className="primary" disabled={state.busy || !state.data || !!draft} onClick={() => void log(step.remaining)}>{stepLabel}</button>
-        : <button className="primary" disabled={state.busy || !state.data || !!draft} onClick={() => open()}>
-          {total ? t('Log again') : t(counted ? 'Log counts' : 'Log minutes')}</button>}
+      <StepRing fill={(total - stepFrom) / Math.max(1, stepGoal - stepFrom)} done={finished}
+        label={total + '/' + stepGoal} title={t(counted ? '{0} / {1} counts' : '{0} / {1} min', total, stepGoal)} />
+      <button type="button" className="habit-summary" aria-expanded={details} onClick={() => setDetails(!details)}>
+        <span className="habit-title-row">
+          <strong className="task-title">{task.title}</strong>
+          {habit && <span className="step-pips" aria-hidden="true">{[0, 1, 2].map(index =>
+            <i key={index} className={level > index || (cheer !== null && cheer > index) ? 'done' : level === index ? 'current' : ''} />)}</span>}
+          {badge}
+        </span>
+        {rule.identity && <span className="identity">{rule.identity}</span>}
+        <AnimatePresence initial={false} mode="wait">
+          <motion.span key={cheer ? 'cheer' + cheer : 'step' + level} className={`step-line ${cheer ? 'cheer' : ''}`}
+            initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.22 }}>
+            {stepLine}</motion.span>
+        </AnimatePresence>
+      </button>
+      <button className={level === 3 ? 'secondary-button' : 'primary'} disabled={busy || !!draft}
+        aria-label={t("Record {0}", task.title)} onClick={open}>{t("Record")}</button>
     </div>
-    <div className="habit-progress">
-      <span className={`meter ${habit ? 'tiered' : ''}`} role="progressbar" aria-label={task.title + ' ' + t(counted ? 'Counts' : 'Minutes')}
-        aria-valuemin={0} aria-valuemax={rule.target} aria-valuenow={Math.min(total, rule.target)}>
-        <motion.span initial={false} animate={{ scaleX: Math.min(1, total / rule.target) }} transition={spring} />
-        {habit && [tiers.start, tiers.maintain].filter(value => value < tiers.goal).map(value =>
-          <i key={value} className="tier-mark" style={{ left: `${value / tiers.goal * 100}%` }} />)}
-      </span>
-      <span className="habit-numbers">{[t(counted ? '{0} / {1} counts' : '{0} / {1} min', total, rule.target), status,
-        points(rule.rate) + t(counted ? ' pt/count' : ' pt/min')].filter(Boolean).join(' · ')}</span>
-    </div>
-    {week && <p className="week-line"><span className="consistency">{t("{0} of {1} days this week", Math.min(week.done, week.times), week.times)}</span>
-      {week.done >= week.times ? t("This week is done. Extra days still earn points.") : t("Any day counts once it is checked in.")}</p>}
-    {habit && <p className="tier-line">
-      {level === 0 && rule.starter ? <>{t("Two-minute start:")} {rule.starter}</>
-        : t('Check in {0} · Maintain {1} · Goal {2}', amount(tiers.start), amount(tiers.maintain), amount(tiers.goal))}
-      {!draft && <button type="button" className="text-button" disabled={state.busy || !state.data} onClick={() => open()}>{t("Other amount")}</button>}
-    </p>}
-    {rule.bundle && <p className="bundle">{t("Only while doing this:")} {rule.bundle}</p>}
-    {habit && <HabitTrack insight={insight} />}
-    {/* A custom amount. The buttons keep one place at the end of the panel; Enter saves and Esc closes. */}
-    {draft && <form className="log-panel" onSubmit={event => void save(event)}
+    {/* Quick amounts save at once; another amount saves with Enter, and Esc closes. */}
+    {draft && <form className="log-panel" onSubmit={save}
       onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); setDraft(undefined); } }}>
+      <div className="chip-row" role="group" aria-label={t("Record {0}", task.title)}>
+        {quick.map((value, index) => <button key={value} type="button" className={`chip ${index === 0 && next ? 'selected' : ''}`}
+          disabled={busy || draft.day !== state.data?.day} onClick={() => void log(value)}>+{amount(value)}</button>)}
+      </div>
       <div className="log-fields">
-        <label>{t(counted ? "Counts" : "Minutes")} <input type="number" min="1" max="1440" step="1" value={draft.minutes} required autoFocus
-          onChange={event => setDraft({ ...draft, minutes: event.target.value })} /></label>
-        <div className="chip-row">{chips.map(value =>
-          <button key={value} type="button" className={`chip ${draft.minutes === String(value) ? 'selected' : ''}`}
-            onClick={() => setDraft({ ...draft, minutes: String(value) })}>{value} {t(counted ? "counts" : "min")}</button>)}
+        <label>{t("Other amount")} <input type="number" min="1" max="1440" step="1" value={draft.amount} required autoFocus
+          onChange={event => setDraft({ ...draft, amount: event.target.value })} /></label>
+        <div className="log-actions">
+          <button type="button" className="secondary-button" onClick={() => setDraft(undefined)}>{t("Cancel")}</button>
+          <button className="primary" disabled={busy || draft.day !== state.data?.day}>{t("Save")}</button>
         </div>
       </div>
       {draft.day !== state.data?.day && <p role="alert">{t("The date changed. Reopen this activity before saving.")}</p>}
-      <div className="log-actions">
-        <button type="button" className="secondary-button" onClick={() => setDraft(undefined)}>{t("Cancel")}</button>
-        <button className="primary" disabled={state.busy || draft.day !== state.data?.day}>{t("Save")}</button>
-      </div>
     </form>}
+    <AnimatePresence initial={false}>
+      {details && <motion.div key="details" className="habit-details" initial={{ height: 0, opacity: 0 }}
+        animate={{ height: 'auto', opacity: 1, transitionEnd: { height: 'auto' } }} exit={{ height: 0, opacity: 0 }}
+        transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}>
+        {where && <p className="cue">{where}</p>}
+        {rule.bundle && <p className="bundle">{t("Only while doing this:")} {rule.bundle}</p>}
+        <p className="tier-line">{[habit ? t('Check in {0} · Maintain {1} · Goal {2}', amount(tiers.start), amount(tiers.maintain), amount(tiers.goal)) : '',
+          points(rule.rate) + t(counted ? ' pt/count' : ' pt/min')].filter(Boolean).join(' · ')}<VoteCount votes={votes} /></p>
+        {habit && <HabitTrack insight={insight} nudge={false} />}
+        <div className="habit-detail-actions">
+          <button type="button" className="text-button" disabled={state.busy} onClick={() => onEdit(task)}><PencilIcon />{t("Edit plan")}</button>
+          {!total && !week && <button type="button" className="text-button" disabled={state.busy} onClick={() => onRest(task)}>
+            <MoonIcon />{t(habit ? 'Rest today' : 'Cancel')}</button>}
+        </div>
+      </motion.div>}
+    </AnimatePresence>
   </article>;
 }

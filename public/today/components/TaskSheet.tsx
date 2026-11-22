@@ -7,8 +7,8 @@ import { emptyPlan, points } from '../../../src/shared/personal.ts';
 import type { HabitPlan, ScoringRule } from '../../../src/shared/personal.ts';
 import type { Frequency, RecurrenceRule, Task, TaskDraft, Weekday } from '../../../src/shared/tasks.ts';
 import { WEEKDAYS } from '../../../src/shared/weekdays.ts';
-import { HABIT_LIMIT, cueLine, tiersOf } from '../../../src/shared/habits.ts';
-import { dateText, frequencyLabels } from '../view-options.ts';
+import { HABIT_LIMIT, tiersOf } from '../../../src/shared/habits.ts';
+import { cueText, dateText, frequencyLabels } from '../view-options.ts';
 import { WeekdayPicker } from './WeekdayPicker.tsx';
 import { CloseIcon, PencilIcon } from './Icons.tsx';
 
@@ -139,7 +139,11 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
   const changedSchedule = series && (date !== initialDate || frequency !== series.frequency ||
     JSON.stringify(days) !== JSON.stringify(series.weekdays));
   const basicsMissing = ((!editing || !!series) && (!date || (repeating && date < today))) || !title.trim() || (!!days && !days.length) || (flexible && !(Number(times) >= 1 && Number(times) <= 7));
-  const blocked = saving || busy || basicsMissing;
+  // A new habit, or a task becoming one, needs its two-minute version: the habit card shows it first
+  // each day. Habits saved before this rule keep working without one.
+  const needsStarter = category === 'habit' && !(series && isHabit(series));
+  const starterMissing = needsStarter && !plan.starter.trim();
+  const blocked = saving || busy || basicsMissing || starterMissing;
   const shownStep = (index: number) => !guided || step === index;
 
   // Each guided step starts in its first field, so the keyboard flow stays Enter, type, Enter.
@@ -150,7 +154,7 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (guided && step < steps.length - 1) {
-      if (step > 0 || !basicsMissing) setStep(step + 1);
+      if ((step > 0 || !basicsMissing) && (step !== 2 || !starterMissing)) setStep(step + 1);
       return;
     }
     if (blocked || deletion || historyOnly) return;
@@ -187,8 +191,9 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
     <h3 id="law-easy"><span className="law">3</span>{t("Make it easy")}</h3>
     <label className="field">{t("Two-minute version")}
       <input value={plan.starter} maxLength={180} placeholder={repeating ? t('Put on my running shoes') : t('Open the file and write one line')}
-        disabled={saving} onChange={field('starter')} data-step-focus /></label>
-    <p className="group-note">{t("Start smaller than feels useful. Doing only the two-minute version still counts as showing up.")}</p>
+        required={needsStarter} disabled={saving} onChange={field('starter')} data-step-focus /></label>
+    <p className="group-note">{t("Start smaller than feels useful. Doing only the two-minute version still counts as showing up.")}
+      {needsStarter && ' ' + t("Each day the habit card shows this first, so it is required.")}</p>
   </section>;
 
   return <form ref={form} className="sheet-form" onSubmit={event => void submit(event)}>
@@ -352,7 +357,7 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
 
       {shownStep(3) && <section className="sheet-preview" aria-label={t("Plan summary")}>
         <p className="preview-title">{subject ? '“' + subject + '”' : t('Your plan')}</p>
-        {cueLine(category === 'habit' ? plan : { ...emptyPlan, time: plan.time, place: plan.place }) && <p>{cueLine(category === 'habit' ? plan : { ...emptyPlan, time: plan.time, place: plan.place })}</p>}
+        {cueText(category === 'habit' ? plan : { ...emptyPlan, time: plan.time, place: plan.place }) && <p>{cueText(category === 'habit' ? plan : { ...emptyPlan, time: plan.time, place: plan.place })}</p>}
         <p>{[schedule, scoreText, counted ? t(unit === 'count' ? '{0} counts per day' : '{0} minutes per day', target || '?') : ''].filter(Boolean).join(' · ')}</p>
         {category === 'habit' && plan.starter && <p>{t("Start with:")} {plan.starter}</p>}
         {category === 'habit' && plan.identity && <p>{t("Vote for:")} {plan.identity}</p>}
@@ -381,7 +386,8 @@ function SheetForm({ request, today, busy, reward, anchors, identities, habits, 
         ? <button type="button" className="secondary-button" disabled={saving} onClick={() => setStep(step - 1)}>{t("Back")}</button>
         : <button type="button" className="secondary-button" disabled={saving} onClick={onClose}>{t("Cancel")}</button>}
       {guided && step < steps.length - 1
-        ? <button type="submit" className="primary" disabled={saving || (step === 0 && basicsMissing)}>{step === 0 ? t('Next') : t('Next (or skip)')}</button>
+        ? <button type="submit" className="primary" disabled={saving || (step === 0 && basicsMissing) || (step === 2 && starterMissing)}>
+          {step === 0 || step === 2 ? t('Next') : t('Next (or skip)')}</button>
         : !historyOnly && <button type="submit" className="primary" disabled={blocked}>
           {saving ? t('Saving...') : editing ? t('Save plan') : category === 'habit' ? t('Add habit') : t('Add task')}</button>}
       </>}

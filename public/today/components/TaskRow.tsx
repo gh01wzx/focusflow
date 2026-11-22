@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { points } from '../../../src/shared/personal.ts';
 import type { ScoringRule } from '../../../src/shared/personal.ts';
 import type { Task, TaskResolution } from '../../../src/shared/tasks.ts';
-import { dateText, frequencyLabels } from '../view-options.ts';
-import { cueLine } from '../../../src/shared/habits.ts';
+import { cueText, dateText, frequencyLabels } from '../view-options.ts';
 import type { HabitInsight } from '../../../src/shared/habits.ts';
 import { HabitTrack, VoteCount } from './HabitCard.tsx';
 import { CheckIcon, CloseIcon, DashIcon, MoonIcon, PencilIcon, StarIcon } from './Icons.tsx';
@@ -35,7 +34,7 @@ export function TaskRow({ task, today, busy, completable = true, rule, insight, 
   const late = pending && !task.frequency && task.plannedDate < today;
   const statusLabel = task.status === 'completed' ? 'Completed' : task.status === 'missed' ? 'Missed'
     : habit ? 'Rest day' : 'Cancelled';
-  const cue = cueLine(rule);
+  const cue = cueText(rule);
 
   return (
     <div data-category={habit ? 'habit' : 'task'} className={`task ${pending ? '' : 'resolved'} ${checking ? 'checking' : ''}`}>

@@ -5,7 +5,8 @@ import type { PointerEvent } from 'react';
 import { motion } from 'motion/react';
 import type { ScoringRule } from '../../../src/shared/personal.ts';
 import type { Task } from '../../../src/shared/tasks.ts';
-import { cueLine, nextTier, tiersOf } from '../../../src/shared/habits.ts';
+import { nextTier, tiersOf } from '../../../src/shared/habits.ts';
+import { cueText } from '../view-options.ts';
 import { spring } from './Animated.tsx';
 import { PlayIcon } from './Icons.tsx';
 import type { Timer } from '../local-state.ts';
@@ -81,7 +82,7 @@ function TimerCarousel({ items, rules, progress, busy, onTimer }: NowProps) {
       onScroll={event => setIndex(Math.round(event.currentTarget.scrollLeft / Math.max(1, event.currentTarget.clientWidth)))}>
       {items.map((task, position) => {
         const rule = rules.get(task.recurrenceId ?? task.id);
-        const cue = cueLine(rule);
+        const cue = cueText(rule);
         const later = rule?.time && rule.time > minute;
         const focusable = position === current ? 0 : -1;
         return <article key={task.id} className="now-card glass" aria-roledescription="slide"
@@ -129,7 +130,7 @@ function RunningCard({ task, timer, rules, progress, busy, onTimer, onComplete, 
   const step = minutesHabit && isHabit(task) ? nextTier(logged, tiersOf(rule)) : null;
   const goal = minutesHabit ? Math.max(START_SECONDS, (step ? step.remaining : Math.max(0, rule.target - logged)) * 60) : START_SECONDS;
   const loggedMinutes = Math.min(1440, Math.max(1, Math.round(elapsed / 60)));
-  const cue = cueLine(rule);
+  const cue = cueText(rule);
   const cancel = () => onTimer(null);
   // Stop records the session: minutes for a timed habit, one count for a counted one, or done.
   async function stop() {

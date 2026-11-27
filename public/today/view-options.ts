@@ -7,6 +7,11 @@ import { t } from '../workspace/locale.ts';
 // The cue in the chosen language. Chinese shows the moment as written, such as "after a shower".
 export const afterCue = (cue: string) => t('After I {0}', cue);
 export const cueText = (plan: Pick<HabitPlan, 'cue' | 'time' | 'place'> | undefined) => cueLine(plan, afterCue);
+// "After I shower → read one page": the moment and the two-minute version, as a habit card shows them.
+export const startText = (plan: Pick<HabitPlan, 'cue' | 'starter'> | undefined) =>
+  plan ? [plan.cue && afterCue(plan.cue), plan.starter].filter(Boolean).join(' → ') : '';
+// Time and place, without the cue.
+export const whenText = (plan: Pick<HabitPlan, 'time' | 'place'> | undefined) => plan ? [plan.time, plan.place].filter(Boolean).join(' · ') : '';
 
 export type Tab = 'due' | 'upcoming' | 'history';
 // Mirrors the server rule: a repeating occurrence can be reopened only during its period.

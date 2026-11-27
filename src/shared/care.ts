@@ -1,4 +1,4 @@
-// Backups, export, start at login and reminders: the long-term care of a personal profile.
+// Backups, export, start at login, reminders and the data folder: the long-term care of a personal profile.
 export interface CareStatus {
   // When the newest daily backup was made, or null before the first one.
   lastBackup: string | null;
@@ -10,14 +10,34 @@ export interface CareStatus {
   // Whether FocusFlow starts in the tray at login, or null where that is not available.
   loginItem: boolean | null;
   reminders: boolean;
+  // Where the task database is kept, and whether the everyday desktop app can move it.
+  dataDirectory: string;
+  defaultData: boolean;
+  canMoveData: boolean;
 }
+
+// A folder chosen for the data, before it is used. `existing` is when the FocusFlow data already
+// there last changed, or null when the folder has none.
+export interface DataMove { directory: string; existing: string | null }
+export type DataMoveMode = 'copy' | 'switch' | 'replace';
 
 export function parseCareStatus(value: unknown): CareStatus {
   const record = value && typeof value === 'object' ? value as Record<string, unknown> : {};
   if ((record.lastBackup !== null && typeof record.lastBackup !== 'string') || typeof record.backups !== 'number'
     || typeof record.folder !== 'string' || typeof record.folderError !== 'string' || typeof record.canChooseFolder !== 'boolean'
-    || (record.loginItem !== null && typeof record.loginItem !== 'boolean') || typeof record.reminders !== 'boolean') {
+    || (record.loginItem !== null && typeof record.loginItem !== 'boolean') || typeof record.reminders !== 'boolean'
+    || typeof record.dataDirectory !== 'string' || typeof record.defaultData !== 'boolean' || typeof record.canMoveData !== 'boolean') {
     throw new Error('Could not read backup and reminder settings.');
   }
   return record as unknown as CareStatus;
+}
+
+// null when the folder dialog was closed without a choice.
+export function parseDataMove(value: unknown): DataMove | null {
+  if (value === null) return null;
+  const record = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  if (typeof record.directory !== 'string' || (record.existing !== null && typeof record.existing !== 'string')) {
+    throw new Error('Could not read the chosen data folder.');
+  }
+  return { directory: record.directory, existing: record.existing };
 }

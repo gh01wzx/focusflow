@@ -1,4 +1,5 @@
-import { parseCareStatus } from '../shared/care.ts';
+import { parseCareStatus, parseDataMove } from '../shared/care.ts';
+import type { DataMove, DataMoveMode } from '../shared/care.ts';
 
 async function request(path: string, body?: unknown): Promise<unknown> {
   const response = await fetch('/api/care' + path, body === undefined ? { cache: 'no-store' }
@@ -16,6 +17,11 @@ export const backupNow = async () => parseCareStatus(await request('/backup', {}
 export const chooseBackupFolder = async () => parseCareStatus(await request('/choose-folder', {}));
 export const clearBackupFolder = async () => parseCareStatus(await request('/clear-folder', {}));
 export const saveStartup = async (change: { loginItem?: boolean; reminders?: boolean }) => parseCareStatus(await request('/startup', change));
+export const chooseDataFolder = async () => parseDataMove(await request('/data-choose', {}));
+export const defaultDataFolder = async () => parseDataMove(await request('/data-default', {}));
+export async function moveData(move: DataMove, mode: DataMoveMode): Promise<void> {
+  await request('/data-move', { directory: move.directory, mode });
+}
 export async function exportData(format: 'json' | 'csv'): Promise<string[]> {
   const result = await request('/export', { format });
   const files = result && typeof result === 'object' && 'files' in result ? result.files : null;

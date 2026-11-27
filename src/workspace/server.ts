@@ -68,14 +68,17 @@ export async function startWorkspaceServer(options: {
   onInterfaceReady?: () => void;
   appVersion?: string;
   desktop?: DesktopHooks;
+  // The profile folder for exports and coding worktrees. It holds the data folder unless the data was moved.
+  profileDirectory?: string;
 }): Promise<LocalServer> {
   const store = await openWorkspaceStore(join(options.dataDirectory, 'tracker.db'), options.clock);
-  // Daily backups and exports sit beside the data folder of this profile.
-  const care = createDataCare(store, join(options.dataDirectory, '..', 'exports'), options.desktop, options.clock);
+  const profileDirectory = options.profileDirectory ?? join(options.dataDirectory, '..');
+  // Daily backups stay with the data; exports go to the profile folder.
+  const care = createDataCare(store, { data: options.dataDirectory, exports: join(profileDirectory, 'exports') }, options.desktop, options.clock);
   care.schedule();
   const trace = (stage: ShutdownStage) => { options.onShutdown?.(stage); };
   const taskApi = { ...store.tasks, snapshot: store.snapshot };
-  const workspaces = createWorkspaceService(store.execution, store.projectRepository, join(options.dataDirectory, '..', 'coding-workspaces'));
+  const workspaces = createWorkspaceService(store.execution, store.projectRepository, join(profileDirectory, 'coding-workspaces'));
   const approvals = createApprovalBroker();
   const previews = createPreviewService(store.execution);
   const ai = options.ai ?? createAiService({ installed: async () => false, run: async () => { throw new Error('No desktop runtime'); } });

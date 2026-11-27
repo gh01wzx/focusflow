@@ -456,7 +456,9 @@ html[data-size="large"] { zoom: 1.125; }
 .pause-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; margin-bottom: 12px; padding: 12px 16px;
   background: linear-gradient(135deg, rgba(88, 86, 214, .1), rgba(52, 199, 89, .08)), var(--glass); }
 /* Long-term history: a column per week, a square per day, shaded by the tier reached. */
-.heatmap-list { display: grid; gap: 14px; margin: 0; padding: 4px 18px 10px; list-style: none; }
+/* Side by side where there is room: each half-year grid is about 350px wide. */
+.heatmap-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px 24px; margin: 0; padding: 4px 18px 10px; list-style: none; }
+.heatmap-list > li { min-width: 0; }
 .heatmap-list strong { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; }
 .heatmap-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-bottom: 6px; }
 .heatmap-heading strong { margin: 0; }
@@ -753,6 +755,8 @@ html[data-motion="reduced"] *, html[data-motion="reduced"] *::before, html[data-
 .care-settings p { margin: 0; }
 .care-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .care-message { color: var(--green-text); font-size: 13px; overflow-wrap: anywhere; }
+.care-path { padding: 6px 10px; border-radius: var(--radius-xs); background: var(--fill); font-size: 12.5px; overflow-wrap: anywhere; }
+.care-confirm { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--separator); border-radius: var(--radius-sm); }
 .settings-dialog .sound-settings label { display: flex; align-items: center; gap: 8px; }
 .settings-dialog .sound-settings input[type="checkbox"] { width: auto; min-height: 0; }
 .settings-dialog .sound-settings input[type="range"] { flex: 1; min-height: 0; }

@@ -6,6 +6,7 @@ import type { LocalServer } from '../http/local-server.ts';
 import { MigrationError, NewerDatabaseError } from '../database/migrate.ts';
 import { SCHEMA_VERSION } from '../database/schema.ts';
 import { localDataDirectory, selectProfile } from '../runtime/profile.ts';
+import { dataLocationReady, readDataLocation, saveDataLocation } from '../runtime/location.ts';
 import { createAiService } from '../ai/service.ts';
 import { createAiRuntime } from '../ai/runtime.ts';
 import { createProviderCredential } from '../ai/credential.ts';
@@ -76,6 +77,24 @@ async function startDesktop(): Promise<void> {
       app.on('window-all-closed', () => { if (!closing) app.quit(); });
 
       await app.whenReady();
+      // The everyday profile may keep its data in a folder chosen in Settings.
+      const everyday = !profile.workspaceLabel && !process.env.FOCUSFLOW_TEST_PROFILE;
+      const defaultData = join(profileDirectory, 'data');
+      let dataDirectory = defaultData;
+      const chosen = everyday ? readDataLocation(profileDirectory) : null;
+      if (chosen && dataLocationReady(chosen)) dataDirectory = chosen;
+      else if (chosen) {
+        const answer = dialog.showMessageBoxSync({ type: 'warning', title: 'FocusFlow', buttons: ['Quit', 'Open the default folder'],
+          defaultId: 0, cancelId: 0, message: 'Your data folder cannot be reached.',
+          detail: `FocusFlow keeps your data in ${chosen}, but its database is not there now. If it is on a drive that is not connected, connect it and open FocusFlow again.\n\nThe default folder (${defaultData}) may have older data.` });
+        if (answer === 0) { app.exit(0); return; }
+        saveDataLocation(profileDirectory, null);
+      }
+      const pickFolder = async (title: string) => {
+        const options = { title, properties: ['openDirectory', 'createDirectory'] as ('openDirectory' | 'createDirectory')[] };
+        const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
+        return result.canceled ? null : result.filePaths[0] ?? null;
+      };
       let confirmReady!: () => void;
       const ready = new Promise<void>(resolve => { confirmReady = resolve; });
       const ai = createAiService(createAiRuntime(dataRoot, true, profileDirectory));
@@ -93,14 +112,17 @@ async function startDesktop(): Promise<void> {
         claude: createCompatibleService(createProviderCredential(join(profileDirectory, 'ai'), crypto, 'claude'), 'claude'),
         deepseek: createCompatibleService(createProviderCredential(join(profileDirectory, 'ai'), crypto, 'deepseek-api'), 'deepseek'),
       };
-      service = await startWorkspaceServer({ dataDirectory: join(profileDirectory, 'data'), workspaceLabel: profile.workspaceLabel,
+      service = await startWorkspaceServer({ dataDirectory, profileDirectory, workspaceLabel: profile.workspaceLabel,
         github, ai, dsh, compatible, namedApis, onShutdown: traceShutdown, onInterfaceReady: confirmReady, appVersion: app.getVersion(),
         desktop: {
-          async chooseFolder() {
-            const options = { title: 'FocusFlow backups', properties: ['openDirectory', 'createDirectory'] as ('openDirectory' | 'createDirectory')[] };
-            const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
-            return result.canceled ? null : result.filePaths[0] ?? null;
-          },
+          chooseFolder: () => pickFolder('FocusFlow backups'),
+          ...(everyday ? { dataLocation: {
+            defaultDirectory: defaultData,
+            choose: () => pickFolder('FocusFlow data'),
+            save: (directory: string | null) => saveDataLocation(profileDirectory, directory),
+            // Quitting closes the service and database first; the new instance opens the saved folder.
+            restart: () => { app.relaunch({ args: app.isPackaged ? [] : [app.getAppPath(), '--personal'] }); app.quit(); },
+          } } : {}),
           reveal: path => shell.showItemInFolder(path),
           notify: (title, body) => tray?.notify(title, body),
           // Starting at login opens the everyday profile quietly in the tray. Windows only, because a

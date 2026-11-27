@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { points } from '../../../src/shared/personal.ts';
 import type { ScoringRule } from '../../../src/shared/personal.ts';
 import type { Task, TaskResolution } from '../../../src/shared/tasks.ts';
-import { cueText, dateText, frequencyLabels } from '../view-options.ts';
+import { dateText, frequencyLabels, startText, whenText } from '../view-options.ts';
 import type { HabitInsight } from '../../../src/shared/habits.ts';
 import { HabitTrack, VoteCount } from './HabitCard.tsx';
 import { CheckIcon, CloseIcon, DashIcon, MoonIcon, PencilIcon, StarIcon } from './Icons.tsx';
@@ -34,7 +34,7 @@ export function TaskRow({ task, today, busy, completable = true, rule, insight, 
   const late = pending && !task.frequency && task.plannedDate < today;
   const statusLabel = task.status === 'completed' ? 'Completed' : task.status === 'missed' ? 'Missed'
     : habit ? 'Rest day' : 'Cancelled';
-  const cue = cueText(rule);
+  const where = whenText(rule), start = startText(rule);
 
   return (
     <div data-category={habit ? 'habit' : 'task'} className={`task ${pending ? '' : 'resolved'} ${checking ? 'checking' : ''}`}>
@@ -58,14 +58,14 @@ export function TaskRow({ task, today, busy, completable = true, rule, insight, 
           <span>{task.frequency ? t(frequencyLabels[task.frequency]) + ' · ' : ''}{dateText(task.plannedDate)}</span>
           {late && <span className="overdue">{t("Overdue")}</span>}
           {pending && !completable && <span>{t(rule?.unit === 'count' ? "Log counts on the day" : "Log minutes on the day")}</span>}
-          {cue && pending && <span className="cue">{cue}</span>}
+          {where && pending && <span className="cue">{where}</span>}
           {!pending && <>
             <span className={`state ${task.status}`}>{t(statusLabel)}</span>
             {task.resolvedAt && <span>{new Intl.DateTimeFormat(document.documentElement.lang, { month: 'short', day: 'numeric' }).format(new Date(task.resolvedAt))}</span>}
           </>}
         </div>
-        {pending && rule?.starter && <p className="starter">{t("Two-minute start:")} {rule.starter}</p>}
-        {pending && rule?.identity && <p className="identity"><span>{t("Vote for")} </span>{rule.identity}<VoteCount votes={votes} /></p>}
+        {pending && start && <p className="starter">{start}</p>}
+        {pending && rule?.identity && <p className="identity">{rule.identity}<VoteCount votes={votes} /></p>}
         {insight && <HabitTrack insight={insight} />}
       </div>
       {pending && rule?.mode === 'complete' && rule.rate > 0 && <span className="points-badge" title={t("Points when done")}>+{points(rule.rate)}</span>}

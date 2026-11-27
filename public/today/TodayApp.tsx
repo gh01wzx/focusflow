@@ -334,7 +334,8 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
               onMore={title => setSheet({ mode: 'create', id: crypto.randomUUID(), title })} />}
             {tab === 'due' && view && reviewDue && <WeekPrompt busy={saving}
               onOpen={() => setReviewing(true)} onDismiss={() => finishReview(false)} />}
-            {tab === 'due' && view && minute >= EVENING && closedDay !== today && <EveningPrompt busy={saving}
+            {/* One prompt at a time: the weekly review first, then closing the day. */}
+            {tab === 'due' && view && !reviewDue && minute >= EVENING && closedDay !== today && <EveningPrompt busy={saving}
               onOpen={() => setClosing(true)} onDismiss={() => closeDay(false)} />}
             {tab === 'due' && view && data && <NowCard items={timers} due={view.due} rules={rules} progress={amounts} busy={saving}
               timer={timer} onTimer={setTimer}

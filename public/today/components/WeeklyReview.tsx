@@ -123,7 +123,7 @@ function ReviewBody({ today, reviews, votes, busy, onTarget, onGraduate, onEditP
         {total > 0 && earlier > 0 && change !== 0 && <p>{t(change > 0 ? "{0} more than the week before." : "{0} fewer than the week before.", Math.abs(change))}</p>}
         {identities.length > 0 && <ul className="vote-chips" aria-label={t("Identity votes")}>
           {identities.map(item => <li key={item.key}><strong>{item.label}</strong>
-            {' · ' + item.week + t(' this week · ') + item.total + ' in all'}</li>)}
+            {' · ' + t('{0} this week · {1} in all', item.week, item.total)}</li>)}
         </ul>}
       </section>
       {reviews.length > HABIT_LIMIT && <p className="soft-note">{t("You are building {0} habits at once. Habits stick better a few at a time; graduate or stop one when you are ready.", reviews.length)}</p>}

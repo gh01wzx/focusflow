@@ -50,7 +50,7 @@ export function PreviewPanel({ ticketId }: { ticketId: string }) {
       const response = await fetch(route(ticketId) + '/' + action, { method: 'POST',
         headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const result = await response.json() as (PreviewState & { error?: string }) | null;
-      if (!response.ok) throw new Error(result?.error ?? 'Could not ' + action + ' the preview.');
+      if (!response.ok) throw new Error(result?.error ?? (action === 'start' ? 'Could not start the preview.' : 'Could not stop the preview.'));
       setPreview(result); setReadError('');
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Preview failed.'); }
     finally { pending.current = false; setBusy(false); }

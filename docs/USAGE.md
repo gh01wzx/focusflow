@@ -33,7 +33,16 @@ The cards at the top hold today's timed habits that have not reached their goal 
 
 ### Record and track
 
-Tick the square to complete a task and use the circle to check in a habit. A timed or counted habit shows one step at a time. It starts with the two-minute version, such as "After I shower → read one page", which counts as checking in. When a step is done, its ring closes with a check and a short note, and the card moves on to **maintain** and then the **goal**; three small dots show the steps done today. Choose **Record** and tap an amount, such as the rest of the current step, or enter another amount. Amounts add up and the card moves on by itself; reaching the goal turns it green. Click the habit to show its cue, time and place, pairing, recent days, points, **Edit plan** and **Rest today**. Set the check-in and maintain amounts in the editor, or leave them empty for two minutes (one count) and the point halfway to the goal. A habit can also repeat **Some days a week, any days**: choose how many days, and each seven-day period from its start date needs that many days with a check-in. Its card shows the days so far this week and counts today's amount toward the steps; once the week is done it shows as met, and extra days still earn points. It has no **Rest today**, because resting would skip the whole week. Checking in closes the habit for the day's ring, and reaching the goal earns a bonus of a fifth of the goal's points, shown as **Goal bonus** in Points history. A habit card shows its chain, or **Never miss twice** after a miss; its details show recent occurrences and how many of the latest seven you showed up for. Any logged minutes count as showing up. One miss does not break the chain; two misses in a row do. **Rest today** records a planned day off that never counts as a miss. For sick days or travel, choose **Pause habits** under the panel beside Today and pick an end date up to 90 days ahead: every habit rests until then, today's untouched habits included, and repeating tasks continue. A banner at the top of Today shows the pause; **Resume now** ends it and brings back today's habits. A habit with an identity shows its votes so far: every day done or started is one vote for that identity, across all habits that name it.
+Tick the square to complete a task and use the circle to check in a check-off habit. A timed or counted habit shows one step at a time:
+
+- **Steps.** It starts with the two-minute version, such as "After I shower → read one page", which counts as checking in. Then it moves on to **maintain** and the **goal**. When a step is done, its ring closes with a check and a short note; three small dots show the steps done today. Reaching the goal turns the card green.
+- **Record.** Choose **Record** and tap an amount, such as the rest of the current step, or enter another amount. Amounts add up and the card moves on by itself.
+- **Details.** Click the habit to show its time and place, pairing, recent days, points, **Edit plan** and **Rest today**. Set the check-in and maintain amounts in the editor, or leave them empty for two minutes (one count) and halfway to the goal.
+- **Chain.** The card shows the chain, or **Never miss twice** after a miss. Any logged amount counts as showing up. One miss does not break the chain; two in a row do. **Rest today** is a planned day off and never counts as a miss.
+- **Some days a week.** Choose how many days; each seven-day period from the start date needs that many days with a check-in. The card shows the days so far this week. It has no **Rest today**, because resting would skip the whole week.
+- **Points.** Checking in closes the habit for the day's ring. Reaching the goal earns a bonus of a fifth of the goal's points, shown as **Goal bonus** in Points history.
+- **Identity.** Every day a habit is done or started is one vote for its identity, across all habits that name it.
+- **Pause.** For sick days or travel, choose **Pause habits** under the panel beside Today and pick an end date up to 90 days ahead. Every habit rests until then; repeating tasks continue. **Resume now** in the banner ends the pause.
 
 Each habit you finish today gets a short, quiet moment that grows as the day fills: a fine ripple from where you tapped and a small note at the top with your progress. When every habit is done, a ring closes in the middle of the screen, with a soft chord if sound is on, and shows how many days in a row you have done them all. Click it or wait a few seconds. With reduced motion on, only the notes and the finished ring appear.
 
@@ -47,7 +56,7 @@ Choose the star on up to three one-off tasks to make them today's **Focus**. The
 
 ### Close the day
 
-From 6 PM, Today offers **Close the day**, about a minute of evening review; the panel beside Today opens it at any time. For habits with nothing logged today, **2 min now** starts the timer at the top of Today and **Rest today** records a planned rest day. One-off tasks still open can move to **Tomorrow** or another date, or be dropped; open repeating tasks can skip the current occurrence. Then pick up to three tasks as tomorrow's focus and read a tip for preparing tomorrow's first planned habit. **Done for today** or **Not tonight** hides the evening prompt until the next day.
+From 6 PM, Today offers **Close the day**, about a minute of evening review, once any weekly review prompt is done; the panel beside Today opens it at any time. For habits with nothing logged today, **2 min now** starts the timer at the top of Today and **Rest today** records a planned rest day. One-off tasks still open can move to **Tomorrow** or another date, or be dropped; open repeating tasks can skip the current occurrence. Then pick up to three tasks as tomorrow's focus and read a tip for preparing tomorrow's first planned habit. **Done for today** or **Not tonight** hides the evening prompt until the next day.
 
 ### Weekly review
 
@@ -70,6 +79,10 @@ In **Settings > Start and reminders**, turn on **Start FocusFlow in the tray whe
 ### Backups and export
 
 FocusFlow backs up your data once a day and keeps the last 30 days beside it. In **Settings > Backups and export**, choose **Back up now**, or choose a backup folder that a cloud drive such as OneDrive syncs, so a copy also lives off this computer. **Export JSON** saves everything; **Export CSV** saves your tasks and your points log as tables for a spreadsheet. The desktop app opens the folder with the exported files. To restore a backup, follow the recovery steps in the development guide.
+
+### Data folder
+
+**Settings > Data folder** shows where your tasks, habits and settings are saved. Choose **Choose another folder** to keep them elsewhere, such as a second drive. An empty folder receives a verified copy; for any other folder FocusFlow makes a `FocusFlow` folder inside it. If the folder already has FocusFlow data, choose **Use the data there** or **Replace it with my current data**; replaced data is kept as a backup file. FocusFlow then restarts on the new folder, and the previous folder keeps its copy. **Use the default folder** moves back the same way. If the chosen folder cannot be reached at start, for example on a disconnected drive, FocusFlow asks before opening the default folder. Do not put the data folder in a cloud drive; use it as the backup folder instead.
 
 ## Projects
 

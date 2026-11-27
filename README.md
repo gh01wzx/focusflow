@@ -22,7 +22,7 @@ After cloning, you can also double-click `Start-FocusFlow.command` in Finder. Th
 
 Closing the window keeps FocusFlow running in the Windows notification area or the Mac menu bar. Click the tray icon, or open the launcher again, to bring the window back. To end FocusFlow, choose **Quit FocusFlow** from the tray icon's menu, or press Cmd+Q on a Mac. The launcher window closes once the app opens. Review workspaces opened with `--review` keep their launcher window open.
 
-Everyday data stays outside the checkout, in `~/Library/Application Support/FocusFlow/desktop` on Mac and `%LOCALAPPDATA%\FocusFlow\desktop` on Windows. New profiles start empty.
+Everyday data stays outside the checkout, in `~/Library/Application Support/FocusFlow/desktop` on Mac and `%LOCALAPPDATA%\FocusFlow\desktop` on Windows. New profiles start empty. **Settings > Data folder** can move your data to another folder.
 
 Personal opens on **Today**. Add a one-off task, a repeating task or a habit, track points and redeem your own rewards. Keep undated ideas in **Someday** and set up to three **Goals** each quarter. FocusFlow backs up your data once a day and can export it as JSON or CSV. In **Projects**, the Action center lists tickets to review, work in progress and the next eligible ticket. Open a project for its milestones and status board.
 

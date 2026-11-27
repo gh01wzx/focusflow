@@ -90,7 +90,8 @@ export function HabitCard({ task, rule, insight, state, logged, week, onEdit, on
   const finished = level === 3 || cheer !== null;
   const next = habit ? nextTier(total, tiers) : total < rule.target ? { remaining: rule.target - total } : null;
   const startLine = [rule.cue && afterCue(rule.cue), rule.starter || t('Start with {0}', amount(tiers.start))].filter(Boolean).join(' → ');
-  const stepLine = cheer ? t(habit ? cheers[cheer] : 'Target reached.')
+  // A flexible habit whose week is done shows the goal as met, so its note is about the week.
+  const stepLine = cheer ? t(!habit ? 'Target reached.' : cheer === 3 && weekDone ? 'This week is done.' : cheers[cheer])
     : level === 3 ? (weekDone ? t("This week is done. Extra days still earn points.") : t('Done today · {0}', amount(total)))
     : !habit ? t('Goal: {0}', amount(rule.target))
     : level === 0 ? startLine : level === 1 ? t('Keep going to {0}', amount(tiers.maintain)) : t('Go for the goal: {0}', amount(tiers.goal));

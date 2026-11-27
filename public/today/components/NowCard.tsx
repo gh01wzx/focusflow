@@ -6,7 +6,7 @@ import { motion } from 'motion/react';
 import type { ScoringRule } from '../../../src/shared/personal.ts';
 import type { Task } from '../../../src/shared/tasks.ts';
 import { nextTier, tiersOf } from '../../../src/shared/habits.ts';
-import { cueText } from '../view-options.ts';
+import { startText, whenText } from '../view-options.ts';
 import { spring } from './Animated.tsx';
 import { PlayIcon } from './Icons.tsx';
 import type { Timer } from '../local-state.ts';
@@ -82,7 +82,7 @@ function TimerCarousel({ items, rules, progress, busy, onTimer }: NowProps) {
       onScroll={event => setIndex(Math.round(event.currentTarget.scrollLeft / Math.max(1, event.currentTarget.clientWidth)))}>
       {items.map((task, position) => {
         const rule = rules.get(task.recurrenceId ?? task.id);
-        const cue = cueText(rule);
+        const start = startText(rule), where = rule?.place ?? '';
         const later = rule?.time && rule.time > minute;
         const focusable = position === current ? 0 : -1;
         return <article key={task.id} className="now-card glass" aria-roledescription="slide"
@@ -91,8 +91,8 @@ function TimerCarousel({ items, rules, progress, busy, onTimer }: NowProps) {
             <p className="eyebrow">{later ? t('Next at ') + rule!.time : t('Next')}
               {rule ? ' · ' + t('{0} / {1} min', progress[task.id] ?? 0, rule.target) : ''}</p>
             <h2 className="now-title"><span className="sr-only">{t("Next:")} </span>{task.title}</h2>
-            {cue && <p className="cue">{cue}</p>}
-            {rule?.starter && <p className="starter">{t("Start with:")} {rule.starter}</p>}
+            {start && <p className="cue">{start}</p>}
+            {where && <p className="starter">{where}</p>}
             <div className="now-actions">
               <button className="primary now-start" disabled={busy} tabIndex={focusable}
                 aria-label={t("Start two minutes on {0}", task.title)} onClick={() => onTimer({ taskId: task.id, startedAt: Date.now() })}>
@@ -130,7 +130,7 @@ function RunningCard({ task, timer, rules, progress, busy, onTimer, onComplete, 
   const step = minutesHabit && isHabit(task) ? nextTier(logged, tiersOf(rule)) : null;
   const goal = minutesHabit ? Math.max(START_SECONDS, (step ? step.remaining : Math.max(0, rule.target - logged)) * 60) : START_SECONDS;
   const loggedMinutes = Math.min(1440, Math.max(1, Math.round(elapsed / 60)));
-  const cue = cueText(rule);
+  const start = startText(rule), where = whenText(rule);
   const cancel = () => onTimer(null);
   // Stop records the session: minutes for a timed habit, one count for a counted one, or done.
   async function stop() {
@@ -141,8 +141,8 @@ function RunningCard({ task, timer, rules, progress, busy, onTimer, onComplete, 
     <div className="now-main">
       <p className="eyebrow">{t('In progress')}</p>
       <h2 className="now-title"><span className="sr-only">{t("Next:")} </span>{task.title}</h2>
-      {cue && <p className="cue">{cue}</p>}
-      {rule?.starter && <p className="starter">{t("Start with:")} {rule.starter}</p>}
+      {start && <p className="cue">{start}</p>}
+      {where && <p className="starter">{where}</p>}
       <div className="now-actions">
         <button className="primary" disabled={busy} aria-label={t("Stop and record {0}", task.title)} onClick={() => void stop()}>
           {counted ? t('Stop · log 1 count') : minutesHabit ? t("Stop · log {0} min", loggedMinutes)

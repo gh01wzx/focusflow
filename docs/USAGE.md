@@ -70,19 +70,23 @@ From the editor, delete a single task, one occurrence, or the whole repeating pl
 
 ### Points and rewards
 
-The panel beside Today shows a pink habit ring and a green task ring, today's points, the last seven days, your balance and progress toward a pinned reward. **Rewards** lets you add and price your own rewards; the balance carries forward and pays for redemptions. **Archive** asks for confirmation and removes a reward from the shop while keeping its history. In **History > Points history**, **Correct log** adjusts an amount or moves it to another scheduled date at the original rate, and supported entries can be undone after confirming. Open **Settings > Sound and motion** for sounds, volume and reduced motion.
+The panel beside Today shows a pink habit ring and a green task ring, today's points, the last seven days, your balance and progress toward a pinned reward. **Rewards** lets you add and price your own rewards; the balance carries forward and pays for redemptions. **Archive** asks for confirmation and removes a reward from the shop while keeping its history. In **History > Points history**, **Correct log** adjusts an amount or moves it to another scheduled date at the original rate, and supported entries can be undone after confirming. Open **Settings > General** for sounds, volume and reduced motion.
 
 ### Start and reminders
 
-In **Settings > Start and reminders**, turn on **Start FocusFlow in the tray when I sign in to Windows** so it is always ready; it starts quietly and the tray icon opens it. **Remind me of habits at their planned time** shows a note from the tray at a habit's planned time while it is not checked in, and one at 8 PM for habits still open; click it to open FocusFlow. Paused habits stay quiet. Reminders come from the running app, so they need it in the tray.
+Settings has three sections: **General**, **Start and reminders** and **Data**. Every change takes effect at once. In **Start and reminders**, turn on **Start FocusFlow in the tray when I sign in to Windows** so it is always ready; it starts quietly and the tray icon opens it. **Remind me of habits at their planned time** shows a note from the tray at a habit's planned time while it is not checked in, and one at 8 PM for habits still open; click it to open FocusFlow. Paused habits stay quiet. Reminders come from the running app, so they need it in the tray.
 
-### Backups and export
+### Data, backups and export
 
-FocusFlow backs up your data once a day and keeps the last 30 days beside it. In **Settings > Backups and export**, choose **Back up now**, or choose a backup folder that a cloud drive such as OneDrive syncs, so a copy also lives off this computer. **Export JSON** saves everything; **Export CSV** saves your tasks and your points log as tables for a spreadsheet. The desktop app opens the folder with the exported files. To restore a backup, follow the recovery steps in the development guide.
+Your tasks, habits and settings are one file, `tracker.db`. **Settings > Data** shows it:
 
-### Data folder
+- **Open the folder** shows the file in File Explorer or Finder.
+- **Move to another folder** keeps it elsewhere, such as a second drive. An empty folder receives a verified copy; any other folder gets a `FocusFlow` folder inside it. If the folder already has FocusFlow data, choose **Use the data there** or **Replace it with my current data**. FocusFlow then restarts, and the previous folder keeps its copy. **Use the default folder** moves back the same way. If the folder cannot be reached at start, for example on a disconnected drive, FocusFlow asks before opening the default folder.
+- **Import a data file** replaces your data with an exported `.focusflow` file, a backup or another `tracker.db`. It is checked first, and after you confirm, FocusFlow restarts with it; your previous data is kept in the `backups` folder.
+- **Backups:** choose **Once a day** or **Each time FocusFlow quits**; the last 30 stay beside your data. **Back up now** makes one at once. A backup folder that a cloud drive such as OneDrive syncs also receives a copy. Do not put the data file itself in a cloud drive.
+- **Export:** a **data file** is one complete `.focusflow` copy you can import again; **JSON** saves everything as text; **CSV** saves tasks and points as tables for a spreadsheet.
 
-**Settings > Data folder** shows where your tasks, habits and settings are saved. Choose **Choose another folder** to keep them elsewhere, such as a second drive. An empty folder receives a verified copy; for any other folder FocusFlow makes a `FocusFlow` folder inside it. If the folder already has FocusFlow data, choose **Use the data there** or **Replace it with my current data**; replaced data is kept as a backup file. FocusFlow then restarts on the new folder, and the previous folder keeps its copy. **Use the default folder** moves back the same way. If the chosen folder cannot be reached at start, for example on a disconnected drive, FocusFlow asks before opening the default folder. Do not put the data folder in a cloud drive; use it as the backup folder instead.
+To restore a backup by hand, follow the recovery steps in the development guide.
 
 ## Projects
 
@@ -96,7 +100,7 @@ To remove a project, choose **Delete project** and type its name. This permanent
 
 ## Optional connections
 
-Open **AI connection** above **Settings**. Choose OpenAI, Claude or DeepSeek to enter an API key. Connecting reads the provider's model list. Pick the connection and model in a project before sending a request. For Codex, run `npm run ai:install` from the source checkout and follow **Sign in with ChatGPT**. Uses are charged to the selected ChatGPT Codex allowance. For the optional DeepSeek Harness, install the CLI shown in the dialog and save a key there, or supply the existing `DEEPSEEK_API_KEY` environment setting. Compatible API connections can use a configured endpoint and key. These requests use the selected API balance. Open **Settings** to change the interface language, startup workspace or size. Save to apply the language and size immediately. Each local profile keeps its own preferences.
+Open **AI connection** above **Settings**. Choose OpenAI, Claude or DeepSeek to enter an API key. Connecting reads the provider's model list. Pick the connection and model in a project before sending a request. For Codex, run `npm run ai:install` from the source checkout and follow **Sign in with ChatGPT**. Uses are charged to the selected ChatGPT Codex allowance. For the optional DeepSeek Harness, install the CLI shown in the dialog and save a key there, or supply the existing `DEEPSEEK_API_KEY` environment setting. Compatible API connections can use a configured endpoint and key. These requests use the selected API balance. Open **Settings > General** to change the interface language, startup workspace or size; changes apply at once. Each local profile keeps its own preferences.
 
 The desktop protects saved API keys with Windows encryption or the macOS Keychain.
 

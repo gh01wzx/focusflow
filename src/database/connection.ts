@@ -18,7 +18,11 @@ export async function openDatabase(path: string): Promise<DatabaseSync> {
     if (version > 0 && db.prepare('SELECT format FROM tracker_meta').get()?.format !== 'focusflow-tasks') throw new Error('UNRECOGNIZED_PRODUCT_DATABASE');
     db.exec('PRAGMA busy_timeout=3000; PRAGMA foreign_keys=ON;');
     await migrateDatabase(db, path, MIGRATIONS);
-    db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;');
+    // A rollback journal keeps the data in one file; WAL would leave -wal and -shm files beside it
+    // while the app runs. Switching an older WAL database folds its log back into the file. It needs
+    // sole access, so while another connection holds the file the switch waits for a later start.
+    db.exec('PRAGMA synchronous=FULL;');
+    try { db.exec('PRAGMA journal_mode=DELETE;'); } catch { /* Keep the current journal until the file is free. */ }
   } catch (error) { db.close(); throw error; }
 
   return db;

@@ -124,12 +124,12 @@ test('unknown schema-zero databases are refused without changing their contents'
   assert.deepEqual(await readFile(path), before);
 });
 
-test('online product backup includes committed WAL data and stays independent of later changes', async t => {
+test('the data stays in one file, and an online backup stays independent of later changes', async t => {
   const { directory, path } = await fixture(t);
   const store = await openStore(path);
   try {
     store.tasks.add({ title: 'In the snapshot', plannedDate: '2026-11-04' });
-    assert.ok((await readFile(path + '-wal')).length > 0);
+    for (const suffix of ['-wal', '-shm', '-journal']) await assert.rejects(() => access(path + suffix));
     const snapshot = await store.snapshot();
     store.tasks.add({ title: 'After the snapshot', plannedDate: '2026-11-04' });
     const restoredPath = join(directory, 'independent.db');

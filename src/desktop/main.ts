@@ -7,6 +7,7 @@ import { MigrationError, NewerDatabaseError } from '../database/migrate.ts';
 import { SCHEMA_VERSION } from '../database/schema.ts';
 import { localDataDirectory, selectProfile } from '../runtime/profile.ts';
 import { dataLocationReady, readDataLocation, saveDataLocation } from '../runtime/location.ts';
+import { applyPendingImport } from '../database/data-file.ts';
 import { createAiService } from '../ai/service.ts';
 import { createAiRuntime } from '../ai/runtime.ts';
 import { createProviderCredential } from '../ai/credential.ts';
@@ -90,11 +91,14 @@ async function startDesktop(): Promise<void> {
         if (answer === 0) { app.exit(0); return; }
         saveDataLocation(profileDirectory, null);
       }
+      // A data file imported in Settings takes the data's place now, before anything opens it.
+      if (everyday) applyPendingImport(dataDirectory);
       const pickFolder = async (title: string) => {
         const options = { title, properties: ['openDirectory', 'createDirectory'] as ('openDirectory' | 'createDirectory')[] };
         const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
         return result.canceled ? null : result.filePaths[0] ?? null;
       };
+      const dataFiles = [{ name: 'FocusFlow data', extensions: ['focusflow', 'db'] }];
       let confirmReady!: () => void;
       const ready = new Promise<void>(resolve => { confirmReady = resolve; });
       const ai = createAiService(createAiRuntime(dataRoot, true, profileDirectory));
@@ -116,6 +120,16 @@ async function startDesktop(): Promise<void> {
         github, ai, dsh, compatible, namedApis, onShutdown: traceShutdown, onInterfaceReady: confirmReady, appVersion: app.getVersion(),
         desktop: {
           chooseFolder: () => pickFolder('FocusFlow backups'),
+          async saveFile(name: string) {
+            const options = { title: 'Export FocusFlow data', defaultPath: join(app.getPath('documents'), name), filters: dataFiles };
+            const result = window ? await dialog.showSaveDialog(window, options) : await dialog.showSaveDialog(options);
+            return result.canceled ? null : result.filePath ?? null;
+          },
+          async openFile() {
+            const options = { title: 'Import FocusFlow data', properties: ['openFile'] as 'openFile'[], filters: dataFiles };
+            const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
+            return result.canceled ? null : result.filePaths[0] ?? null;
+          },
           ...(everyday ? { dataLocation: {
             defaultDirectory: defaultData,
             choose: () => pickFolder('FocusFlow data'),

@@ -53,7 +53,7 @@ The root is `%LOCALAPPDATA%\FocusFlow` on Windows and `~/Library/Application Sup
 | `npm start` or browser development default | `workspaces/development/CHECKOUT_ID/schema-N` |
 | `--review NAME` | `workspaces/reviews/NAME/schema-N` |
 
-Each directory stores `data/tracker.db` and its own connection settings. The everyday profile can keep its `data` folder elsewhere; `data-location.json` in the profile records that folder, and launch uses it only while its `tracker.db` exists. The development ID comes from the checkout path. A named workspace is shared across checkouts that use the same name and format. Open another name for a fresh workspace. Previous `development` and `reviews` folders stay on disk. Launch uses the current paths in the table.
+Each directory stores `data/tracker.db` and its own connection settings. The database uses a rollback journal, so the data stays in that one file. The everyday profile can keep its `data` folder elsewhere; `data-location.json` in the profile records that folder, and launch uses it only while its `tracker.db` exists. An import is copied beside it as `tracker.db.import` and takes its place at the next start, after the current file moves into `backups` as `replaced-<time>.db`. The development ID comes from the checkout path. A named workspace is shared across checkouts that use the same name and format. Open another name for a fresh workspace. Previous `development` and `reviews` folders stay on disk. Launch uses the current paths in the table.
 
 `FOCUSFLOW_TEST_PROFILE` overrides the desktop test directory. The browser development service accepts `FOCUSFLOW_DATA_DIR`. Use disposable directories for these overrides. The desktop rejects combinations of test, personal and review modes that would make the selected directory ambiguous.
 
@@ -61,7 +61,7 @@ The selected profile also keeps `coding-workspaces\TICKET_ID`, run records, prev
 
 ## Backup and recovery
 
-Migrations take a verified snapshot of recognised existing data before changing its schema. FocusFlow also makes one verified `daily-` snapshot each local day, a few seconds after opening or hourly while it stays open, and keeps the newest 30. Backups are stored beside the database in `backups`; a folder chosen in **Settings > Backups and export** receives a copy of each daily snapshot. Exports go to `exports` in the profile folder. Append migrations without changing already-applied SQL.
+Migrations take a verified snapshot of recognised existing data before changing its schema. FocusFlow also makes verified `daily-` snapshots, either once each local day (a few seconds after opening, or hourly while it stays open) or each time the app quits, and keeps the newest 30. Backups are stored beside the database in `backups`; a folder chosen in **Settings > Data** receives a copy of each one. Exports go to `exports` in the profile folder. Append migrations without changing already-applied SQL.
 
 Close the app and retain the original database and any WAL/SHM sidecars. Keep a snapshot and its matching `.db.json` manifest together. Restore to a **new** destination:
 

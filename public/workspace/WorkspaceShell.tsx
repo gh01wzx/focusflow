@@ -21,7 +21,11 @@ export function WorkspaceShell({ workspace, busy, navigation, children, onWorksp
       <aside className="sidebar">
         <button type="button" className="brand" aria-label={t("FocusFlow home")} disabled={busy}
           onClick={() => onWorkspaceChange('personal')}>
-          <span className="brand-mark" aria-hidden="true">f<span>.</span></span>FocusFlow
+          {/* The FL mark from the app icon, drawn on the same 1000-unit grid. */}
+          <span className="brand-mark" aria-hidden="true"><svg viewBox="180 230 680 540">
+            <rect x="236" y="290" width="104" height="420" rx="26" /><rect x="236" y="290" width="304" height="100" rx="26" />
+            <rect x="236" y="460" width="236" height="96" rx="26" /><rect x="566" y="290" width="104" height="420" rx="26" />
+            <rect x="566" y="610" width="226" height="100" rx="26" /></svg></span>FocusFlow
         </button>
         <nav className="workspace-nav" aria-label={t("Workspaces")}>
           <button aria-current={workspace === 'personal' ? 'page' : undefined}

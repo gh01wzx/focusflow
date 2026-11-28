@@ -140,7 +140,7 @@ h4 { font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
 @supports (corner-shape: squircle) {
   :root { --radius-xl: 36px; --radius-lg: 27px; --radius: 21px; }
   .glass:not(.whisper), .sidebar, .sheet, .sheet-group, .sheet-preview, .panel-action, .empty-icon,
-  .settings-dialog .sound-settings { corner-shape: squircle; }
+  .settings-section { corner-shape: squircle; }
 }
 
 .workspace-notice {
@@ -160,6 +160,30 @@ h4 { font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(88, 86, 214, .18);
 }
 input[type=checkbox], input[type=radio], input[type=range] { accent-color: var(--accent); }
+/* Dropdowns open as a list in the app's own style instead of the system menu. They stay native
+   selects, so the keyboard, screen readers and form handling work as before. */
+@supports (appearance: base-select) {
+  select, ::picker(select) { appearance: base-select; }
+  select { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; padding-right: 12px; cursor: pointer; }
+  select::picker-icon {
+    content: ''; width: 7px; height: 7px; margin-top: -4px; border: solid var(--muted); border-width: 0 1.8px 1.8px 0;
+    transform: rotate(45deg); transition: transform .2s var(--ease), margin .2s var(--ease);
+  }
+  select:open::picker-icon { margin-top: 3px; transform: rotate(225deg); }
+  ::picker(select) {
+    margin-block: 6px; padding: 4px; border: 1px solid var(--separator); border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, .98); box-shadow: var(--shadow-lg);
+    transition: opacity .16s var(--ease), translate .2s var(--ease), overlay .2s allow-discrete, display .2s allow-discrete;
+  }
+  ::picker(select):popover-open { opacity: 1; translate: 0 0; }
+  @starting-style { ::picker(select):popover-open { opacity: 0; translate: 0 -4px; } }
+  select option { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: var(--radius-xs); color: var(--text); font-size: 14px; }
+  select option:hover, select option:focus-visible { outline: none; background: var(--fill); }
+  select option:checked { color: var(--accent-text); font-weight: 600; }
+  select option::checkmark { order: 1; margin-left: auto; color: var(--accent); }
+}
+/* Thin scroll bars on a clear track, so rounded surfaces keep their corners. */
+* { scrollbar-width: thin; scrollbar-color: rgba(60, 60, 67, .28) transparent; }
 ::placeholder { color: #a1a1a6; }
 
 /* Buttons */
@@ -230,12 +254,14 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: var(-
   display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 0 8px; border: 0; background: transparent;
   color: var(--text); font-size: 18px; font-weight: 700; letter-spacing: -.02em; text-align: left;
 }
+/* The app icon in small: white FL on the same gradient. */
 .brand-mark {
-  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; padding-bottom: 3px; border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, #7a78ea, var(--accent)); color: #fff; font-family: Georgia, serif; font-size: 22px; font-style: italic; line-height: 1;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 4px 10px -4px rgba(88, 86, 214, .7);
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 8px;
+  background: linear-gradient(150deg, #8f8cf7, #6461e0 48%, #4a3fc6); color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 4px 10px -4px rgba(74, 63, 198, .7);
 }
-.brand-mark span { color: #d9d8ff; }
+@supports (corner-shape: squircle) { .brand-mark { border-radius: 11px; corner-shape: squircle; } }
+.brand-mark svg { width: 21px; height: 21px; fill: currentColor; }
 nav { display: grid; gap: 2px; }
 .nav-item {
   display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 7px 10px; border: 0; border-radius: var(--radius-sm);
@@ -524,7 +550,7 @@ html[data-size="large"] { zoom: 1.125; }
 .sheet-body { display: grid; gap: 14px; overflow-y: auto; padding: 6px 22px 18px; }
 .sheet-footer {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; padding: 14px 22px 18px;
-  border-top: 1px solid var(--separator); background: rgba(255, 255, 255, .55);
+  border-top: 1px solid var(--separator);
 }
 .sheet-delete-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-inline-end: auto; }
 .sheet-delete-actions .danger-text { color: var(--red-text); }
@@ -749,17 +775,10 @@ html[data-size="large"] { zoom: 1.125; }
 html[data-motion="reduced"] *, html[data-motion="reduced"] *::before, html[data-motion="reduced"] *::after {
   animation-duration: .01ms !important; transition-duration: .01ms !important;
 }
-.settings-dialog .sound-settings { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--separator); border-radius: var(--radius); }
-.settings-dialog .sound-settings legend { padding: 0 4px; font-weight: 600; }
-.care-settings { margin-top: 14px; }
-.care-settings p { margin: 0; }
 .care-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .care-message { color: var(--green-text); font-size: 13px; overflow-wrap: anywhere; }
 .care-path { padding: 6px 10px; border-radius: var(--radius-xs); background: var(--fill); font-size: 12.5px; overflow-wrap: anywhere; }
 .care-confirm { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--separator); border-radius: var(--radius-sm); }
-.settings-dialog .sound-settings label { display: flex; align-items: center; gap: 8px; }
-.settings-dialog .sound-settings input[type="checkbox"] { width: auto; min-height: 0; }
-.settings-dialog .sound-settings input[type="range"] { flex: 1; min-height: 0; }
 
 /* Long lists grow a page at a time. */
 .show-more { display: block; margin: 4px auto 12px; }

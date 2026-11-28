@@ -40,8 +40,8 @@ async function exerciseSettings(page: Page): Promise<void> {
   const entry = page.getByRole('button', { name: 'Settings', exact: true });
   await entry.click();
   const dialog = page.getByRole('dialog', { name: 'Settings', exact: true });
-  await dialog.getByLabel('Language').waitFor();
-  await dialog.getByLabel('Startup workspace').waitFor();
+  await dialog.getByLabel('Language', { exact: true }).waitFor();
+  await dialog.getByLabel('Startup workspace', { exact: true }).waitFor();
   await dialog.getByRole('button', { name: 'Close Settings', exact: true }).click();
   assert.equal(await entry.evaluate(element => element === document.activeElement), true);
 }

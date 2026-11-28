@@ -68,7 +68,7 @@ export function HabitCard({ task, rule, insight, state, logged, week, onEdit, on
   const votes = rule.identity ? state.data?.votes[identityKey(rule.identity)] ?? 0 : 0;
   const counted = rule.unit === 'count';
   const habit = task.category !== 'task';
-  const amount = (value: number) => t(counted ? '{0} counts' : '{0} min', value);
+  const amount = (value: number) => t(!counted ? '{0} min' : value === 1 ? '{0} count' : '{0} counts', value);
   const tiers = tiersOf(rule);
   const level: TierLevel = habit ? tierLevel(total, tiers) : total >= rule.target ? 3 : 0;
   const weekDone = !!week && week.done >= week.times;

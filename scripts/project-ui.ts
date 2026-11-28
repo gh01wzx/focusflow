@@ -180,24 +180,23 @@ export async function exerciseProjectUI(page: Page, actionScreenshot?: string, e
   await page.getByRole('navigation', { name: 'Project list', exact: true })
     .getByRole('button', { name: 'Another project', exact: true }).click();
   await page.getByRole('button', { name: 'Action center', exact: true }).click();
-  await page.getByRole('heading', { name: 'Action center.', exact: true }).waitFor();
+  await page.getByRole('heading', { name: 'Action center', exact: true }).waitFor();
   const next = page.getByRole('region', { name: 'Next task', exact: true });
   await next.getByRole('heading', { name: 'Separate project work', exact: true }).waitFor();
   await page.getByRole('region', { name: 'Review', exact: true })
     .getByRole('heading', { name: 'Check project plan', exact: true }).waitFor();
   await page.getByRole('region', { name: 'In progress', exact: true })
     .getByRole('heading', { name: 'Second milestone work', exact: true }).waitFor();
+  // Review, In progress and Next task are separate bordered sections, stacked in one column.
   const columns = await page.locator('.action-column').evaluateAll(elements => elements.map(element => {
     const rect = element.getBoundingClientRect();
-    return { x: rect.x, y: rect.y, right: rect.right, border: parseFloat(getComputedStyle(element).borderLeftWidth) };
+    return { x: rect.x, top: rect.top, bottom: rect.bottom, border: parseFloat(getComputedStyle(element).borderLeftWidth) };
   }));
   assert.equal(columns.length, 3);
-  assert.ok(columns.every(column => column.y === columns[0]!.y && column.border >= 1));
-  assert.ok(columns[0]!.right < columns[1]!.x && columns[1]!.right < columns[2]!.x, 'Statuses must be separate horizontal columns.');
+  assert.ok(columns.every(column => column.x === columns[0]!.x && column.border > 0), 'Sections share one column: ' + JSON.stringify(columns));
+  assert.ok(columns[0]!.bottom < columns[1]!.top && columns[1]!.bottom < columns[2]!.top, 'Statuses must be separate sections.');
   assert.equal(await page.getByRole('button', { name: 'Browse projects', exact: true }).count(), 0);
   if (actionScreenshot) await page.screenshot({ path: actionScreenshot, fullPage: true });
-  await next.locator('summary').click();
-  await next.getByText('The plan has three clear steps.', { exact: true }).waitFor();
   await page.route('**/api/project-tickets/*/start', route => route.fulfill({
     status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'Could not start this ticket.' }),
   }));

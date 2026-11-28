@@ -151,7 +151,8 @@ try {
     async function add(title: string, date = today, frequency: 'none' | 'daily' | 'weekly' = 'none') {
       await addPersonalTask(page, title, { date, frequency,
         ...(frequency === 'weekly' ? { weekdays: [new Date(date + 'T12:00:00Z').getUTCDay() as Weekday] } : {}) });
-      await page.getByText(title, { exact: true }).waitFor();
+      // Look in task titles: some titles, such as Weekly review, also name a button on the page.
+      await page.locator('.task-title').getByText(title, { exact: true }).waitFor();
     }
     mark('save-failure-keeps-input');
     await page.route('**/api/tasks', async route => {
@@ -219,12 +220,16 @@ try {
     await page.locator('.task-title').getByText('Finish a small task', { exact: true }).waitFor();
     await page.locator('.task-title').getByText('An optional task', { exact: true }).waitFor();
     mark('repeating-task-controls');
+    // A repeating task records counts toward its target with Record; one count meets the default target.
     await add('Daily check-in', today, 'daily');
-    await page.getByRole('checkbox', { name: 'Complete Daily check-in', exact: true }).click();
-    await page.getByRole('status').filter({ hasText: 'Task completed.' }).waitFor();
+    await page.getByRole('button', { name: 'Record Daily check-in', exact: true }).click();
+    await page.getByRole('group', { name: 'Record Daily check-in', exact: true }).getByRole('button', { name: '+1 count', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Logged 1 count for Daily check-in.' }).waitFor();
+    await page.getByText('Done today · 1 count', { exact: true }).waitFor();
     await add('Weekly review', today, 'weekly');
-    // Cancelling a repeating task skips only this occurrence.
-    await page.getByRole('button', { name: 'Cancel Weekly review', exact: true }).click();
+    // Cancelling a repeating task skips only this occurrence. It sits in the card's details.
+    await page.getByRole('article', { name: 'Weekly review', exact: true }).locator('.habit-summary').click();
+    await page.getByRole('article', { name: 'Weekly review', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Task cancelled.' }).waitFor();
     await add('Daily unfinished', today, 'daily');
     await add('Future repeat', shift(1), 'weekly');
@@ -242,7 +247,8 @@ try {
     mark('close-and-relaunch'); await closeApp(); page = await launch();
     await page.getByText('Review the first Today workflow', { exact: true }).waitFor();
     repeatView = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
-    assert.equal(repeatView.due.length, 4); assert.equal(repeatView.upcoming.length, 1); assert.equal(repeatView.history.length, 4);
+    // A repeating task that met its target stays on Today until its period ends.
+    assert.equal(repeatView.due.length, 5); assert.equal(repeatView.upcoming.length, 1); assert.equal(repeatView.history.length, 3);
     // Seed the disposable profile as if its last run was in the previous period.
     // The installed app then reconciles using its real clock, with no product clock override.
     mark('seed-previous-periods'); await closeApp();
@@ -257,9 +263,9 @@ try {
       writer.exec('COMMIT');
     } finally { writer.close(); }
     mark('installed-period-rollover'); page = await launch();
-    await page.getByRole('checkbox', { name: 'Complete Daily check-in', exact: true }).waitFor();
-    await page.getByRole('checkbox', { name: 'Complete Weekly review', exact: true }).waitFor();
-    await page.getByRole('checkbox', { name: 'Complete Daily unfinished', exact: true }).waitFor();
+    for (const title of ['Daily check-in', 'Weekly review', 'Daily unfinished']) {
+      await page.getByRole('button', { name: 'Record ' + title, exact: true }).waitFor();
+    }
     const rolled = await page.evaluate(async () => (await fetch('/api/tasks')).json()) as TaskView;
     assert.equal(rolled.due.length, 6); assert.equal(rolled.upcoming.length, 1); assert.equal(rolled.history.length, 5);
     assert.ok(rolled.due.filter(task => task.recurrenceId).every(task => task.plannedDate === today));

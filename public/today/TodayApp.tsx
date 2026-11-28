@@ -191,7 +191,8 @@ export function TodayApp({ onWorkspaceChange }: WorkspaceProps) {
     return saved;
   }
   function logged(task: Task, minutes: number, first: boolean) {
-    state.announce(t(ruleFor(task)?.unit === 'count' ? 'Logged {0} counts for {1}.' : 'Logged {0} min for {1}.', minutes, task.title) + vote(task, first));
+    const unit = ruleFor(task)?.unit !== 'count' ? 'Logged {0} min for {1}.' : minutes === 1 ? 'Logged {0} count for {1}.' : 'Logged {0} counts for {1}.';
+    state.announce(t(unit, minutes, task.title) + vote(task, first));
   }
   function rest(task: Task) { void personal.resolve(task, 'cancelled', state.resolve); }
   function setTimer(next: Timer | null) {

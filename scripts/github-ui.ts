@@ -48,7 +48,7 @@ export async function exerciseGitHubUI(page: Page, projectTitle: string, screens
   await page.getByLabel('GitHub App client ID', { exact: true }).waitFor();
   await page.getByText('Connection settings', { exact: true }).click();
   if (screenshot) await page.locator('.github-connection').screenshot({ path: screenshot.replace('.png', '-choose.png') });
-  await page.getByLabel('Repository owner/name', { exact: true }).fill('sample/public-work');
+  await page.getByLabel('GitHub URL or owner/name', { exact: true }).fill('sample/public-work');
   await page.getByRole('button', { name: 'Inspect repository', exact: true }).click();
   await page.getByText('Public repository', { exact: false }).waitFor();
   assert.equal(await page.getByRole('button', { name: 'Connect repository', exact: true }).isDisabled(), true);
@@ -62,10 +62,10 @@ export async function exerciseGitHubUI(page: Page, projectTitle: string, screens
   assert.equal(await confirmation.getAttribute('aria-pressed'), 'false');
   assert.equal(await page.getByRole('button', { name: 'Connect repository', exact: true }).isDisabled(), true);
   await confirmation.click();
-  await page.getByLabel('Repository owner/name', { exact: true }).fill('sample/another');
+  await page.getByLabel('GitHub URL or owner/name', { exact: true }).fill('sample/another');
   assert.equal(await page.getByRole('button', { name: 'Connect repository', exact: true }).count(), 0);
   assert.equal(confirmedRequests, 0);
-  await page.getByLabel('Repository owner/name', { exact: true }).fill('sample/public-work');
+  await page.getByLabel('GitHub URL or owner/name', { exact: true }).fill('sample/public-work');
   await page.getByRole('button', { name: 'Inspect repository', exact: true }).click();
   await page.getByRole('button', { name: 'I confirm this repository for this project.', exact: true }).click();
   if (screenshot) await page.locator('.github-connection').screenshot({ path: screenshot.replace('.png', '-confirm.png') });

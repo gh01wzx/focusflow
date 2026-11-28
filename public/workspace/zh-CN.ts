@@ -1195,4 +1195,6 @@ export const chinese: Record<string, string> = {
   "The AI plan format is invalid. Try another explicit request; the previous draft is kept.": "AI 计划格式无效。请换一种明确的说法再试；之前的草稿会保留。",
   "Select at least one task before approval.": "批准前请至少选择一项任务。",
   "Could not read publication results. Reopen the dialog before retrying.": "无法读取发布结果。请重新打开对话框后再试。",
+  "{0} count": "{0} 次",
+  "Logged {0} count for {1}.": "已为“{1}”记录 {0} 次。",
 };

@@ -14,14 +14,17 @@ export async function exercisePlanUI(page: Page): Promise<void> {
   const generate = dialog.getByRole('button', { name: 'Generate draft', exact: true });
   const goal = dialog.getByRole('textbox', { name: 'Project goal', exact: true });
   const consent = dialog.getByRole('checkbox', { name: 'I understand that generating this draft uses Codex allowance.', exact: true });
-  await dialog.getByRole('status').filter({ hasText: 'Draft suggestions are private.' }).waitFor();
-  await goal.fill('A small private goal'); assert.equal(await generate.isDisabled(), true);
-  await consent.check(); await generate.click();
-  await dialog.getByRole('status').filter({ hasText: 'Install the pinned runtime' }).waitFor();
-  assert.equal(await consent.isChecked(), false); assert.equal(await generate.isDisabled(), true);
+  // A fresh profile has no AI connection, so the dialog asks for one and offers no goal field.
+  await dialog.getByRole('status').filter({ hasText: 'Connect a provider in AI connection to generate a draft.' }).waitFor();
+  assert.equal(await goal.count(), 0);
   assert.equal(await dialog.getByRole('region', { name: 'Saved AI draft' }).count(), 0);
   await dialog.getByRole('button', { name: 'Close AI plan draft', exact: true }).click();
 
+  // The rest simulates a connected Codex provider with one model.
+  const selection = { provider: 'codex', model: 'simulated-model', effort: '' };
+  await page.route('**/api/ai/providers', route => route.fulfill({ json: [{ provider: 'codex', connected: true }] }));
+  await page.route('**/api/ai/providers/codex/models', route => route.fulfill({
+    json: [{ id: selection.model, label: 'Simulated model', efforts: [], defaultEffort: '' }] }));
   let state: PlanState = { draft: null, busy: false, cancelling: false, message: 'Simulated saved draft check.' };
   let generations = 0, cancellations = 0, edits = 0, approvals = 0, failSave = true;
   const pattern = '**/api/projects/*/plan-draft**';
@@ -29,7 +32,7 @@ export async function exercisePlanUI(page: Page): Promise<void> {
     const path = new URL(route.request().url()).pathname;
     const id = path.split('/')[3]!;
     if (path.endsWith('/generate')) {
-      assert.deepEqual(route.request().postDataJSON(), { goal: 'A small private goal', confirmAllowance: true });
+      assert.deepEqual(route.request().postDataJSON(), { goal: 'A small private goal', confirmAllowance: true, selection });
       generations++;
       state = { ...state, busy: true, message: 'Waiting for an AI draft.' };
     } else if (path.endsWith('/cancel')) {
@@ -116,7 +119,7 @@ export async function exercisePlanUI(page: Page): Promise<void> {
     await dialog.getByRole('status').filter({ hasText: 'Plan approved: 2 saved tasks.' }).waitFor();
     assert.equal(approvals, 1);
     await dialog.getByRole('button', { name: 'Close AI plan draft', exact: true }).click();
-  } finally { await page.unroute(pattern); }
+  } finally { await page.unroute(pattern); await page.unroute('**/api/ai/providers'); await page.unroute('**/api/ai/providers/codex/models'); }
 }
 
 export async function exercisePublicationUI(page: Page): Promise<void> {

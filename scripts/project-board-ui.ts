@@ -49,8 +49,9 @@ export async function exerciseProjectBoard(page: Page): Promise<void> {
   assert.equal(columns.length, 4);
   assert.equal(await board.getByRole('region', { name: 'Ready', exact: true }).count(), 0);
   assert.equal(await board.getByRole('region', { name: 'Blocked', exact: true }).count(), 0);
-  assert.ok(columns.every((column, index) => column.y === columns[0]!.y && column.border >= 1
-    && (index === 0 || columns[index - 1]!.right < column.x)), 'Four distinct columns stay horizontal.');
+  // A 1px border measures below 1 on scaled displays, so any border counts.
+  assert.ok(columns.every((column, index) => column.y === columns[0]!.y && column.border > 0
+    && (index === 0 || columns[index - 1]!.right < column.x)), 'Four distinct columns stay horizontal: ' + JSON.stringify(columns));
   for (const status of TICKET_STATUSES) await board.getByRole('region', { name: TICKET_STATUS_LABELS[status], exact: true }).waitFor();
   assert.equal(await board.getByRole('button', { name: /^Open ticket / }).count(), before.tickets.length);
   for (const ticket of before.tickets) {

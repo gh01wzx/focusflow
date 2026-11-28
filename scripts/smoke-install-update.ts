@@ -125,7 +125,7 @@ try {
   await checkInvalidLaunch(join(installation, 'FocusFlow.exe'), environment);
   assert.equal(existsSync(profile), false, 'Invalid launch must not create task data.');
   mark('launch-baseline');
-  let page = await launch('0.1.0');
+  let page = await launch('1.0.0');
   const today = localDay(new Date());
   await post(page, '/api/tasks', { title: 'Retain through installer replacement', plannedDate: today });
   await post(page, '/api/recurrences', { title: 'Retain weekly plan', frequency: 'weekly', plannedDate: today, weekdays: [1, 3] });
@@ -153,7 +153,7 @@ try {
   mark('install-candidate');
   await install(candidate);
   assert.equal(await digest(database), databaseBefore, 'Installer must leave task bytes alone.');
-  page = await launch('0.1.1');
+  page = await launch('1.0.1');
   assert.deepEqual(await views(page, projectId), saved);
   await page.screenshot({ path: join(artifacts, 'candidate.png'), fullPage: true });
   mark('close-candidate'); await close();
@@ -171,13 +171,13 @@ try {
   assert.equal(await digest(database), beforeRestore, 'Separate recovery must not alter the current database.');
   mark('reinstall-baseline-same-schema');
   await install(baseline);
-  page = await launch('0.1.0');
+  page = await launch('1.0.0');
   assert.deepEqual(await views(page, projectId), saved);
   mark('close-restored-baseline'); await close();
   await writeFile(join(artifacts, 'report.json'), JSON.stringify({
     status: 'verified', commit: process.env.GITHUB_SHA ?? 'unknown', schema: SCHEMA_VERSION,
-    baseline: { version: '0.1.0', sha256: await digest(baseline) },
-    candidate: { version: '0.1.1', sha256: await digest(candidate) },
+    baseline: { version: '1.0.0', sha256: await digest(baseline) },
+    candidate: { version: '1.0.1', sha256: await digest(candidate) },
     scope: 'Unsigned offline full-installer replacement of the same code/schema, installed shortcuts and duplicate-launch handoff, exact Personal/repeat/project/prerequisite/status data preservation, separate snapshot recovery and same-schema binary rollback.',
     unverified: 'No signed update feed, download/signature verification, SmartScreen acceptance, in-app one-click updater or cross-schema downgrade proof.',
   }, null, 2));

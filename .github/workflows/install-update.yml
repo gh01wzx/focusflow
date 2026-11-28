@@ -21,13 +21,13 @@ jobs:
         run: node -e "const fs=require('node:fs');const exe=require('electron');if(!fs.existsSync(exe))throw new Error('Missing runtime')"
       - run: npm run package:windows
       - name: Build candidate with the same code and a test-only version
-        run: npm exec -- electron-builder --win --x64 --publish never --config electron-builder.json --config.extraMetadata.version=0.1.0-alpha.4 --config.directories.output=.phase0/update-candidate
+        run: npm exec -- electron-builder --win --x64 --publish never --config electron-builder.json --config.extraMetadata.version=0.1.1 --config.directories.output=.phase0/update-candidate
       - name: Install, replace, recover separately and return to baseline
         timeout-minutes: 8
         shell: pwsh
         run: |
-          $baseline = Get-Item -LiteralPath release/FocusFlow-0.1.0-alpha.3-x64.exe
-          $candidate = Get-Item -LiteralPath .phase0/update-candidate/FocusFlow-0.1.0-alpha.4-x64.exe
+          $baseline = Get-Item -LiteralPath release/FocusFlow-0.1.0-x64.exe
+          $candidate = Get-Item -LiteralPath .phase0/update-candidate/FocusFlow-0.1.1-x64.exe
           node dist/scripts/smoke-install-update.js $baseline.FullName $candidate.FullName
           exit $LASTEXITCODE
       - name: Print replacement results in the run log

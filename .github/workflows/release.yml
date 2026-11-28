@@ -1,0 +1,72 @@
+name: Release
+# Builds the Windows installer and the Apple silicon disk image for one version and attaches them
+# to a draft GitHub release. Publishing the draft is a separate, explicit step.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Version tag, such as v0.1.0. It must match the version in package.json.
+        required: true
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  prepare:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check the tag and create a draft release
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "v$version" ]; then echo "Tag $TAG does not match version $version."; exit 1; fi
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            test "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = "true" || { echo "$TAG is already published."; exit 1; }
+          else
+            gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "FocusFlow $TAG" --notes "Release notes follow."
+          fi
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            script: package:windows
+            app: release/win-unpacked/FocusFlow.exe
+            file: release/FocusFlow-*-x64.exe
+          - os: macos-15
+            script: package:mac
+            app: release/mac-arm64/FocusFlow.app/Contents/MacOS/FocusFlow
+            file: release/FocusFlow-*-arm64.dmg
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.12.0'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run check:language
+      - run: npm run typecheck
+      - run: npm run ${{ matrix.script }}
+      - name: Open the packaged app once without task data
+        run: node scripts/diagnose-desktop.ts "${{ matrix.app }}"
+      - name: Attach the package to the draft release
+        shell: bash
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "$TAG" ${{ matrix.file }} --clobber

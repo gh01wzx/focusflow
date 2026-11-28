@@ -3,13 +3,13 @@
 ## Product and authorization
 
 - Follow [the product baseline](docs/PRODUCT_BASELINE.md). Keep Windows-first, single-user, local-first scope, with source launch support on macOS.
-- Implement the local Personal, Projects and AI workflow for owner-led local acceptance. Live integration, account permissions and sandbox enforcement remain unverified until observed; missing live evidence does not block writing the feature code. The product is for personal local use through Start-FocusFlow.cmd on Windows or Start-FocusFlow.command on macOS. Formal installation, signing, release, distribution and updating are outside scope, not pending deliverables.
+- Implement the local Personal, Projects and AI workflow for owner-led local acceptance. Live integration, account permissions and sandbox enforcement remain unverified until observed; missing live evidence does not block writing the feature code. The product is for personal local use through Start-FocusFlow.cmd on Windows or Start-FocusFlow.command on macOS. GitHub releases are in scope (owner decision, 2026-11-28): an unsigned Windows x64 installer and an Apple silicon disk image, built by the manual Release workflow and published as GitHub releases. Code signing, notarization, automatic updates and other platforms are outside scope.
 - The owner authorized public gh01wzx/focusflow and desktop development on 2026-11-03. Do not repeat that authorization request. New account scopes and external actions stay within the approved workflow.
 
 ## Work with the owner
 
 - Discuss the work in Chinese. Use simple English in source, comments, docs, Issues, commits and PRs. Maintain English and Simplified Chinese interface text. Preserve user-entered text; escape non-English test fixtures.
-- Work through the owner-authorized implementation batch in dependency order, with self-review and one implementation PR at a time. The owner will perform unified local acceptance after implementation. Run the local test suites (`npm run typecheck`, `npm run test:source`) when a change needs them, as authorized by the owner on 2026-11-22; record what ran and retain failures observed. Live model trials stay off unless separately authorized. Merge completed code within the batch authorization. New account scopes, live-model spending, paid services, release and deployment still need their own authorization.
+- Work through the owner-authorized implementation batch in dependency order, with self-review and one implementation PR at a time. The owner will perform unified local acceptance after implementation. Run the local test suites (`npm run typecheck`, `npm run test:source`) when a change needs them, as authorized by the owner on 2026-11-22; record what ran and retain failures observed. Live model trials stay off unless separately authorized. Merge completed code within the batch authorization. New account scopes, live-model spending, paid services and deployment still need their own authorization. Publish a release only when the owner asks for it.
 - A coding task is complete only after its linked PR is observed merged.
 - Use the Issue number as the task ID: [ID] Plain-English outcome for Issue/PR titles, ID-short-outcome for branches, and Closes #ID in the PR. GitHub's separate PR number is only a platform reference. Apply this from task 21 onward.
 - Keep lasting rules here. Keep task status, approvals and development history in GitHub rather than adding a chronological log to this file.
@@ -27,7 +27,7 @@
 ## CI cost and notifications
 
 - The owner requires no paid CI usage. Automatic workflows run only in public repositories on standard GitHub-hosted Windows/Linux runners. The manual-only Mac source check may use a standard GitHub-hosted macOS runner, which is free for public repositories. Keep persistent artifact uploads and caches disabled. Paid runners, storage and external services require explicit owner approval.
-- Automated verification is manual-only during owner-led local acceptance. Keep the existing workflow definitions and failure history, but do not trigger hosted test, packaging or installer runs for this batch. Local test runs are allowed. Personal email notification settings and billing budgets are separate account controls.
+- Automated verification is manual-only during owner-led local acceptance. Keep the existing workflow definitions and failure history, but do not trigger hosted test, packaging or installer runs for this batch. The Release workflow runs when the owner asks for a release. Local test runs are allowed. Personal email notification settings and billing budgets are separate account controls.
 
 ## Code and data
 

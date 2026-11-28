@@ -215,8 +215,9 @@ try {
     await add('\u4fdd\u7559\u539f\u6587 <img src=x onerror=alert(1)>');
     assert.equal(await page.locator('img').count(), 0);
     await page.getByRole('navigation', { name: 'Personal views', exact: true }).getByRole('button', { name: /History/ }).click();
-    await page.getByText('Finish a small task', { exact: true }).waitFor();
-    await page.getByText('An optional task', { exact: true }).waitFor();
+    // History lists the task and, for a completed one, its points entry, so look for the task row.
+    await page.locator('.task-title').getByText('Finish a small task', { exact: true }).waitFor();
+    await page.locator('.task-title').getByText('An optional task', { exact: true }).waitFor();
     mark('repeating-task-controls');
     await add('Daily check-in', today, 'daily');
     await page.getByRole('checkbox', { name: 'Complete Daily check-in', exact: true }).click();

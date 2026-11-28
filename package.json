@@ -1,6 +1,6 @@
 {
   "name": "focusflow",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "dist/src/desktop/main.js",
@@ -17,6 +17,7 @@
     "start:web": "node dist/src/main.js --open",
     "prestart:web": "npm run build",
     "package:windows": "npm run build && electron-builder --win --x64 --publish never --config electron-builder.json",
+    "package:mac": "npm run build && electron-builder --mac --arm64 --publish never --config electron-builder.json",
     "build": "node scripts/clean-build.ts && tsc -p tsconfig.json && tsc -p tsconfig.desktop.json && node scripts/copy-assets.ts && node scripts/build-renderer.ts",
     "typecheck": "npm run check:boundaries && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.browser.json --noEmit && tsc -p tsconfig.desktop.json --noEmit && tsc -p tsconfig.tools.json --noEmit",
     "check:boundaries": "node scripts/check-boundaries.ts",

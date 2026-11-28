@@ -1,7 +1,7 @@
 {
   "appId": "dev.focusflow.desktop",
   "productName": "FocusFlow",
-  "directories": { "output": "release" },
+  "directories": { "output": "release", "buildResources": "build" },
   "files": ["dist/src/**/*", "dist/public/**/*", "package.json"],
   "artifactName": "FocusFlow-${version}-${arch}.${ext}",
   "win": {
@@ -17,5 +17,14 @@
     "runAfterFinish": false,
     "deleteAppDataOnUninstall": false
   },
+  "mac": {
+    "target": [{ "target": "dmg", "arch": ["arm64"] }],
+    "category": "public.app-category.productivity",
+    "identity": "-",
+    "hardenedRuntime": false,
+    "gatekeeperAssess": false,
+    "notarize": false
+  },
+  "dmg": { "sign": false },
   "publish": null
 }

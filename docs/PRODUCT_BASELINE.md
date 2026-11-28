@@ -52,7 +52,7 @@ Do not control existing Codex App UI/sessions or automatically start the next Ti
 
 ## Personal-use delivery and quality
 
-The target is a useful local tool for the owner, not a distributed app. Formal installers, signing, public releases, update feeds, update installation and installer rollback are outside scope. They do not block feature completion or personal use.
+The target is a useful local tool for the owner. GitHub releases provide an unsigned Windows x64 installer and an Apple silicon disk image (owner decision, 2026-11-28). Code signing, notarization, update feeds, automatic updates and installer rollback are outside scope. Running from source stays supported.
 
 Each platform launcher builds the source when it changed since the last successful build and opens the fixed personal profile. Named review workspaces are separate and start empty. Existing personal data retains verified migration snapshots and separate-path recovery; these remain necessary for personal use.
 

@@ -1,6 +1,6 @@
 # Development
 
-Use Node.js 24.12 or a later 24.x version. Install exact dependencies with `npm ci`. Open the app from source with `Start-FocusFlow.cmd` on Windows or `./Start-FocusFlow.command` on Mac. Packaging, distribution and app updates are outside the personal-use scope.
+Use Node.js 24.12 or a later 24.x version. Install exact dependencies with `npm ci`. Open the app from source with `Start-FocusFlow.cmd` on Windows or `./Start-FocusFlow.command` on Mac. Releases are built by the manual **Release** workflow; see [Releases](#releases). Automatic updates are outside scope.
 
 ## Where information belongs
 
@@ -27,12 +27,21 @@ Use the [task template](../.github/ISSUE_TEMPLATE/task.md) and [PR template](../
 | `npm run typecheck` | Check module boundaries and compile all TypeScript without writing output |
 | `npm run check:language` | Check maintained source and documentation language |
 | `npm run build` | Always rebuild the ignored `dist` directory |
+| `npm run package:windows` / `npm run package:mac` | Build the Windows installer or, on a Mac, the Apple silicon disk image into the ignored `release` directory |
 | `npm run diagnose:desktop` | Try the built desktop runtime once without opening task data |
 | `npm run ai:install` | Install the pinned Codex runtime before first use |
 | `npm test` / `npm run test:source` | Run compiled tests or source tests in disposable folders, never against everyday data or a running app's build |
 | `npm run codex:write-trial -- --sandbox-only` | Check a disposable Windows write using the existing trial setup without a model |
 
 Use [Codex commands](CODEX.md) for runtime diagnostics and [GitHub connection](GITHUB_CONNECTION.md) for authorization. GitHub verification workflows are manual-only. With owner authorization, select **Desktop checks > mac-source** to open a fresh review workspace on a standard public macOS runner. It records native window readiness, the selected database and preview shutdown. Tests use disposable storage, simulated providers and no personal data. Record build checks, hosted results, Windows owner acceptance and live provider evidence separately.
+
+## Releases
+
+1. Set the version in `package.json` and `package-lock.json`, and push it to `main`.
+2. In GitHub Actions, run **Release** with the tag `vVERSION`. It checks the tag, creates a draft release, builds `FocusFlow-VERSION-x64.exe` on Windows and `FocusFlow-VERSION-arm64.dmg` on macOS, opens each packaged app once without task data, and attaches both files.
+3. Write the release notes, then publish the draft.
+
+The packages are not code-signed. Installed apps open the same everyday profile as the source launcher, so do not open data with an older version than the one that last saved it.
 
 ## Data paths
 

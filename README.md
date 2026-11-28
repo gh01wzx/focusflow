@@ -2,7 +2,16 @@
 
 FocusFlow is a local Windows and macOS app for personal tasks, habits and project work. Use it without an account. Connect AI and GitHub when you want help planning a ticket, writing code or reviewing a pull request.
 
-## Open FocusFlow
+## Download
+
+Get the latest version from [Releases](https://github.com/gh01wzx/focusflow/releases):
+
+- **Windows:** `FocusFlow-VERSION-x64.exe`. The installer is not signed, so Windows may show "Windows protected your PC": choose **More info**, then **Run anyway**.
+- **Mac with Apple silicon:** `FocusFlow-VERSION-arm64.dmg`. Drag FocusFlow to Applications. The app is not notarized, so the first time, open it, then go to **System Settings > Privacy & Security** and choose **Open Anyway**.
+
+The installed app and the source launcher use the same everyday data.
+
+## Run from source
 
 Install Git and Node.js 24.12 or a later 24.x version with npm. On Windows, double-click `Start-FocusFlow.cmd` or run this from the checkout.
 
